@@ -768,7 +768,7 @@ const NavbarContent = () => {
                 : 'hover:text-gray-900'
                 }`}
             >
-              PB Home
+              Stock
             </Link>
             {/* font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1 */}
 
@@ -1082,7 +1082,7 @@ const NavbarContent = () => {
                     onClick={() => router.push("/pb-home")}
                   >
                     <House className="h-4 w-4" />
-                    PB Home
+                    Stock
                   </button>
                 </li>
 
@@ -1177,7 +1177,7 @@ const NavbarContent = () => {
                     }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  PB Home
+                  Stock
                 </Link> */}
 
 
