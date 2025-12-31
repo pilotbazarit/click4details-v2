@@ -37,7 +37,7 @@ export default function ResetPasswordModal({ isOpen, onClose }) {
         setErrorMsg("Failed to reset password. Please try again.");
       }
     } catch (error) {
-      console.log("error", error);
+      // console.log("error", error);
       setErrorMsg(error.message || "An error occurred. Please try again.");
       
     } finally {

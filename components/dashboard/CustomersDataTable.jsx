@@ -5,6 +5,7 @@ import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import CustomerService from "@/services/CustomerService";
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -228,10 +229,6 @@ const CustomersDataTable = () => {
     setCurrentPage(1);
   };
 
-  const handleCustomerNameClick = (customerId) => {
-    router.push(`/dashboard/customers/${customerId}`);
-  };
-
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
@@ -336,13 +333,13 @@ const CustomersDataTable = () => {
                   return (
                     <tr key={customer.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button
-                          onClick={() => handleCustomerNameClick(customer.id)}
+                        <Link
+                          href={`/dashboard/customers/${customer.id}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer flex items-center space-x-1"
                         >
                           <span>{customer.name}</span>
                           <ExternalLink className="w-3 h-3" />
-                        </button>
+                        </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.mobile}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.client_seriousness?.md_title || "-"}</td>

@@ -4,7 +4,7 @@ import CustomDatePicker from "@/components/CustomDatePicker";
 import { useAppContext } from "@/context/AppContext";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
 
@@ -37,8 +37,23 @@ const FollowupModal = ({ isOpen, onClose, onSuccess, customer = null, customerID
 
   const commandApi = createApiRequest(API_URL);
 
+  // Minimal helper to safely format dates - only prevents RangeError
+  const safeFormatDate = (date) => {
+    if (!date) return null;
+    try {
+      // Check if date is valid before formatting
+      if (date instanceof Date && isNaN(date.getTime())) {
+        return null;
+      }
+      return date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-");
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return null;
+    }
+  };
+
   const calculateAndSetStages = (currentFormData, currentSelectedFollowupPackage) => {
-    if (currentFormData.followup_date && currentSelectedFollowupPackage && currentSelectedFollowupPackage.stages) {
+    if (currentSelectedFollowupPackage && currentSelectedFollowupPackage.stages) {
       const newStages = currentSelectedFollowupPackage.stages.map((stage) => {
         let calculatedDate = null;
         const startDate = currentFormData.followup_date ? new Date(currentFormData.followup_date) : null;
@@ -47,10 +62,15 @@ const FollowupModal = ({ isOpen, onClose, onSuccess, customer = null, customerID
         const endDate = currentFormData.followup_end_date ? new Date(currentFormData.followup_end_date) : null;
         if (endDate) endDate.setHours(0, 0, 0, 0);
 
-        if (stage.trigger_event_type === "followup_date") {
+        if (stage.trigger_event_type === "followup_date" && currentFormData.followup_date) {
           calculatedDate = calculateStageDateFromStartDate(currentFormData.followup_date, stage.day, stage.day_of_week);
-        } else if (stage.trigger_event_type === "visit_date") {
+        } else if (stage.trigger_event_type === "visit_date" && currentFormData.visit_date) {
           calculatedDate = calculateStageDateFromVisitDate(currentFormData.visit_date, stage.day_offset);
+        }
+
+        // Defensively check for invalid dates from calculations
+        if (calculatedDate && isNaN(calculatedDate.getTime())) {
+          calculatedDate = null;
         }
 
         // Ensure calculated date is not before Followup Start Date
@@ -132,10 +152,14 @@ const FollowupModal = ({ isOpen, onClose, onSuccess, customer = null, customerID
     }
   }, [isOpen, customer, customerID]);
 
-  // Effect to calculate stage dates when follow-up start date, end date, or selected package changes
+  // Effect to calculate stage dates when follow-up start date, end date, or visit date changes
+  // Note: Package changes are handled in handleInputChange to avoid race conditions
   useEffect(() => {
-    calculateAndSetStages(formData, selectedFollowupPackage);
-  }, [formData.followup_date, formData.followup_end_date, selectedFollowupPackage, formData.visit_date]);
+    // Only recalculate if package is already selected (not when package is being selected)
+    if (selectedFollowupPackage) {
+      calculateAndSetStages(formData, selectedFollowupPackage);
+    }
+  }, [formData.followup_date, formData.followup_end_date, formData.visit_date]);
 
   const fetchCustomers = async () => {
     try {
@@ -244,19 +268,24 @@ const FollowupModal = ({ isOpen, onClose, onSuccess, customer = null, customerID
 
   // Helper function to calculate stage date based on visit date and day offset
   const calculateStageDateFromVisitDate = (visitDate, dayOffset) => {
-    if (!visitDate || dayOffset === null || dayOffset === undefined) {
+    if (!visitDate || dayOffset === null || dayOffset === undefined || dayOffset === "") {
+      return null;
+    }
+
+    const offset = parseInt(dayOffset, 10);
+    if (isNaN(offset)) {
       return null;
     }
 
     let resultDate = new Date(visitDate);
     resultDate.setHours(0, 0, 0, 0);
-    resultDate.setDate(resultDate.getDate() + dayOffset);
+    resultDate.setDate(resultDate.getDate() + offset);
     return resultDate;
   };
 
   // Helper function to calculate stage date based on follow-up start date and stage properties
   const calculateStageDateFromStartDate = (followupStartDate, targetDayName, targetDayOfWeekOccurrence) => {
-    if (!followupStartDate || !targetDayName || targetDayOfWeekOccurrence === null) {
+    if (!followupStartDate || !targetDayName || targetDayOfWeekOccurrence == null) {
       return null;
     }
 
@@ -382,29 +411,19 @@ const FollowupModal = ({ isOpen, onClose, onSuccess, customer = null, customerID
 
     try {
       const submitData = {
-        followup_date: formData.followup_date
-          ? formData.followup_date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")
-          : null,
-        followup_end_date: formData.followup_end_date
-          ? formData.followup_end_date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")
-          : null,
+        followup_date: safeFormatDate(formData.followup_date),
+        followup_end_date: safeFormatDate(formData.followup_end_date),
         customer_id: formData.customer_id,
         description: formData.description,
         followup_by: formData.followup_by,
         followup_package_id: formData.followup_package_id,
-        visit_date: formData.visit_date
-          ? formData.visit_date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")
-          : null,
-        purchase_date: formData.purchase_date
-          ? formData.purchase_date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")
-          : null,
+        visit_date: safeFormatDate(formData.visit_date),
+        purchase_date: safeFormatDate(formData.purchase_date),
 
         customer_info: formData.customer_info,
         stage_dates: editableStages.map((stage) => ({
           id: stage.id, // Include ID for existing details
-          followup_date: stage.followup_date
-            ? stage.followup_date.toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-")
-            : null,
+          followup_date: safeFormatDate(stage.followup_date),
           stage_name: stage.stage_name,
           message_template: stage.message_template,
           include_call: stage.include_call,

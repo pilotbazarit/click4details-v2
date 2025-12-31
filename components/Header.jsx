@@ -7,7 +7,7 @@ const Header = () => {
 
     const pathname = usePathname();
 
-    console.log("Path Name::::", pathname);
+    // console.log("Path Name::::", pathname);
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -22,7 +22,7 @@ const Header = () => {
             <div className="flex items-center gap-2 justify-center py-2 lg:py-3 md:px-16 lg:px-32 border-b border-gray-300 text-gray-700 bg-gray-800">
                 {/* {
                     !user && (
-                        <h1 className='text-xl lg:text-4xl font-large font-bold text-white tracking-wider'>Click4Details</h1>
+                        <h1 className='text-xl lg:text-4xl font-large font-bold text-white tracking-wider'>Pilot Bazar</h1>
                     )
                 } */}
                 
@@ -42,7 +42,7 @@ const Header = () => {
                     📞 Hotline:&nbsp;
                     {
                         user && pathname !== '/pb-home/' ? (
-                            <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
+                            <a href={`tel:+880${user?.phone}`} className="hover:text-blue-300 transition-colors">+880{user?.phone}</a>
                         ) : (
                             <a href="tel:+8801969944400" className="hover:text-blue-300 transition-colors">+8801969944400</a>
                         )

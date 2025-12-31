@@ -162,7 +162,7 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
                 setPermissionNames(response.data);
             }
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
         }
     };
 

@@ -45,7 +45,7 @@ const ProductDetails = ({ productDetails }) => {
             .slice(0, -1) // শেষের ID বাদ দেবে
             .join("/");
 
-    console.log("basePath===========", basePath);
+    // console.log("basePath===========", basePath);
 
     useEffect(() => {
         if (productDetails) {
@@ -98,7 +98,27 @@ const ProductDetails = ({ productDetails }) => {
         saveAs(content, `${folderName}.zip`);
     };
 
-    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.app';
+    const downloadAsUnzip = async () => {
+        // if (!folderName.trim()) {
+        //     alert("Please enter a folder name");
+        //     return;
+        // }
+
+        setShowModal(false);
+
+        for (let i = 0; i < sliderImage.length; i++) {
+            try {
+                const response = await fetch(sliderImage[i]);
+                const blob = await response.blob();
+                const fileName = `${folderName}-image-${i + 1}.${blob.type.split("/")[1]}`;
+                saveAs(blob, fileName);
+            } catch (error) {
+                console.error(`Error downloading image ${i + 1}:`, error);
+            }
+        }
+    };
+
+    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
 
     if (!productDetails) {
         return <div>Loading...</div>; // Or some other loading state
@@ -468,7 +488,7 @@ const ProductDetails = ({ productDetails }) => {
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
                     </div>
 
-                    <div>
+                    <div className="hidden md:block">
                         <button
                             onClick={handleCopyAllClick}
                             className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
@@ -524,7 +544,7 @@ const ProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Click4Details'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -599,7 +619,7 @@ const ProductDetails = ({ productDetails }) => {
                                             onClick={handleImageShare}
                                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
                                         >
-                                            <Share2 className="h-4 w-4" /> Image Share
+                                            <Share2 className="h-4 w-4" /> 
                                         </button>
                                     </div>
 
@@ -608,13 +628,13 @@ const ProductDetails = ({ productDetails }) => {
                                             <button
                                                 type="button"
                                                 onClick={() => setShowModal(true)}
-                                                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
+                                                className="px-4 py-2 text-sm font-medium text-white bg-lime-600 border border-lime-700 rounded-l hover:bg-lime-700 flex items-center gap-2"
                                             >
-                                                <Download className="h-4 w-4" /> Download All
+                                                <Download className="h-4 w-4" /> 
                                             </button>
                                             {showModal && (
                                                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                                                    <div className="bg-white p-6 rounded-lg shadow-lg w-80">
+                                                    <div className="bg-white p-6 rounded-lg shadow-lg w-104">
                                                         <h2 className="text-lg font-bold mb-4">Enter Folder Name</h2>
                                                         <input
                                                             type="text"
@@ -623,19 +643,27 @@ const ProductDetails = ({ productDetails }) => {
                                                             placeholder="Folder name..."
                                                             className="border border-gray-300 rounded w-full px-3 py-2 mb-4"
                                                         />
-                                                        <div className="flex justify-end gap-2">
+                                                        <div className="flex justify-between gap-2">
                                                             <button
                                                                 onClick={() => setShowModal(false)}
                                                                 className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
                                                             >
                                                                 Cancel
                                                             </button>
-                                                            <button
-                                                                onClick={downloadAsZip}
-                                                                className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
-                                                            >
-                                                                Download
-                                                            </button>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={downloadAsZip}
+                                                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                                >
+                                                                    Download as ZIP
+                                                                </button>
+                                                                <button
+                                                                    onClick={downloadAsUnzip}
+                                                                    className="px-4 py-2 bg-lime-400 text-white rounded hover:bg-lime-400"
+                                                                >
+                                                                    Download at Gallery
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -656,6 +684,17 @@ const ProductDetails = ({ productDetails }) => {
                         <ProductDetailsDescription productDetails={productDetails} basePath={basePath} />
                     </div>
                     {/* // )} */}
+                </div>
+
+
+                <div className="md:hidden">
+                    <button
+                        onClick={handleCopyAllClick}
+                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
+                    >
+                        <Copy className="h-4 w-4" />
+                        <span>Copy All Text</span>
+                    </button>
                 </div>
 
 
@@ -747,7 +786,7 @@ const ProductDetails = ({ productDetails }) => {
                                 } */}
 
                                 {
-                                    (basePath === "/product/my-shop" || basePath === "/product/company-shop" || (user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl'))) && (
+                                    ( basePath === "/product/my-shop" || basePath === "/product/company-shop" || (user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl' || basePath === "/product" ))) && (
                                         <div className="grid grid-cols-6 gap-2">
                                             <div className="col-span-3 text-base">Chassis No :</div>
                                             <div className="col-span-3 text-base font-semibold">{productDetails?.v_chassis}</div>

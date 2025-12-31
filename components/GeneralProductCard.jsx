@@ -6,12 +6,14 @@ import { FireExtinguisher, GitBranch, LifeBuoy, MapPin, ReceiptText, Share2, Pho
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
 import ProductShareModal from "./modals/ProductShareModal";
+import AddToCartModal from "./modals/AddToCartModal";
 import { usePathname } from "next/navigation";
 import { getSessionId } from "@/lib/utils";
 
 
 const GeneralProductCard = ({ product }) => {
   const [open, setOpen] = useState(false);
+  const [addToCartModalOpen, setAddToCartModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const { cartItems, setCartItems, addToCart, user } = useAppContext();
@@ -160,11 +162,11 @@ const GeneralProductCard = ({ product }) => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <p className="text-orange-600 font-bold text-lg">
-                ৳{formatPrice(product?.prices && product?.prices[0]?.pp_discount_price)}
-              </p>
-              <p className="text-gray-500 line-through text-sm">
                 ৳{formatPrice(product?.prices && product?.prices[0]?.pp_regular_price)}
               </p>
+              {/* <p className="text-gray-500 line-through text-sm">
+                ৳{formatPrice(product?.prices && product?.prices[0]?.pp_regular_price)}
+              </p> */}
             </div>
             <div>
               <button
@@ -192,8 +194,8 @@ const GeneralProductCard = ({ product }) => {
             </div>
           </div>
           <div className="flex justify-between items-center mt-2">
-            <button 
-              onClick={() => handleAddToCart(product)} 
+            <button
+              onClick={() => setAddToCartModalOpen(true)}
               className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
             >
               Add to Cart
@@ -203,6 +205,13 @@ const GeneralProductCard = ({ product }) => {
       </div>
 
       <ProductShareModal open={open} setOpen={setOpen} product={product} />
+
+      <AddToCartModal
+        open={addToCartModalOpen}
+        setOpen={setAddToCartModalOpen}
+        product={product}
+        onAddToCart={handleAddToCart}
+      />
 
     </div>
   );

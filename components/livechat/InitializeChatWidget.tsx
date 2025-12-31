@@ -58,12 +58,12 @@ export default function InitializeChatWidget() {
       return;
     }
 
-    console.log('🔄 LiveChat: Fetching configuration for chatId:', chatId);
+    // console.log('🔄 LiveChat: Fetching configuration for chatId:', chatId);
 
     (async () => {
       try {
         const url = `${getApiUrl()}/chat/chat-codes/external?chatId=${chatId}`;
-        console.log('📡 LiveChat: API Request:', url);
+        // console.log('📡 LiveChat: API Request:', url);
 
         const response = await fetch(url);
         const data = await response.json();
@@ -101,7 +101,7 @@ export default function InitializeChatWidget() {
           setFetched(true);
           console.log('✅ LiveChat: Configuration initialized (fetched=true)');
         } else {
-          console.log('LiveChat: Failed to fetch configuration:', data);
+          // console.log('LiveChat: Failed to fetch configuration:', data);
           // Still set fetched to true to prevent infinite loading
           setFetched(true);
         }
@@ -132,12 +132,12 @@ export default function InitializeChatWidget() {
   useEffect(() => {
     const caToken = localStorage.getItem('ca_token');
     if (!caToken) {
-      console.log('📝 LiveChat: No auth token found (guest mode)');
+      // console.log('📝 LiveChat: No auth token found (guest mode)');
       setUserFetched(true);
       return;
     }
 
-    console.log('🔄 LiveChat: Checking authentication...');
+    // console.log('🔄 LiveChat: Checking authentication...');
 
     (async () => {
       try {
@@ -151,7 +151,7 @@ export default function InitializeChatWidget() {
           const data = await response.json();
           localStorage.setItem('ca_token', data?.access_token);
           setUser(data?.user);
-          console.log('✅ LiveChat: User authenticated', data?.user);
+          // console.log('✅ LiveChat: User authenticated', data?.user);
         } else {
           console.log('❌ LiveChat: Authentication failed');
         }

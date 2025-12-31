@@ -126,8 +126,8 @@ const ProductList = () => {
       const params = {
         _page: currentPage,
         _perPage: itemsPerPage,
-        // _order: 'desc',
-        // _orderBy: 'v_id',
+        _order: 'desc',
+        _orderBy: 'v_updated_at',
         _status: 'inactive',
       };
 

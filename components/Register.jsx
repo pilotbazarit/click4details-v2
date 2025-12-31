@@ -1,10 +1,12 @@
 import { useState } from "react";
 import api from "@/lib/api"; // Adjust the import based on your project structure
 import toast from "react-hot-toast";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import LoginService from "@/services/LoginService";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 // Yup Validation Schema
 const schema = yup.object().shape({
@@ -22,9 +24,12 @@ const schema = yup.object().shape({
 });
 
 export default function Register({ isOpen, onClose }) {
+  const [countryCode, setCountryCode] = useState("+880");
+
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
     reset,
   } = useForm({
@@ -55,10 +60,20 @@ export default function Register({ isOpen, onClose }) {
 
 
    const onSubmit = async (data) => {
+    // Remove country code from phone number
+    const phoneWithoutCode = data.phone.replace(countryCode.replace('+', ''), '');
+
+    console.log("Form data:", {
+      ...data,
+      u_country_code: countryCode,
+      phone: phoneWithoutCode
+    }); // Check phone format
+
     try {
       const response = await LoginService.Commands.registration({
         name: data.name,
-        phone: data.phone,
+        u_country_code: countryCode,
+        phone: phoneWithoutCode,
         email: data.email,
         password: data.password,
         password_confirmation: data.password_confirmation,
@@ -113,7 +128,7 @@ export default function Register({ isOpen, onClose }) {
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div>
                 <label
-                  htmlFor="phone"
+                  htmlFor="name"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
                   Name
@@ -138,17 +153,30 @@ export default function Register({ isOpen, onClose }) {
                 >
                   Phone
                 </label>
-                <input
-                  {...register("phone")}
-                  type="text"
+                <Controller
                   name="phone"
-                  id="phone"
-                  required
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                  placeholder="+8801XXXXXXXXX"
+                  control={control}
+                  render={({ field: { onChange, value } }) => (
+                    <PhoneInput
+                      country={'bd'}
+                      value={value}
+                      onChange={(phone, country) => {
+                        onChange(phone);
+                        setCountryCode(`+${country.dialCode}`);
+                      }}
+                      inputProps={{
+                        name: 'phone',
+                        required: true,
+                      }}
+                      containerClass="w-full"
+                      inputClass="!w-full"
+                      buttonClass="!bg-gray-50 dark:!bg-gray-600"
+                      dropdownClass="!bg-white dark:!bg-gray-700"
+                    />
+                  )}
                 />
                 {errors.phone && (
-                  <p className="text-red-500 text-sm">{errors.name.message}</p>
+                  <p className="text-red-500 text-sm">{errors.phone.message}</p>
                 )}
               </div>
 

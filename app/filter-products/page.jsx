@@ -16,32 +16,40 @@ import { useAppContext } from "@/context/AppContext";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import constData from "@/lib/constant";
+import CategoryService from "@/services/CategoryService";
 import CustomerService from "@/services/CustomerService";
 import LocationService from "@/services/LocationService";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import SearchHistoryService from "@/services/SearchHistoryService";
+import ShopService from "@/services/ShopService";
 import dayjs from "dayjs";
 import { Plus, Search, Star, User, Users, X } from "lucide-react";
 import Link from "next/link";
 import "rc-slider/assets/index.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
 
 const FilterProducts = () => {
   const { getAllProduct, total, loading } = useAdvanceFilterProductContext();
   const { user } = useAppContext();
-  const normalizedUser =
-    typeof user === "string"
-      ? (() => {
-          try {
-            return JSON.parse(user);
-          } catch {
-            return null;
-          }
-        })()
-      : user;
+  
+  // Memoize normalizedUser to prevent unnecessary recalculations
+  // User is now loaded synchronously from localStorage in AppContext, so it's available on first render
+  const normalizedUser = useMemo(() => {
+    if (user === null || user === undefined) {
+      return null;
+    }
+    if (typeof user === "string") {
+      try {
+        return JSON.parse(user);
+      } catch {
+        return null;
+      }
+    }
+    return user;
+  }, [user]);
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
@@ -51,8 +59,23 @@ const FilterProducts = () => {
   const allowedRoles = new Set(["Customer Care", "Admin", "Co-Admin"]);
   const userRoleName = normalizedUser?.role?.name || normalizedUser?.role_name || normalizedUser?.role || normalizedUser?.user_role;
   // const canSeeCustomerInfo = !!(userRoleName && allowedRoles.has(userRoleName));
-  const canSeeCustomerInfo = normalizedUser?.user_mode === "pbl";
+  
+ 
+  const canSeeUserModes = useMemo(() => {
+    return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme" || normalizedUser?.user_mode === "admin";
+  }, [normalizedUser?.user_mode]);
 
+  // Memoize canSeeCustomerInfo to prevent unnecessary recalculations
+  const canSeeCustomerInfo = useMemo(() => {
+    return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme";
+  }, [normalizedUser?.user_mode]);
+
+  // Log when values change (user is now available on first render, so this will only log once per actual change)
+  useEffect(() => {
+    console.log('canSeeUserModes', canSeeUserModes);
+    console.log('canSeeCustomerInfo', canSeeCustomerInfo);
+    console.log('normalizedUser', normalizedUser);
+  }, [canSeeUserModes, canSeeCustomerInfo, normalizedUser]);
   // useEffect(() => {
   //   if (isClient) {
   //     console.log("userRoleName", userRoleName);
@@ -83,7 +106,7 @@ const FilterProducts = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState(null);
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [anniversaryDate, setAnniversaryDate] = useState("");
   const [purchaseReason, setPurchaseReason] = useState("");
   const [interestedLoan, setInterestedLoan] = useState("");
@@ -247,9 +270,9 @@ const FilterProducts = () => {
           (customerResponse.data.car_exchange_category_per_year && parseInt(customerResponse.data.car_exchange_category_per_year.md_id)) || ""
         );
         setDescription(description || "");
-        setCarAvailable(parseInt(customerResponse.data.car_available.md_id) || 0);
+        setCarAvailable((customerResponse.data.car_available && parseInt(customerResponse.data.car_available.md_id)) || 0);
         setClientAttitude(customerResponse.data.client_attitude ? String(customerResponse.data.client_attitude).split(",").map(Number) : []);
-        setClientProfession(parseInt(customerResponse.data.client_profession.md_id) || 0);
+        setClientProfession((customerResponse.data.client_profession && parseInt(customerResponse.data.client_profession.md_id)) || 0);
         setFilterFields((prev) => ({ ...prev, clientLastPurchaseDate: customerResponse.data.client_last_purchase_date || null }));
       } else {
         setSelectedCustomerId(null);
@@ -296,7 +319,10 @@ const FilterProducts = () => {
   const [searchType, setSearchType] = useState("wide");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isConsolidatedView, setIsConsolidatedView] = useState(false);
-  const [selectedUserModes, setSelectedUserModes] = useState(["Partner"]); // New state for user modes
+  const [selectedUserModes, setSelectedUserModes] = useState([""]); // New state for user modes
+  const [shopsData, setShopsData] = useState([]);
+  const [selectedShops, setSelectedShops] = useState([]); // Array of selected shop objects
+  const [shopsLoading, setShopsLoading] = useState(false); // Loading state for shops
   const [mileageInputInFocus, setMileageInputInFocus] = useState(null);
   const [capacityInputInFocus, setCapacityInputInFocus] = useState(null);
   const [budgetInputInFocus, setBudgetInputInFocus] = useState(null);
@@ -348,34 +374,38 @@ const FilterProducts = () => {
 
   // category data get from api
   const getCategories = async () => {
-    const categoryData = [
-      {
-        value: "",
-        label: "-Select Category-",
-      },
-      {
-        value: "1",
-        label: "Vehicle",
-      },
-      {
-        value: "2",
-        label: "Land",
-      },
-      {
-        value: "3",
-        label: "Home",
-      },
-      {
-        value: "4",
-        label: "Motorcycle",
-      },
-      {
-        value: "5",
-        label: "Mobile",
-      },
-    ];
+    try {
+      const response = await CategoryService.Queries.getCategories({
+        _page: 1,
+        _perPage: 1000,
+        _parent_id: 0, // Only fetch main categories (parent_id = 0)
+      });
 
-    setCategories(categoryData);
+      if (response?.status === "success") {
+        const categoriesMasterData = response.data?.data || [];
+        const categoryData = [
+          {
+            value: "",
+            label: "-Select Category-",
+          },
+          ...categoriesMasterData.map((category) => ({
+            value: category.c_id,
+            label: category.c_name,
+          })),
+        ];
+        setCategories(categoryData);
+      } else {
+        setCategories([{ value: "", label: "-Select Category-" }]);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      if (error.errors) {
+        Object.values(error.errors).forEach((e) => toast.error(e[0]));
+      } else {
+        toast.error(error.message || "Failed to fetch categories");
+      }
+      setCategories([{ value: "", label: "-Select Category-" }]);
+    }
   };
 
   // brand data get from api
@@ -403,6 +433,77 @@ const FilterProducts = () => {
       } else {
         toast.error(error.message || "Something went wrong");
       }
+    }
+  };
+
+  // shops data get from api
+  const getShops = async () => {
+    try {
+      // Don't fetch shops if user is not loaded yet
+      if (!normalizedUser?.id) {
+        return;
+      }
+
+      setShopsLoading(true);
+
+      const params = {
+        _page: 1,
+        _perPage: 1000,
+        order: "desc",
+        orderBy: "s_id",
+        _user_id: normalizedUser.id, // Always filter by logged-in user's ID
+      };
+
+      const response = await ShopService.Queries.getShops(params);
+      const companyShopsResponse = await ShopService.Queries.getCompanyShops(normalizedUser.id);
+      
+      const shopsDataFromAPI = response?.data?.data || [];
+      const companyShopsDataFromAPI = companyShopsResponse?.data || [];
+      
+      const newCompanyShopsData = companyShopsDataFromAPI.map(shop => ({
+        value: shop.shop.s_id,
+        label: shop.shop.s_title,
+      }));
+
+      const userShopsData = shopsDataFromAPI.map(shop => ({
+        value: shop.s_id,
+        label: shop.s_title,
+      }));
+      let allShopsData = [];
+      // const allShopsData = [{ value: "all", label: "All Shops" }, ...userShopsData, ...newCompanyShopsData];
+      if(canSeeUserModes) {
+        allShopsData = [{ value: "all", label: "All Shops" }, { value: "pbhome", label: "PBL Home" }, ...userShopsData, ...newCompanyShopsData];
+      } else {
+        allShopsData = [{ value: "all", label: "All Shops" }, { value: "pbhome", label: "PBL Home" }, ...userShopsData, ...newCompanyShopsData];
+      }
+
+      setShopsData(allShopsData);
+
+      // Check if there are pending shop selections from prepopulated data
+      const pendingShops = sessionStorage.getItem("pendingShopSelection");
+      if (pendingShops) {
+        try {
+          const shopIds = JSON.parse(pendingShops);
+          const selectedShopObjects = shopIds.map(shopId => {
+            const shop = allShopsData.find(s => s.value === shopId || s.value === String(shopId));
+            return shop || { value: shopId, label: `Shop ${shopId}` };
+          });
+          setSelectedShops(selectedShopObjects);
+          sessionStorage.removeItem("pendingShopSelection");
+        } catch (error) {
+          console.error("Error loading pending shop selection:", error);
+          sessionStorage.removeItem("pendingShopSelection");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching shops:", error);
+      if (error.errors) {
+        Object.values(error.errors).forEach((e) => toast.error(e[0]));
+      } else {
+        toast.error(error.message || "Failed to fetch shops");
+      }
+    } finally {
+      setShopsLoading(false);
     }
   };
 
@@ -458,6 +559,26 @@ const FilterProducts = () => {
         })),
       ];
       setPackageData(packageData);
+      
+      // Check if there are pending package selections from prepopulated data
+      const pendingPackages = sessionStorage.getItem("pendingPackageSelection");
+      if (pendingPackages) {
+        try {
+          const packageIds = JSON.parse(pendingPackages);
+          // Filter to only include valid package IDs that exist in the fetched data
+          const validPackageIds = packageIds.filter(pkgId => 
+            packageData.some(pkg => pkg.value === pkgId || pkg.value === String(pkgId))
+          );
+          
+          if (validPackageIds.length > 0) {
+            setFilterFields(prev => ({ ...prev, package: validPackageIds }));
+          }
+          sessionStorage.removeItem("pendingPackageSelection");
+        } catch (error) {
+          console.error("Error loading pending package selection:", error);
+          sessionStorage.removeItem("pendingPackageSelection");
+        }
+      }
     } catch (error) {
       if (error.errors) {
         Object.values(error.errors).forEach((e) => toast.error(e[0]));
@@ -976,6 +1097,15 @@ const FilterProducts = () => {
           v_insurance_exp_date_to: parsedData.v_insurance_exp_date_to ? dayjs(parsedData.v_insurance_exp_date_to).toDate() : null,
           clientLastPurchaseDate: parsedData.clientLastPurchaseDate ? dayjs(parsedData.clientLastPurchaseDate).toDate() : null,
         };
+        // Handle packages separately - store them for later application after API fetch
+        let packageIds = null;
+        if (parsedData.package && Array.isArray(parsedData.package) && parsedData.package.length > 0) {
+          packageIds = parsedData.package;
+          sessionStorage.setItem("pendingPackageSelection", JSON.stringify(packageIds));
+          // Remove package from formattedParsedData to prevent premature setting
+          delete formattedParsedData.package;
+        }
+        
         setFilterFields(formattedParsedData);
         setSearchType(parsedData.search_type || "wide"); // Set searchType here
         setIsConsolidatedView(parsedData.consolidated); // Set consolidated view
@@ -984,6 +1114,12 @@ const FilterProducts = () => {
         setCustomerMobile(parsedData.customerMobile || "");
         setSelectedUserModes([...parsedData.user_modes]); // Set user modes
         setOldHistoryId(parsedData.history_id || null);
+        
+        // Load selected shops from prepopulated data
+        if (parsedData.shops && Array.isArray(parsedData.shops)) {
+          // Store shop IDs to be loaded after shops data is fetched
+          sessionStorage.setItem("pendingShopSelection", JSON.stringify(parsedData.shops));
+        }
       } catch (e) {
         console.error("Failed to parse prepopulated filter data from localStorage", e);
         fetchInitialData();
@@ -1009,11 +1145,19 @@ const FilterProducts = () => {
     }
   }, [filterFields.brand, filterFields.model]);
 
+  // Fetch shops when user is loaded
+  useEffect(() => {
+    if (normalizedUser?.id) {
+      getShops();
+    }
+  }, [normalizedUser?.id]);
+
   const executeSearch = async (e) => {
     const formattedFilterFields = {
       ...filterFields,
       search_type: searchType,
       user_modes: selectedUserModes, // Added user modes
+      shops: selectedShops.map(shop => shop.value), // Added selected shops (array of shop IDs)
       v_tax_token_exp_date_from: filterFields.v_tax_token_exp_date_from ? dayjs(filterFields.v_tax_token_exp_date_from).format("YYYY-MM-DD") : null,
       v_tax_token_exp_date_to: filterFields.v_tax_token_exp_date_to ? dayjs(filterFields.v_tax_token_exp_date_to).format("YYYY-MM-DD") : null,
       v_fitness_exp_date_from: filterFields.v_fitness_exp_date_from ? dayjs(filterFields.v_fitness_exp_date_from).format("YYYY-MM-DD") : null,
@@ -1066,7 +1210,7 @@ const FilterProducts = () => {
       } else {
         const history = await SearchHistoryService.Queries.saveSearchHistory(searchData);
         setOperationType("update_search");
-        setOldHistoryId(history.data.id);
+        setOldHistoryId(history?.data?.id || null);
         toast.success("New search history saved successfully!");
       }
     }
@@ -1193,6 +1337,19 @@ const FilterProducts = () => {
                           setSearchType(searchParams.search_type || "wide");
                           setIsConsolidatedView(historyItem.consolidated === 1);
                           setSelectedUserModes(searchParams.user_modes || ["Partner"]);
+                          
+                          // Load selected shops
+                          if (searchParams.shops && Array.isArray(searchParams.shops)) {
+                            const selectedShopObjects = searchParams.shops.map(shopId => {
+                              // Find the shop in shopsData to get the label
+                              const shop = shopsData.find(s => s.value === shopId || s.value === String(shopId));
+                              return shop || { value: shopId, label: `Shop ${shopId}` };
+                            });
+                            setSelectedShops(selectedShopObjects);
+                          } else {
+                            setSelectedShops([]);
+                          }
+                          
                           setDisplayVisitingCardImage(historyItem.visiting_card_image || null);
                           setVisitingCardImage(null);
 
@@ -1289,57 +1446,6 @@ const FilterProducts = () => {
                             value={customerMobile}
                             onChange={async (e) => {
                               setCustomerMobile(e.target.value);
-                              // if (e.target.value.length === 11) {
-                              //   // Fetch history after 11 digits
-                              //   setIsLoading(true); // Show loader
-                              //   try {
-                              //     const [customerResponse, response] = await Promise.all([
-                              //       SearchHistoryService.Queries.getCustomerByMobile(e.target.value),
-                              //       SearchHistoryService.Queries.getSearchHistory(e.target.value),
-                              //     ]);
-
-                              //     if (customerResponse.status === "success") {
-                              //       setSelectedCustomerId(customerResponse.data.id || null);
-
-                              //       setCustomerName(customerResponse.data.name || "");
-                              //       setCustomerEmail(customerResponse.data.email || "");
-                              //       setCustomerAddress(customerResponse.data.address || "");
-
-                              //       setClientAttitude(
-                              //         customerResponse.data.client_attitude ? String(customerResponse.data.client_attitude).split(",").map(Number) : []
-                              //       );
-                              //       setPurchaseReason(customerResponse.data.purchase_reason || "");
-                              //       setInterestedLoan(customerResponse.data.interested_for_loan || "");
-                              //       setClientCompanyTransaction(customerResponse.data.client_company_transaction || "");
-                              //       setFacebookIdLink(customerResponse.data.facebook_id_link || "");
-                              //       setBankLoanAmount(customerResponse.data.bank_loan_amount || "");
-                              //       setCarAvailable(customerResponse.data.car_available || "");
-                              //       setClientIncome(customerResponse.data.client_income_per_month || "");
-                              //       setClientLevel(customerResponse.data.client_level || "");
-                              //       setClientSeriousness(customerResponse.data.client_seriousness || "");
-                              //       setCarExchangeCategory(customerResponse.data.car_exchange_category_per_year || "");
-                              //       setDescription(customerResponse.data.description || "");
-                              //       setFilterFields((prev) => ({ ...prev, clientLastPurchaseDate: customerResponse.data.client_last_purchase_date || null }));
-                              //     } else {
-                              //       setSelectedCustomerId(null);
-                              //       setSearchHistory([]);
-                              //     }
-
-                              //     if (response.status === "success") {
-                              //       setSearchHistory(response.data);
-                              //     } else {
-                              //       setSearchHistory([]);
-                              //     }
-                              //   } catch (error) {
-                              //     console.error("Failed to fetch search history:", error);
-                              //     setSearchHistory([]);
-                              //     toast.error("Failed to fetch search history.");
-                              //   } finally {
-                              //     setIsLoading(false); // Hide loader
-                              //   }
-                              // } else {
-                              //   setSearchHistory([]);
-                              // }
                             }}
                           />
                           {isLoading && (
@@ -1806,34 +1912,73 @@ const FilterProducts = () => {
                   {/* Product Name and Code Filter Section */}
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mt-4 mb-4 p-4 border border-gray-200 rounded-lg shadow-sm bg-white">
                     {/* User Mode Button Group */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
-                      <div className="inline-flex rounded-md shadow-sm">
-                        {["Partner", "Member", "User"].map((mode, index) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => {
-                              const newSelectedUserModes = selectedUserModes.includes(mode)
-                                ? selectedUserModes.filter((item) => item !== mode)
-                                : [...selectedUserModes, mode];
-                              setSelectedUserModes(newSelectedUserModes);
-                            }}
-                            className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
-                              index === 0 ? "rounded-l-md" : ""
-                            } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
-                              selectedUserModes.includes(mode)
-                                ? "bg-orange-500 text-white border-orange-500 z-10"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
-                          >
-                            {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
-                            {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
-                            {mode === "User" && <User className="w-4 h-4 mr-2" />}
-                            {mode}
-                          </button>
-                        ))}
+                    {canSeeUserModes && (
+                      <div className="flex flex-col gap-2">
+                        <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
+                        <div className="inline-flex rounded-md shadow-sm">
+                          {["Partner", "Member", "User"].map((mode, index) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => {
+                                const newSelectedUserModes = selectedUserModes.includes(mode)
+                                  ? selectedUserModes.filter((item) => item !== mode)
+                                  : [...selectedUserModes, mode];
+                                setSelectedUserModes(newSelectedUserModes);
+                              }}
+                              className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
+                                index === 0 ? "rounded-l-md" : ""
+                              } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
+                                selectedUserModes.includes(mode)
+                                  ? "bg-orange-500 text-white border-orange-500 z-10"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}
+                            >
+                              {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
+                              {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
+                              {mode === "User" && <User className="w-4 h-4 mr-2" />}
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
                       </div>
+                    )}
+
+                    {/* Shops Multiselect Dropdown */}
+                    <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
+                      <label className="text-base font-medium text-gray-700 mb-2">Filter by Shops</label>
+                      <Select
+                        isMulti
+                        options={shopsData}
+                        value={selectedShops}
+                        onChange={(selected) => {
+                          const selectedArray = selected || [];
+                          
+                          // Check if "All Shops" was just selected
+                          const hasAllShops = selectedArray.some(shop => shop.value === "all");
+                          const hadAllShops = selectedShops.some(shop => shop.value === "all");
+                          
+                          if (hasAllShops && !hadAllShops) {
+                            // "All Shops" was just selected, keep only "All Shops"
+                            setSelectedShops([{ value: "all", label: "All Shops" }]);
+                          } else if (!hasAllShops && hadAllShops) {
+                            // "All Shops" was removed, keep other selections
+                            setSelectedShops(selectedArray);
+                          } else if (hasAllShops && selectedArray.length > 1) {
+                            // User selected a specific shop while "All Shops" was selected, remove "All Shops"
+                            setSelectedShops(selectedArray.filter(shop => shop.value !== "all"));
+                          } else {
+                            // Normal selection
+                            setSelectedShops(selectedArray);
+                          }
+                        }}
+                        placeholder={shopsLoading ? "Loading shops..." : "Select shops..."}
+                        isLoading={shopsLoading}
+                        isDisabled={shopsLoading}
+                        loadingMessage={() => "Loading shops..."}
+                        className="text-sm"
+                        classNamePrefix="react-select"
+                      />
                     </div>
 
                     {/* Search Type Button Group */}
@@ -1842,7 +1987,7 @@ const FilterProducts = () => {
                       <div className="inline-flex rounded-md shadow-sm">
                         {[
                           { value: "wide", label: "Wide Search" },
-                          { value: "flexible", label: "Flexible Search" },
+                          // { value: "flexible", label: "Flexible Search" },
                           { value: "strict", label: "Strict Search" },
                         ].map((type, index) => (
                           <button
@@ -2498,7 +2643,7 @@ const FilterProducts = () => {
                   getAllProduct({}, true);
                   setOperationType("new_search");
                   setCustomerMobile("");
-                  setSelectedUserModes(["Partner"]);
+                  setSelectedUserModes([""]);
                   setOldHistoryId();
                   setIsConsolidatedView(false);
                   setSearchType("wide");

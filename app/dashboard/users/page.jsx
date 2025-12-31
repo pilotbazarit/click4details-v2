@@ -324,6 +324,7 @@ const User = () => {
                 </TableHead>
                 <TableHead className="relative border-r border-gray-300">Name</TableHead>
                 <TableHead className="relative border-r border-gray-300">Company Name</TableHead>
+                <TableHead className="relative border-r border-gray-300">Country Code</TableHead>
                 <TableHead className="relative border-r border-gray-300">
                   <div className="flex items-center justify-between relative">
                     <span>Mobile</span>
@@ -553,6 +554,7 @@ const User = () => {
                     </TableCell>
                     <TableCell className="border-r border-gray-200">{item?.name}</TableCell>
                     <TableCell className="border-r border-gray-200">{item?.profile?.up_company || "N/A"}</TableCell>
+                    <TableCell className="border-r border-gray-200">+880</TableCell>
                     <TableCell className="border-r border-gray-200">{item?.phone}</TableCell>
                     <TableCell className="border-r border-gray-200">{item?.email}</TableCell>
 

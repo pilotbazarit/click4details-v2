@@ -1,54 +1,26 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { useMyShopProductContext } from '@/context/MyShopProductContext'
-import { useAppContext } from '@/context/AppContext'
-import { jsPDF } from 'jspdf'
 import StockListPreviewModal from './StockListPreviewModal'
+import { usePathname } from "next/navigation"
+import { useAppContext } from '@/context/AppContext'
 import VehicleService from '@/services/VehicleService'
+import toast from 'react-hot-toast'
 
-const VehicleStockListModal = ({ open, setOpen }) => {
-    // const { products } = useMyShopProductContext()
-    const { selectedShop, user } = useAppContext()
-    const [products, setProducts] = useState([]);
+const VehicleStockListModal = ({ open, setOpen, user }) => {
+    // Get pathname and context
+    const pathname = usePathname();
+    const { selectedShop, selectedCompanyShop } = useAppContext();
 
-
-
-    const getAllProduct = async (reset = false) => {
-        try {
-          if (!selectedShop) return;
-         
-    
-          const currentPage = 1;
-    
-          const res = await VehicleService.Queries.getVehiclesWithLogin({
-            _page: currentPage,
-            _perPage: 2000,
-            _shop_id: selectedShop?.s_id,
-            _order: 'desc',
-            _orderBy: 'v_id',
-            _status: 'active'
-          });
-
-         
-          if (res.status === "success") {
-            const newProducts = res?.data?.data || [];
-
-            setProducts(newProducts);
-          }
-        } catch (error) {
-          console.log("get product error", error);
-        }
-      };
-
-
-    useEffect(() => {
-        getAllProduct();
-    }, []);
+    // State for sorting options
+    const [orderBy, setOrderBy] = useState('v_priority');
+    const [order, setOrder] = useState('ASC');
+    const [userInfo, setUserInfo] = useState(user);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     // State for preview modal
     const [previewModalOpen, setPreviewModalOpen] = useState(false)
@@ -106,12 +78,123 @@ const VehicleStockListModal = ({ open, setOpen }) => {
         setPreviewModalOpen(true)
     }
 
- 
 
     // Function to handle dialog open/close changes
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen);
     };
+
+
+       const handleDownload = async () => {
+        try {
+            setIsGeneratingPDF(true);
+            toast.loading('Preparing PDF download...', { id: 'pdf-download' });
+
+            // All available feature mappings
+            const allFeatureMap = {
+                'brand': 'brand',
+                'model': 'model',
+                'package': 'pac',
+                'modelYr': 'mod-yr',
+                'registrationYr': 'req-yr',
+                'condition': 'con',
+                'option': 'opt',
+                'fuel': 'fuel',
+                'capacity': 'cc',
+                'available': 'avail',
+                'location': 'loc',
+                'fixedPrice': 'fxd',
+                'askingPrice': 'ask',
+                'chassisNumber': 'chass',
+                'engineNumber': 'eng',
+            };
+
+            // Build featureMap with only selectedFeatures
+            const featureMap = selectedFeatures.reduce((acc, feature) => {
+                if (allFeatureMap[feature]) {
+                    acc[feature] = allFeatureMap[feature];
+                }
+                return acc;
+            }, {});
+
+            // Build _show array from selectedFeatures
+            const showParams = selectedFeatures.reduce((acc, feature, index) => {
+                const mappedFeature = featureMap[feature];
+                if (mappedFeature) {
+                    acc[`_show[${index}]`] = mappedFeature;
+                }
+                return acc;
+            }, {});
+
+            // Add static parameter for detail link
+            showParams[`_show[${selectedFeatures.length}]`] = "d-link";
+
+            const params = {
+                _page: 1,
+                _shop_id: pathname === '/company-shop/' ? selectedCompanyShop?.shop?.s_id : selectedShop?.s_id,
+                _order: order || 'asc',
+                _orderBy: orderBy || 'brand_model',
+                ...showParams,
+                _is_down: 1,
+            };
+
+
+            
+
+            const response = await VehicleService.Queries.stockListDownload(params);
+
+            // console.log("response pdf download", response);
+
+            // The response itself is the Blob, not response.data
+            const blob = response.data || response;
+
+            if (blob instanceof Blob && blob.size > 0) {
+                // Try to read first few bytes to verify it's a PDF
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const arr = new Uint8Array(reader.result).subarray(0, 5);
+                    const header = String.fromCharCode.apply(null, arr);
+
+                    if (header === '%PDF-') {
+                        // Valid PDF, proceed with download
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `Stock_List_${new Date().getTime()}.pdf`;
+
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+
+                        toast.success('PDF downloaded successfully!', { id: 'pdf-download' });
+                    } else {
+                        // Not a valid PDF, but might be HTML error page
+                        console.error('Invalid PDF file. Header:', header);
+
+                        // Try to read as text to see error message
+                        const textReader = new FileReader();
+                        textReader.onloadend = () => {
+                            console.error('Response content:', textReader.result);
+                        };
+                        textReader.readAsText(blob);
+
+                        toast.error('Downloaded file is not a valid PDF.', { id: 'pdf-download' });
+                    }
+                };
+                reader.readAsArrayBuffer(blob.slice(0, 5));
+            } else {
+                // Unknown response format
+                console.error('Invalid response:', response);
+                toast.error('Invalid PDF response from server.', { id: 'pdf-download' });
+            }
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF. Please try again.', { id: 'pdf-download' });
+        } finally {
+            setIsGeneratingPDF(false);
+        }
+    }
 
     return (
         <>
@@ -142,6 +225,43 @@ const VehicleStockListModal = ({ open, setOpen }) => {
                                     {feature.label}
                                 </button>
                             ))}
+
+                        </div>
+
+                        {/* Sorting Options - 2 dropdowns in a row */}
+                        <div className='grid grid-cols-2 gap-3 mt-4'>
+                            {/* Order By Dropdown */}
+                            <div>
+                                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                                    Order By
+                                </label>
+                                <select
+                                    value={orderBy}
+                                    onChange={(e) => setOrderBy(e.target.value)}
+                                    className='w-full py-3 px-4 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200'
+                                >
+                                    <option value="v_priority">Priority</option>
+                                    <option value="v_created_at">Upload Date</option>
+                                    <option value="v_milage">Mileage</option>
+                                    <option value="brand_model">Brand/Model/package</option>
+                                    {/* <option value="package">Package</option> */}
+                                </select>
+                            </div>
+
+                            {/* Order Dropdown */}
+                            <div>
+                                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                                    Order
+                                </label>
+                                <select
+                                    value={order}
+                                    onChange={(e) => setOrder(e.target.value)}
+                                    className='w-full py-3 px-4 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200'
+                                >
+                                    <option value="ASC">Ascending</option>
+                                    <option value="DESC">Descending</option>
+                                </select>
+                            </div>
                         </div>
 
                         {/* Info text */}
@@ -151,24 +271,30 @@ const VehicleStockListModal = ({ open, setOpen }) => {
 
                         {/* Generate PDF Button */}
                         <button
-                            onClick={handleInvoiceModalOpen}
-                            className='w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg'
+                           onClick={handleDownload}
+                            // onClick={handleInvoiceModalOpen}
+                            className="w-full font-semibold py-4 rounded-lg transition-all duration-200 shadow-md bg-blue-500 hover:bg-blue-600 hover:shadow-lg text-white"
                         >
-                            Generate PDF Stock List
+                            {/* Generate PDF Stock List */}
+                             {isGeneratingPDF ? 'Generating...' : ' Generate PDF Stock List'}
                         </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Stock List Preview Modal */}
-            <StockListPreviewModal
+            {/*  <StockListPreviewModal
                 open={previewModalOpen}
                 setOpen={setPreviewModalOpen}
                 selectedFeatures={selectedFeatures}
-                products={products}
-            />
+                userInfo={userInfo}
+                orderBy={orderBy}
+                order={order}
+            /> */}
         </>
     )
 }
 
 export default VehicleStockListModal
+
+

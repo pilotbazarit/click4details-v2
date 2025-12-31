@@ -4,6 +4,7 @@ import { LayoutDashboard, LogOut, ShoppingCart, User, UserPen } from 'lucide-rea
 import LoginService from '@/services/LoginService';
 import { useAppContext } from '@/context/AppContext';
 import { usePathname } from "next/navigation";
+import Link from 'next/link';
 // import { Cross2Icon } from "@radix-ui/react-icons";
 
 const MyHomePopover = ({ setLogout }) => {
@@ -79,71 +80,71 @@ const MyHomePopover = ({ setLogout }) => {
                                 {/* Top Menu Items */}
 
                                 <li className={`${isActiveProfile ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                    <button
+                                    <Link
+                                        href="/profile"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/profile")}
                                     >
                                         <UserPen className="h-4 w-4" />
                                         Profile
-                                    </button>
+                                    </Link>
                                 </li>
 
                                 <li className={`${isActiveMyShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                    <button
+                                    <Link
+                                        href="/my-shop"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/my-shop")}
                                     >
                                         <ShoppingCart className="h-4 w-4" />
                                         My Shop
-                                    </button>
+                                    </Link>
                                 </li>
 
                                 <li className={`${isActiveCompanyShop ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
-                                    <button
+                                    <Link
+                                        href="/company-shop"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/company-shop")}
                                     >
                                         <ShoppingCart className="h-4 w-4" />
                                         Company Shop
-                                    </button>
+                                    </Link>
                                 </li>
 
                                 {
-                                    (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'pbl') && (
+                                    (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') && (
                                         <>
                                             <li className={`${isActiveMemberShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                                <button
+                                                <Link
+                                                    href="/member-shop"
                                                     className="flex items-center gap-2 hover:text-gray-900 transition"
-                                                    onClick={() => router.push("/member-shop")}
                                                 >
                                                     <ShoppingCart className="h-4 w-4" />
                                                     Member Shop
-                                                </button>
+                                                </Link>
                                             </li>
 
 
 
                                             <li className={`${isActiveUserShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                                <button
+                                                <Link
+                                                    href="/user-shop"
                                                     className="flex items-center gap-2 hover:text-gray-900 transition"
-                                                    onClick={() => router.push("/user-shop")}
                                                 >
                                                     <ShoppingCart className="h-4 w-4" />
                                                     User Shop
-                                                </button>
+                                                </Link>
                                             </li>
                                         </>
                                     )
                                 }
 
                                 <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
-                                    <button
+                                    <Link
+                                        href="/dashboard"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/dashboard")}
                                     >
                                         <LayoutDashboard className="h-4 w-4" />
                                         Dashboard
-                                    </button>
+                                    </Link>
                                 </li>
 
 

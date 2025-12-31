@@ -11,6 +11,7 @@ import {
   History,
   LayoutDashboard,
   LayoutList,
+  List,
   ListChecks,
   MessageSquare,
   MessageSquareText,
@@ -121,6 +122,46 @@ const SideBar = () => {
     {
       name: "General Products",
       path: "/dashboard/products/general-product/list/",
+      icon: PackageSearch,
+    },
+    // {
+    //   name: "Order List",
+    //   // path: "/dashboard/orders/list/",
+    //   path: "/dashboard/order-list",
+    //   icon: PackageSearch,
+    // },
+
+    {
+      name: "Orders",
+      icon: List,
+      children: [
+        {
+          name: "Pending Orders",
+          path: "/dashboard/order-list/pending",
+          icon: Users,
+        },
+        {
+          name: "Processing Orders",
+          path: "/dashboard/order-list/processing",
+          icon: Users,
+        },
+        {
+          name: "Completed Orders",
+          path: "/dashboard/order-list/completed",
+          icon: Users,
+        },
+        {
+          name: "Cancelled Orders",
+          path: "/dashboard/order-list/cancelled",
+          icon: Users,
+        }
+      ],
+    },
+
+    {
+      name: "Cart List",
+      // path: "/dashboard/orders/list/",
+      path: "/dashboard/cart-list",
       icon: PackageSearch,
     },
     {

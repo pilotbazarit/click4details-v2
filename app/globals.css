@@ -163,3 +163,17 @@
   color: blue;
   text-decoration: underline;
 }
+
+/* SweetAlert2 z-index fix for modals */
+.swal2-container-high-z {
+  z-index: 99999 !important;
+}
+
+.swal2-popup-high-z {
+  z-index: 99999 !important;
+}
+
+.swal2-actions-visible {
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}

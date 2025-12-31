@@ -26,15 +26,28 @@ const Commands = {
             Accept: "application/json",
         }
     }),
+
+
+
+    cloneVehicle: (id, shopId) => commandApi.post(`/api/vehicle/takeVihicle/${id}?_shop_id=${shopId}`, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+        }
+    }),
 };
 
 const Queries = {
     // getVehicles: () => commandApi.get("/api/partner-vehicle", {}), getVehiclesWithLogin
     getVehiclesWithoutLogin: (params) => commandApi.get(`/api/partner-vehicle`, {params}),
 
+    stockListDownload: (params) => commandApi.get(`/api/vehicle/stock-vehicle-download`, {params, responseType: 'blob'}),
+
     getAdvanceFilterProducts: (params) => commandApi.get(`/api/get-advance-filter-products`, {params}),
 
     getVehiclesWithLogin: (params) => commandApi.get(`/api/vehicle`, {params}),
+
+    getVehiclesSortBYBrandModalPackage: (params) => commandApi.get(`/api/vehicle/sortByBrandModelPackage`, {params}),
 
 
     getCompanyShopVehicle: (params) => commandApi.get(`/api/vehicle`, {params}),

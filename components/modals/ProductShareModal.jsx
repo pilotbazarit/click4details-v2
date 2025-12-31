@@ -34,7 +34,26 @@ const ProductShareModal = ({ open, setOpen, product }) => {
     }, []);
 
 
+    // console.log("product in share modal User:::::", user);
+
+
     const formattedPermissions = formatPermissions(user?.permissions);
+
+
+
+    let companyShopId = selectedCompanyShop?.shop?.s_id;
+
+    let priceAction = "StockList";
+    let action = "Vehicle";
+
+    const hasPermissionStockList = companyShopId
+        ? formattedPermissions.some(
+            permission =>
+                permission.shopId === companyShopId &&
+                (permission.section === "Vehicle" || permission.section === "*") &&
+                (permission.action === priceAction || permission.action === "*")
+        )
+        : false;
 
 
     // console.log("-------------------------------------");
@@ -358,6 +377,127 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${productName}\n\n${url}`)}`;
                 window.open(whatsappUrl, '_blank');
             }
+            return;
+        }
+
+        // featureAndSpecification
+        if (option === 'featureAndSpecification') {
+            // WhatsApp e pathano
+
+            let allDetails = '';
+
+            // Features সেকশন
+            allDetails += `\nFeatures:\n`;
+
+            // Brand
+            if (product?.v_brand_name) {
+                allDetails += `Brand : ${product?.v_brand_name}\n`;
+            }
+            // Model
+            if (product?.v_model_name) {
+                allDetails += `Model: ${product?.v_model_name}\n`;
+            }
+            // Package
+            if (product?.v_edition_name) {
+                allDetails += `Package: ${product?.v_edition_name}\n`;
+            }
+            // Condition
+            if (product?.v_condition_name) {
+                allDetails += `Condition : ${product?.v_condition_name}\n`;
+            }
+            // Model Yr
+            if (product?.v_mod_year) {
+                allDetails += `Model Yr : ${product?.v_mod_year}\n`;
+            }
+            // Reg Yr
+            if (product?.v_registration) {
+                allDetails += `Reg Yr : ${product?.v_registration}\n`;
+            }
+            // Grade
+            if (product?.v_grade_name) {
+                allDetails += `Grade : ${product?.v_grade_name}\n`;
+            }
+            // Exterior Grd
+            if (product?.v_ext_grade_name) {
+                allDetails += `Exterior Grd : ${product?.v_ext_grade_name}\n`;
+            }
+            // Interior Grd
+            if (product?.v_int_grade_name) {
+                allDetails += `Interior Grd : ${product?.v_int_grade_name}\n`;
+            }
+            // Mileage
+            if (product?.v_mileage) {
+                allDetails += `Mileage: ${product?.v_mileage}\n`;
+            }
+            // Color
+            if (product?.v_color_name) {
+                allDetails += `Color: ${product?.v_color_name}\n`;
+            }
+            // Fuel
+            if (product?.v_fuel_name) {
+                allDetails += `Fuel : ${product?.v_fuel_name}\n`;
+            }
+            // Option
+            if (product?.v_transmission_name) {
+                allDetails += `Option : ${product?.v_transmission_name}\n`;
+            }
+            // CC
+            if (product?.v_capacity) {
+                allDetails += `CC : ${product?.v_capacity}\n`;
+            }
+            // Body
+            if (product?.v_skeleton_name) {
+                allDetails += `Body : ${product?.v_skeleton_name}\n`;
+            }
+            // Seat
+            if (product?.v_seat_name) {
+                allDetails += `Seat : ${product?.v_seat_name}\n`;
+            }
+            // Chassis No
+            if (product?.v_chassis) {
+                allDetails += `Chassis No : ${product?.v_chassis}\n`;
+            }
+            // Engine No
+            if (product?.v_engine) {
+                allDetails += `Engine No: ${product?.v_engine}\n`;
+            }
+            // Tax Token
+            if (product?.v_tax_token_exp_date) {
+                allDetails += `Tax Token : ${product?.v_tax_token_exp_date}\n`;
+            }
+            // Fitness
+            if (product?.v_fitness_exp_date) {
+                allDetails += `Fitness : ${product?.v_fitness_exp_date}\n`;
+            }
+
+            // Specific Features সেকশন
+            if (product?.feature_specification && product.feature_specification.length > 0) {
+                allDetails += `\nSpecific Features:\n`;
+
+                const featureText = product.feature_specification
+                    .map((feature) => {
+                        if (
+                            feature?.specification?.length > 0 &&
+                            feature.specification.some((item) => item.is_selected)
+                        ) {
+                            const selectedItems = feature.specification
+                                .filter((item) => item.is_selected)
+                                .map((item) => item.fs_title)
+                                .join(", ");
+
+                            return `${feature.md_title}: ${selectedItems}`;
+                        }
+                        return null;
+                    })
+                    .filter(Boolean)
+                    .join("\n");
+
+                allDetails += featureText;
+            }
+
+
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${allDetails}\n`)}`;
+            window.open(whatsappUrl, '_blank');
             return;
         }
 
@@ -763,7 +903,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 }
 
                 if (user?.phone) {
-                    myProfileMessage += ` Phone: ${user.phone}\n`;
+                    myProfileMessage += ` Phone: +880${user.phone}\n`;
                 }
 
                 if (user?.company_name) {
@@ -828,7 +968,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
     return (
         // <Dialog open={open} onOpenChange={setOpen}>
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className='text-center font-thin'>Share Product</DialogTitle>
                 </DialogHeader>
@@ -840,6 +980,20 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                     <h3 className='text-green-600 font-semibold mb-4'>SEND FOR BUSINESS PURPOSE</h3>
 
                     <div className='space-y-3'>
+
+                        <div
+                            className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                            onClick={() => handleBusinessShare('featureAndSpecification')}
+                        >
+                            <span className='text-gray-700'>Share All Feature & Feature Specification</span>
+                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                {selectedBusinessOption === 'featureAndSpecification' && (
+                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                )}
+                            </div>
+                        </div>
+
+
                         {/* Option 1: All Image */}
                         <div
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
@@ -988,17 +1142,22 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                         </div>
                                     </div>
 
-                                    <div
-                                        className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                        onClick={() => handleBusinessShare('stockList')}
-                                    >
-                                        <span className='text-gray-700'>Stock List</span>
-                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                            {selectedBusinessOption === 'stockList' && (
-                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                            )}
-                                        </div>
-                                    </div>
+                                    {
+                                        (hasPermissionStockList || isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => handleBusinessShare('stockList')}
+                                            >
+                                                <span className='text-gray-700'>Stock List</span>
+                                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                    {selectedBusinessOption === 'stockList' && (
+                                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
 
                                 </>
 
@@ -1121,12 +1280,14 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 onShare={handlePriceShare}
                 selectedCompanyShop={selectedCompanyShop}
                 formattedPermissions={formattedPermissions}
+                isMyShop={isMyShop}
             />
 
             {/* Vehicle Stock List Modal */}
             <VehicleStockListModal
                 open={stockListModalOpen}
                 setOpen={setStockListModalOpen}
+                user={user}
             />
         </Dialog>
     )

@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 
-const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchParams, isEmptyValue, formatValue, allLocations }) => {
+const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchParams, isEmptyValue, formatValue, allLocations, allShops }) => {
   if (!isOpen || !historyItem) return null;
 
   const parsed = historyItem.search_params ? parseSearchParams(historyItem.search_params) : null;
@@ -81,6 +81,18 @@ const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchPar
       addDisplayEntry("Location", locationNames);
     }
 
+    // Add this block for Shops
+    if (parsed.shops && Array.isArray(parsed.shops) && allShops && allShops.length > 0) {
+      const shopNames = parsed.shops
+        .map((shopId) => {
+          const foundShop = allShops.find((shop) => shop.value === shopId || shop.value === String(shopId));
+          return foundShop ? foundShop.label : null;
+        })
+        .filter((name) => name !== null)
+        .join(", ");
+      addDisplayEntry("Shops", shopNames);
+    }
+
     Object.entries(parsed).forEach(([key, value]) => {
       if (
         ![
@@ -115,7 +127,8 @@ const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchPar
           "history_id",
           "customerMobile",
           "location",
-        ].includes(key) // Exclude 'consolidated', 'operation_type', 'history_id', and 'customerMobile' fields
+          "shops",
+        ].includes(key) // Exclude 'consolidated', 'operation_type', 'history_id', 'customerMobile', 'location', and 'shops' fields
       ) {
         addDisplayEntry(key, value);
       }

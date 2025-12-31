@@ -26,11 +26,33 @@ const Commands = {
              Accept: "application/json",
         }
     }),
+
+
+    saveAddress: (data) => commandApi.post("/api/address", data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+             Accept: "application/json",
+        }
+    }),
+
+    // clearCart: (data) => commandApi.post("/api/cart/clear", data, {
+    //     headers: {
+    //         "Content-Type": "multipart/form-data",
+    //          Accept: "application/json",
+    //     }
+    // }),
+
+
+    clearCart: (cartId) => commandApi.delete(`/api/cart/${cartId}`, {}),
 };
 
 const Queries = {
     // getVehicles: () => commandApi.get("/api/partner-vehicle", {}),
     getCartList: (params) => commandApi.get(`/api/cart`, { params }),
+
+    getDistrictList: (params) => commandApi.get(`/api/address/dropdown-data`, { params }),
+
+    getUserAddresses: (params) => commandApi.get(`/api/address`, { params }),
 };
 
 export default {

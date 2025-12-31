@@ -773,6 +773,7 @@ const UpdateProductForm = ({ productId }) => {
                 setValue('vp_pbl_additional_amount', data?.vehicle_db_price?.vp_pbl_additional_amount);
                 setValue('vp_pbl_price_status', data?.vehicle_price?.v_pbl_price_status);
                 setValue('vp_pbl_asking_price', data?.vehicle_db_price?.vp_pbl_asking_price);
+                setValue('vp_user_costing_price', data?.vehicle_db_price?.vp_user_costing_price);
 
                 setValue('pbl_partner_code', data.pbl_partner_code);
                 setValue('v_description', data.v_description);
@@ -921,6 +922,7 @@ const UpdateProductForm = ({ productId }) => {
         data.vp_pbl_additional_amount = data.vp_pbl_additional_amount ? data?.vp_pbl_additional_amount : '';
         data.vp_pbl_price_status = data.vp_pbl_price_status ? data?.vp_pbl_price_status : '';
         data.vp_pbl_asking_price = data.vp_pbl_asking_price ? data?.vp_pbl_asking_price : '';
+        data.vp_user_costing_price = data.vp_user_costing_price ? data?.vp_user_costing_price : '';
         data.vp_pbl_hs_asking_price = data.vp_pbl_hs_asking_price ? data?.vp_pbl_hs_asking_price : '';
         data.vp_pbl_hs_asking_price = data.vp_pbl_hs_asking_price ? data?.vp_pbl_hs_asking_price : '';
         data.v_priority = data.v_priority ? data?.v_priority : '';
@@ -1999,6 +2001,20 @@ const UpdateProductForm = ({ productId }) => {
                                                             name="vp_pbl_asking_price"
                                                             placeholder="Enter PBL Asking Price"
                                                             {...register("vp_pbl_asking_price")}
+                                                            onKeyDown={onlyDecimalInput}
+                                                        />
+                                                    </div>
+
+
+                                                    <div className="mb-2">
+                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                            User Costing Price
+                                                        </label>
+                                                        <Input
+                                                            id="vp_user_costing_price"
+                                                            name="vp_user_costing_price"
+                                                            placeholder="Enter PBL Additional Price"
+                                                            {...register("vp_user_costing_price")}
                                                             onKeyDown={onlyDecimalInput}
                                                         />
                                                     </div>

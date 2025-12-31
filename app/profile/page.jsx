@@ -18,7 +18,8 @@ import { AdvanceFilterProductContextProvider } from "@/context/AdvanceFilterProd
 import { Minus, Plus } from "lucide-react";
 import user_icon from "@/assets/user_icon.svg";
 import Image from "next/image";
-
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 import UserService from "@/services/UserService";
 import { method } from "lodash";
@@ -36,6 +37,7 @@ const Profile = () => {
     const [facebooks, setFacebooks] = useState([""]);
     const [youtubes, setYoutubes] = useState([""]);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [countryCode, setCountryCode] = useState("+880");
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -85,11 +87,24 @@ const Profile = () => {
         if (response.status === "success") {
             const profile = response?.data?.profile || {};
 
+            // Format phone number with country code if not already present
+            let phoneNumber = response?.data?.phone ?? "";
+            console.log("Original phone from API:", phoneNumber);
+
+            // Remove any + or 880 prefix first to normalize
+            phoneNumber = phoneNumber.replace(/^\+?880/, '');
+            // Then add 880 prefix
+            if (phoneNumber) {
+                phoneNumber = '880' + phoneNumber;
+            }
+
+            console.log("Formatted phone for display:", phoneNumber);
+
             setUser({
                 id: response?.data?.id ?? "",
                 name: response?.data?.name ?? "",
                 email: response?.data?.email ?? "",
-                phone: response?.data?.phone ?? "",
+                phone: phoneNumber,
                 designation: profile?.up_designation ?? "",
                 company_name: profile?.up_company ?? "",
                 facebook: profile?.up_facebook ?? "",
@@ -120,10 +135,21 @@ const Profile = () => {
         setIsUpdating(true);
 
         try {
+            // Remove country code from phone number before submitting
+            let phoneForSubmit = user?.phone || "";
+            const dialCodeWithoutPlus = countryCode.replace('+', '');
+
+            if (phoneForSubmit.startsWith(dialCodeWithoutPlus)) {
+                phoneForSubmit = phoneForSubmit.substring(dialCodeWithoutPlus.length);
+            } else if (phoneForSubmit.startsWith('+' + dialCodeWithoutPlus)) {
+                phoneForSubmit = phoneForSubmit.substring(dialCodeWithoutPlus.length + 1);
+            }
+
             const data = {
                 name: user?.name,
                 email: user?.email,
-                phone: user?.phone,
+                phone: phoneForSubmit,
+                country_code: countryCode,
                 up_designation: user?.designation,
                 up_company: user?.company_name,
                 up_facebook: user?.facebook,
@@ -338,13 +364,23 @@ const Profile = () => {
                                 <label className="text-base font-medium" htmlFor="customer-mobile">
                                     Mobile Number
                                 </label>
-                                <input
-                                    id="customer-mobile"
-                                    type="tel"
-                                    placeholder="Enter Mobile Number"
-                                    className="outline-none py-2 px-3 rounded border border-gray-500/40 bg-gray-100 cursor-not-allowed"
+                                <PhoneInput
+                                    country={'bd'}
                                     value={user?.phone || ""}
-                                    readOnly
+                                    onChange={(phone, country) => {
+                                        const dialCode = country.dialCode;
+                                        setUser({ ...user, phone: phone });
+                                        setCountryCode(`+${dialCode}`);
+                                    }}
+                                    inputProps={{
+                                        name: 'phone',
+                                        id: 'customer-mobile',
+                                    }}
+                                    containerClass="w-full"
+                                    inputClass="!w-full"
+                                    buttonClass="!bg-gray-50 dark:!bg-gray-600"
+                                    dropdownClass="!bg-white dark:!bg-gray-700"
+                                    countryCodeEditable={false}
                                 />
                             </div>
 

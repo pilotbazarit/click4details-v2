@@ -103,7 +103,27 @@ const GeneralProductDetails = ({ productDetails }) => {
         saveAs(content, `${folderName}.zip`);
     };
 
-    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.app';
+    const downloadAsUnzip = async () => {
+        // if (!folderName.trim()) {
+        //     alert("Please enter a folder name");
+        //     return;
+        // }
+
+        setShowModal(false);
+
+        for (let i = 0; i < sliderImage.length; i++) {
+            try {
+                const response = await fetch(sliderImage[i]);
+                const blob = await response.blob();
+                const fileName = `${folderName}-image-${i + 1}.${blob.type.split("/")[1]}`;
+                saveAs(blob, fileName);
+            } catch (error) {
+                console.error(`Error downloading image ${i + 1}:`, error);
+            }
+        }
+    };
+
+    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
 
     if (!productDetails) {
         return <div>Loading...</div>; // Or some other loading state
@@ -402,7 +422,7 @@ const GeneralProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Click4Details'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -491,7 +511,7 @@ const GeneralProductDetails = ({ productDetails }) => {
                                             </button>
                                             {showModal && (
                                                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                                                    <div className="bg-white p-6 rounded-lg shadow-lg w-80">
+                                                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                                                         <h2 className="text-lg font-bold mb-4">Enter Folder Name</h2>
                                                         <input
                                                             type="text"
@@ -500,19 +520,27 @@ const GeneralProductDetails = ({ productDetails }) => {
                                                             placeholder="Folder name..."
                                                             className="border border-gray-300 rounded w-full px-3 py-2 mb-4"
                                                         />
-                                                        <div className="flex justify-end gap-2">
+                                                        <div className="flex justify-between gap-2">
                                                             <button
                                                                 onClick={() => setShowModal(false)}
                                                                 className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
                                                             >
                                                                 Cancel
                                                             </button>
-                                                            <button
-                                                                onClick={downloadAsZip}
-                                                                className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
-                                                            >
-                                                                Download
-                                                            </button>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={downloadAsZip}
+                                                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                                >
+                                                                    Download as ZIP
+                                                                </button>
+                                                                <button
+                                                                    onClick={downloadAsUnzip}
+                                                                    className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+                                                                >
+                                                                    Download at Gallery
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

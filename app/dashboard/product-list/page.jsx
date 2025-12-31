@@ -607,6 +607,13 @@ const ProductList = () => {
                 </TableHead>
 
 
+                <TableHead className="border-r border-gray-300">
+                  <div className="flex items-center">
+                    Package
+                  </div>
+                </TableHead>
+
+
 
                 <TableHead className="border-r border-gray-300 relative">
                   <div className="flex items-center justify-between relative">
@@ -766,7 +773,7 @@ const ProductList = () => {
                         className="text-red-600 hover:text-red-800"
                         aria-label={`Delete shop ${item.s_title}`}
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={21} />
                       </button>
                     </TableCell>
                   </TableRow>

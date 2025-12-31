@@ -3,10 +3,20 @@ import Register from "./Register";
 import { useAppContext } from "@/context/AppContext";
 import LoginService from "@/services/LoginService";
 import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+
+// Yup Validation Schema
+const schema = yup.object().shape({
+  login: yup.string().required("Email or phone is required"),
+  password: yup.string().required("Password is required"),
+});
 
 export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
-  const [login, setLogin] = useState("");
-  const [password, setPassword] = useState("");
+  const [countryCode, setCountryCode] = useState("+880");
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -16,18 +26,38 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
 
   const router = useRouter();
 
-  const handleChange = (e) => {
-    e.target.name === "login"
-      ? setLogin(e.target.value)
-      : setPassword(e.target.value);
-  };
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+    reset,
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
+    setError(false);
+    setFieldError(null);
+
+    // Remove country code from phone number if it's a phone number
+    let loginValue = data.login;
+    const dialCodeWithoutPlus = countryCode.replace('+', '');
+
+    // If the login value starts with the country code, remove it
+    if (loginValue.startsWith(dialCodeWithoutPlus)) {
+      loginValue = loginValue.substring(dialCodeWithoutPlus.length);
+    } else if (loginValue.startsWith('+' + dialCodeWithoutPlus)) {
+      loginValue = loginValue.substring(dialCodeWithoutPlus.length + 1);
+    }
 
     try {
-      const res = await LoginService.Commands.login({ login, password });
+      const res = await LoginService.Commands.login({
+        login: loginValue,
+        password: data.password,
+        country_code: countryCode,
+      });
 
       if (res.status === "success") {
         localStorage.setItem("auth_token", res.token);
@@ -35,6 +65,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
         setUser(JSON.stringify(res.data));
 
         onClose(); // close modal
+        reset(); // clear form
         router.push("/my-shop"); // redirect to shop page
       } else {
         setFieldError(res.errors);
@@ -55,7 +86,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
         <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
           <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Sign in to Click4Details
+              Sign in to our pilot bazar
             </h3>
             <button
               type="button"
@@ -84,26 +115,51 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
           </div>
 
           <div className="p-4 md:p-5">
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="login"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
-                  Your email/phone
+                  Your phone
                 </label>
-                <input
-                  type="text"
+                <Controller
                   name="login"
-                  id="login"
-                  required
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                  placeholder="name@company.com/+8801XXXXXXXXX"
-                  onChange={handleChange}
+                  control={control}
+                  render={({ field: { onChange, value } }) => (
+                    <PhoneInput
+                      country={'bd'}
+                      value={value}
+                      onChange={(phone, country) => {
+                        const dialCode = country.dialCode;
+                        // Ensure country code is always present
+                        if (!phone.startsWith(dialCode)) {
+                          onChange(dialCode);
+                        } else {
+                          onChange(phone);
+                          setCountryCode(`+${dialCode}`);
+                        }
+                      }}
+                      inputProps={{
+                        name: 'login',
+                        required: true,
+                      }}
+                      containerClass="w-full"
+                      inputClass="!w-full"
+                      buttonClass="!bg-gray-50 dark:!bg-gray-600"
+                      dropdownClass="!bg-white dark:!bg-gray-700"
+                      countryCodeEditable={false}
+                    />
+                  )}
                 />
-                <p className="text-sm text-red-500 mt-2">
-                  {fieldError?.login[0]}
-                </p>
+                {errors.login && (
+                  <p className="text-red-500 text-sm mt-2">{errors.login.message}</p>
+                )}
+                {fieldError?.login && (
+                  <p className="text-sm text-red-500 mt-2">
+                    {fieldError?.login[0]}
+                  </p>
+                )}
               </div>
               <div>
                 <label
@@ -113,14 +169,17 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
                   Your password
                 </label>
                 <input
+                  {...register("password")}
                   type="password"
                   name="password"
                   id="password"
                   required
                   placeholder="••••••••"
                   className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                  onChange={handleChange}
                 />
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-2">{errors.password.message}</p>
+                )}
               </div>
 
               {error &&

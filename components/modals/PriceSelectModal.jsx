@@ -8,14 +8,18 @@ import {
 import { Button } from "@/components/ui/button"
 import VehicleService from '@/services/VehicleService';
 
-const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop, formattedPermissions }) => {
+const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop, formattedPermissions, isMyShop }) => {
     const [priceType, setPriceType] = useState('fixed'); // 'asking', 'fixed', 'variable'
     const [urgentSale, setUrgentSale] = useState(false);
+
+
+    // console.log("product::::::::::", product);
 
     // Get prices from product and make them editable
     const [askingPrice, setAskingPrice] = useState(product?.vehicle_db_price?.vp_user_asking_price || 0);
     const [fixedPrice, setFixedPrice] = useState(product?.vehicle_db_price?.vp_user_fixed_price || 0);
     const [variablePrice, setVariablePrice] = useState(product?.vehicle_db_price?.vp_variable_price || 0);
+    const [userCostingPrice, setUserCostingPrice] = useState(product?.vehicle_price?.v_costing_price || 0);
 
     const updateVehiclePrice = async (priceData) => {
         try {
@@ -35,30 +39,29 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
         }
     };
 
-    
+
     const handleShare = () => {
         let companyShopId = selectedCompanyShop?.shop?.s_id;
-        
+
         let priceAction = ""
         let action = "Vehicle";
 
-        if(priceType === 'asking'){
+        if (priceType === 'asking') {
             priceAction = "UpdateAskingPrice"
-        }else if(priceType === 'fixed'){
+        } else if (priceType === 'fixed') {
             priceAction = "UpdateFixedPrice"
-        }else if(priceType === 'variable'){
+        } else if (priceType === 'variable') {
             priceAction = "UpdateVariablePrice"
         }
 
         const hasPermission = companyShopId
-        ? formattedPermissions.some(
-            permission =>
-                permission.shopId === companyShopId &&
-                (permission.section === "Vehicle" || permission.section === "*") &&
-                (permission.action === priceAction || permission.action === "*")
-        )
-        : false;
-
+            ? formattedPermissions.some(
+                permission =>
+                    permission.shopId === companyShopId &&
+                    (permission.section === "Vehicle" || permission.section === "*") &&
+                    (permission.action === priceAction || permission.action === "*")
+            )
+            : false;
 
         // const hasPermissionOld = formattedPermissions.some(
         //     permission =>
@@ -77,7 +80,7 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
         onShare(priceData);
         setOpen(false);
 
-        if(hasPermission){
+        if (hasPermission) {
             const response = updateVehiclePrice(priceData);
         }
     };
@@ -87,6 +90,17 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
         setPriceType('fixed');
         setUrgentSale(false);
     };
+
+
+    let companyShopId = selectedCompanyShop?.shop?.s_id;
+    const hasUserPricePermission = companyShopId
+        ? formattedPermissions.some(
+            permission =>
+                permission.shopId === companyShopId &&
+                (permission.section === "Vehicle" || permission.section === "*") &&
+                (permission.action === "UpdateCostingPrice" || permission.action === "*")
+        )
+        : false;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -103,9 +117,8 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
                 <div className="space-y-3">
                     {/* Asking Price */}
                     <div
-                        className={`border rounded-lg p-3 transition ${
-                            priceType === 'asking' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                        }`}
+                        className={`border rounded-lg p-3 transition ${priceType === 'asking' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                            }`}
                     >
                         <label className="text-sm font-medium text-gray-700 block mb-2">
                             Asking Price
@@ -119,9 +132,8 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
                                 placeholder="Enter asking price"
                             />
                             <div
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${
-                                    priceType === 'asking' ? 'border-blue-500' : 'border-gray-400'
-                                }`}
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${priceType === 'asking' ? 'border-blue-500' : 'border-gray-400'
+                                    }`}
                                 onClick={() => setPriceType('asking')}
                             >
                                 {priceType === 'asking' && (
@@ -133,9 +145,8 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
 
                     {/* Fixed Price */}
                     <div
-                        className={`border rounded-lg p-3 transition ${
-                            priceType === 'fixed' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                        }`}
+                        className={`border rounded-lg p-3 transition ${priceType === 'fixed' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                            }`}
                     >
                         <label className="text-sm font-medium text-gray-700 block mb-2">
                             Fixed Price
@@ -149,9 +160,8 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
                                 placeholder="Enter fixed price"
                             />
                             <div
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${
-                                    priceType === 'fixed' ? 'border-blue-500' : 'border-gray-400'
-                                }`}
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${priceType === 'fixed' ? 'border-blue-500' : 'border-gray-400'
+                                    }`}
                                 onClick={() => setPriceType('fixed')}
                             >
                                 {priceType === 'fixed' && (
@@ -163,9 +173,8 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
 
                     {/* Variable Price */}
                     <div
-                        className={`border rounded-lg p-3 transition ${
-                            priceType === 'variable' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                        }`}
+                        className={`border rounded-lg p-3 transition ${priceType === 'variable' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                            }`}
                     >
                         <label className="text-sm font-medium text-gray-700 block mb-2">
                             Variable Price
@@ -179,9 +188,8 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
                                 placeholder="Enter variable price"
                             />
                             <div
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${
-                                    priceType === 'variable' ? 'border-blue-500' : 'border-gray-400'
-                                }`}
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer flex-shrink-0 ${priceType === 'variable' ? 'border-blue-500' : 'border-gray-400'
+                                    }`}
                                 onClick={() => setPriceType('variable')}
                             >
                                 {priceType === 'variable' && (
@@ -191,14 +199,38 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
                         </div>
                     </div>
 
+                    {/* User Costing Price */}
+                    {
+                        (hasUserPricePermission || isMyShop) && (
+                            <div
+                                className={`border rounded-lg p-3 transition border-gray-300`}
+                            >
+                                <label className="text-sm font-medium text-gray-700 block mb-2">
+                                    User Costing Price
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        value={userCostingPrice}
+                                        // onChange={(e) => setVariablePrice(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Enter variable price"
+                                        readOnly
+                                    />
+
+                                </div>
+                            </div>
+                        )
+                    }
+
+
                     {/* Urgent Sale Checkbox */}
                     <div
                         className="flex items-center gap-3 p-3 cursor-pointer"
                         onClick={() => setUrgentSale(!urgentSale)}
                     >
-                        <div className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
-                            urgentSale ? 'bg-blue-500 border-blue-500' : 'border-gray-400'
-                        }`}>
+                        <div className={`w-5 h-5 border-2 rounded flex items-center justify-center ${urgentSale ? 'bg-blue-500 border-blue-500' : 'border-gray-400'
+                            }`}>
                             {urgentSale && (
                                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />

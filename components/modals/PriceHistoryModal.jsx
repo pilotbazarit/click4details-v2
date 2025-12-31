@@ -58,12 +58,12 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
                 setHistoryData(response?.data);
             }
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
         }
     }
 
-    console.log("-----------------------");
-    console.log("setHistoryData", historyData);
+    // console.log("-----------------------");
+    // console.log("setHistoryData", historyData);
 
 
     useEffect(() => {

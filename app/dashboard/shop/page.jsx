@@ -45,7 +45,9 @@ const Shop = () => {
 
       const params = {
         _page: 1,
-        _perPage: 1000
+        _perPage: 1000,
+        _order: 'desc',
+        _orderBy: 's_created_at',
       };
 
 
@@ -192,13 +194,13 @@ const Shop = () => {
                           <Pencil size={18} />
                         </button>
 
-                        <button
+                        {/* <button
                           // Add delete handler here
                           className="text-red-600 hover:text-red-800"
                           aria-label={`Delete shop ${shop.s_title}`}
                         >
                           <Trash2 size={18} />
-                        </button>
+                        </button> */}
                       </TableCell>
                     </TableRow>
                   ))

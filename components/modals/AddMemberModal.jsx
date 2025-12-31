@@ -73,13 +73,15 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
 
             if (response?.status == "success") {
                 setUsers(response?.data?.data)
-                setLoading(false);
             } else {
-                toast.error(response?.data?.message || "Failed to fetch models");
+                toast.error(response?.data?.message || "Failed to fetch users");
             }
 
         } catch (error) {
-            console.log("error", error);
+            console.log("Error fetching users:", error);
+            toast.error("Failed to fetch users");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -124,7 +126,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
             }
         } catch (error) {
             setLoading(true);
-            console.log("error", error);
+            // console.log("error", error);
         }
     };
 
@@ -271,7 +273,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
             }
         } catch (error) {
             toast.error(error?.message);
-            console.log("error", error);
+            // console.log("error", error);
         }
     };
 
@@ -286,7 +288,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                 setPermissionNames(response?.data?.urp_permissions);
             }
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
         }
     }
 

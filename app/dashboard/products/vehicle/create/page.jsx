@@ -1613,6 +1613,8 @@ const Vehicle = () => {
                                 />
                               </div>
 
+
+
                               <div className="mb-2">
                                 <label className="text-base font-medium" htmlFor="customer-name">
                                   PBL Asking Price
@@ -1622,6 +1624,22 @@ const Vehicle = () => {
                                   name="vp_pbl_asking_price"
                                   placeholder="Enter PBL Asking Price"
                                   {...register("vp_pbl_asking_price")}
+                                  onKeyDown={onlyDecimalInput}
+                                />
+                              </div>
+
+
+
+
+                              <div className="mb-2">
+                                <label className="text-base font-medium" htmlFor="customer-name">
+                                  User Costing Price
+                                </label>
+                                <Input
+                                  id="vp_user_costing_price"
+                                  name="vp_user_costing_price"
+                                  placeholder="Enter PBL Additional Price"
+                                  {...register("vp_user_costing_price")}
                                   onKeyDown={onlyDecimalInput}
                                 />
                               </div>
@@ -1669,6 +1687,9 @@ const Vehicle = () => {
                                   onKeyDown={onlyDecimalInput}
                                 />
                               </div>
+
+
+                              
                             </div>
                           </div>
                         )

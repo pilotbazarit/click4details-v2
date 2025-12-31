@@ -6,6 +6,7 @@ import { FireExtinguisher, GitBranch, LifeBuoy, MapPin, ReceiptText, Share2, Pho
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
 import ProductShareModal from "./modals/ProductShareModal";
+import ShopSelectModal from "./modals/ShopSelectModal";
 import { usePathname } from "next/navigation";
 import { formatPrice } from "@/helpers/functions";
 
@@ -13,6 +14,7 @@ import { formatPrice } from "@/helpers/functions";
 const ProductCard = ({ product, parsedUser = null }) => {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shopModalOpen, setShopModalOpen] = useState(false);
 
 
   // console.log("parsedUser", parsedUser?.user_mode);
@@ -37,6 +39,9 @@ const ProductCard = ({ product, parsedUser = null }) => {
     pathname.startsWith("/my-shop/") || pathname.startsWith("/company-shop/") || pathname.startsWith("/member-shop/") || pathname.startsWith("/user-shop/")
       ? `/product/my-shop/${product?.v_id}`
       : `/product/${product?.v_id}`;
+
+
+      // console.log("pathname", pathname);
 
 
   // ID বাদ দিয়ে basePath বের করা
@@ -82,7 +87,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
             </div>
           </div>
         )}
-        <Link href={href}>
+        <Link href={href} target="_blank">
           <div className="relative overflow-hidden rounded-xl group/image">
             {product?.vehicle_front_image?.url && (
               <img
@@ -104,7 +109,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
           </div>
         </Link>
 
-        <Link href={`/product/${product?.v_id}`}>
+        <Link href={`/product/${product?.v_id}`} target="_blank">
           <p className="text-lg leading-6 font-bold text-blue-800 hover:text-blue-900 transition-colors duration-200 line-clamp-2">
             {product?.v_title?.length > 50
               ? product.v_title.slice(0, 50) + "..."
@@ -189,7 +194,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
           <div className="font-extrabold text-gray-900 text-xl mb-1">
             {product?.vehicle_price?.user_price !== 'Call for Price' && ''}
             {product?.vehicle_price?.user_price !== 'Call for Price' && 'TK. '}
-            {pathname === '/my-shop/'
+            {(pathname === '/my-shop/'|| pathname === '/company-shop/')
               ? formatPrice(product?.vehicle_price?.user_price)
               : formatPrice(product?.vehicle_price?.pbl_price)
             }
@@ -215,6 +220,38 @@ const ProductCard = ({ product, parsedUser = null }) => {
           }
 
           <div className="flex justify-between gap-2">
+            {pathname === '/pb-home/' && (
+              <button
+                onClick={() => {
+                  setShopModalOpen(true);
+                }}
+                className="
+                flex-1
+                px-3
+                lg:px-4
+                md:px-5
+                xl:px-3
+                3xl:px-4
+                py-2
+                border-2
+                border-green-300
+                rounded-lg
+                text-green-700
+                font-semibold
+                hover:bg-green-50
+                hover:border-green-400
+                active:scale-95
+                transition-all
+                duration-200"
+              >
+                <div
+                  className="flex items-center justify-center gap-2"
+                >
+                  <GitBranch className="h-4 w-4" />
+                  <span className="text-sm">Clone</span>
+                </div>
+              </button>
+            )}
             <button
               onClick={() => setOpen(true)}
               className="
@@ -269,7 +306,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
             >
               <div className="flex items-center justify-center gap-2">
                 <PhoneOutgoing className="h-4 w-4" />
-                <span className="text-sm">Call Now</span>
+                <span className="text-sm">Call</span>
               </div>
             </button>
           </div>
@@ -277,6 +314,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
       </div>
 
       <ProductShareModal open={open} setOpen={setOpen} product={product} />
+      <ShopSelectModal open={shopModalOpen} setOpen={setShopModalOpen} product={product} />
 
     </div>
   );

@@ -714,12 +714,13 @@ const NavbarContent = () => {
     <>
       <nav className="flex items-center justify-between px-4 md:px-16 lg:px-32 py-1 border-b border-gray-300 text-gray-700">
         <div className="flex space-x-6 items-center">
-          <Image
-            className="cursor-pointer w-20 md:w-20 h-12"
-            onClick={() => router.push("/")}
-            src={assets.pilotBazarLogo}
-            alt="logo"
-          />
+          <Link href="/">
+            <Image
+              className="cursor-pointer w-20 md:w-20 h-12"
+              src={assets.pilotBazarLogo}
+              alt="logo"
+            />
+          </Link>
 
           {/* ALL CATEGORIES FORM MOBILE DEVICE */}
           {/* <div className="block md:hidden">
@@ -1082,7 +1083,7 @@ const NavbarContent = () => {
                     onClick={() => router.push("/pb-home")}
                   >
                     <House className="h-4 w-4" />
-                    Stock
+                    PB Home
                   </button>
                 </li>
 
@@ -1177,7 +1178,7 @@ const NavbarContent = () => {
                     }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Stock
+                  PB Home
                 </Link> */}
 
 

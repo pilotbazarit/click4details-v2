@@ -180,7 +180,7 @@ const AddShopPermissionModal = ({ open, setOpen, selectedShop }) => {
                 setPermissionNames(response.data);
             }
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
         }
     };
 
