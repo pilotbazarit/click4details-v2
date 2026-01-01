@@ -5,10 +5,13 @@ import Login from "@/components/Login";
 import { useAppContext } from "@/context/AppContext";
 import LoginService from "@/services/LoginService";
 import { useRouter } from "next/navigation";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 const Home = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(true);
-  const [login, setLogin] = useState("");
+  const [fullPhone, setFullPhone] = useState(""); // Full phone with country code
+  const [countryData, setCountryData] = useState(null); // Store country info
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState(null);
@@ -18,9 +21,12 @@ const Home = () => {
   const router = useRouter();
 
   const handleChange = (e) => {
-    e.target.name === "login"
-      ? setLogin(e.target.value)
-      : setPassword(e.target.value);
+    setPassword(e.target.value);
+  };
+
+  const handlePhoneChange = (value, country) => {
+    setFullPhone(value);
+    setCountryData(country);
   };
 
   const handleSubmit = async (e) => {
@@ -28,7 +34,15 @@ const Home = () => {
     setLoading(true);
 
     try {
-      const res = await LoginService.Commands.login({ login, password });
+      // Extract phone number without country code
+      const countryCode = `+${countryData.dialCode}`;
+      const phoneWithoutCountryCode = fullPhone.slice(countryData.dialCode.length);
+
+      const res = await LoginService.Commands.login({
+        login: phoneWithoutCountryCode,
+        password,
+        country_code: countryCode
+      });
 
       if (res.status === "success") {
         localStorage.setItem("auth_token", res.token);
@@ -49,7 +63,7 @@ const Home = () => {
 
   return (
     <ProductContextProvider>
-    {/* <div> */}
+      {/* <div> */}
       {/* <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"> */}
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-400 via-blue-400 to-purple-300 relative overflow-hidden">
         {/* Decorative Blurred Circles */}
@@ -82,6 +96,46 @@ const Home = () => {
           {/* Right Side - Login Form */}
           <div className="flex-1 max-w-md w-full">
             <div className="backdrop-blur-xl bg-white/20 rounded-3xl p-8 shadow-2xl border border-white/30">
+              <style jsx>{`
+                .phone-input-custom :global(.react-tel-input) {
+                  width: 100%;
+                }
+                .phone-input-custom :global(.react-tel-input .form-control) {
+                  width: 100% !important;
+                  padding: 0.75rem 1rem 0.75rem 3.5rem !important;
+                  border-radius: 0.5rem !important;
+                  background: rgba(255, 255, 255, 0.9) !important;
+                  backdrop-filter: blur(4px) !important;
+                  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+                  color: #1f2937 !important;
+                  font-size: 1rem !important;
+                  height: auto !important;
+                }
+                .phone-input-custom :global(.react-tel-input .form-control:focus) {
+                  outline: none !important;
+                  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5) !important;
+                  border-color: rgba(255, 255, 255, 0.5) !important;
+                }
+                .phone-input-custom :global(.react-tel-input .flag-dropdown) {
+                  background: rgba(255, 255, 255, 0.9) !important;
+                  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+                  border-radius: 0.5rem 0 0 0.5rem !important;
+                }
+                .phone-input-custom :global(.react-tel-input .selected-flag) {
+                  padding: 0 0 0 0.75rem !important;
+                  border-radius: 0.5rem 0 0 0.5rem !important;
+                }
+                .phone-input-custom :global(.react-tel-input .selected-flag:hover),
+                .phone-input-custom :global(.react-tel-input .selected-flag.open) {
+                  background: rgba(255, 255, 255, 0.95) !important;
+                }
+                .phone-input-custom :global(.react-tel-input .country-list) {
+                  background: white !important;
+                  border-radius: 0.5rem !important;
+                  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+                }
+              `}</style>
+
               <div className="text-center mb-8">
                 <p className="text-white text-sm font-medium tracking-wider mb-2">
                   WELCOME BACK Click4Details
@@ -92,14 +146,15 @@ const Home = () => {
               </div>
 
               <form className="space-y-4" onSubmit={handleSubmit}>
-                <div>
-                  <input
-                    type="text"
-                    name="login"
-                    placeholder="Your email/phone"
-                    className="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
-                    onChange={handleChange}
-                    required
+                <div className="phone-input-custom">
+                  <PhoneInput
+                    country={'bd'}
+                    value={fullPhone}
+                    onChange={handlePhoneChange}
+                    inputProps={{
+                      name: 'login',
+                      required: true,
+                    }}
                   />
                   {fieldError?.login && (
                     <p className="text-red-500 text-sm mt-1">
@@ -167,7 +222,7 @@ const Home = () => {
           openForgotPasswordModal={() => {}}
         /> */}
       </div>
-    {/* </div> */}
+      {/* </div> */}
     </ProductContextProvider>
   );
 };

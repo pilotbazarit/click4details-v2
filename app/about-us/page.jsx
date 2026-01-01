@@ -26,7 +26,7 @@ const AboutUs = () => {
                             <div className="w-36 h-1 bg-gradient-to-r from-orange-500 to-orange-300 rounded-full mt-3 z-10"></div>
 
                             <div className='mt-4 text-gray-600 text-xl'>
-                                <p>Pilot Bazar Ltd is Bangladesh's trustworthy, quality-controlled, monitored online marketplace and multipurpose business web and app. It is also a totally free social platform on which people can interact with each other. In addition to business support, this app provides various free social services. Besides Pilot Bazar Ltd sells and buys cars, apartments and land.</p>
+                                <p>Click4Details Ltd is Bangladesh's trustworthy, quality-controlled, monitored online marketplace and multipurpose business web and app. It is also a totally free social platform on which people can interact with each other. In addition to business support, this app provides various free social services. Besides Click4Details Ltd sells and buys cars, apartments and land.</p>
                             </div>
 
                             {/* Vieo Section */}

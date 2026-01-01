@@ -9,8 +9,8 @@ import MouseTrail from "@/components/MouseTrail";
 const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500"] });
 
 export const metadata = {
-  title: "Pilot Bazar",
-  description: "Pilot Bazar - Your one-stop shop for everything",
+  title: "Click4Details",
+  description: "Click4Details - Your one-stop shop for everything",
   icons: {
     icon: [
       { url: '/favicon.ico' },

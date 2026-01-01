@@ -14,28 +14,28 @@ import slider5 from '../assets/slider5.jpg';
 const slides = [
   {
     image: slider1,
-    title: 'Pilot Bazar',
-    description: 'pilotbazar.com',
+    title: 'Click4Details',
+    description: 'click4Details.com',
   },
   {
     image: slider2,
-    title: 'Pilot Bazar',
-    description: 'pilotbazar.com',
+    title: 'Click4Details',
+    description: 'click4Details.com',
   },
    {
     image: slider3,
-    title: 'Pilot Bazar',
-    description: 'pilotbazar.com',
+    title: 'Click4Details',
+    description: 'click4Details.com',
   },
   {
     image: slider4,
-    title: 'Pilot Bazar',
-    description: 'pilotbazar.com',
+    title: 'Click4Details',
+    description: 'click4Details.com',
   },
   {
     image: slider5,
-    title: 'Pilot Bazar',
-    description: 'pilotbazar.com',
+    title: 'Click4Details',
+    description: 'click4Details.com',
   }
 ];
 
