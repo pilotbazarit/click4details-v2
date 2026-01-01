@@ -95,7 +95,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     phone = selectedCompanyShop?.shop?.user?.phone; // fallback number
   } else {
-    phone = "+8801969944400";
+    phone = "1969944400";
   }
 
   // ---------- Email ----------
