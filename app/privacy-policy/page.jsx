@@ -106,7 +106,7 @@ const PrivacePolicy = () => {
                             </ul>
                             <p className="text-gray-600 mt-2">
                                 To exercise these rights, please contact us at
-                                <a href="mailto:pilotbazar.com@gmail.com" className="text-green-600 hover:underline">pilotbazar.com@gmail.com</a>.
+                                <a href="mailto:click4details.importer@gmail.com" className="text-green-600 hover:underline">click4details.importer@gmail.com</a>.
                             </p>
                         </div>
 
@@ -131,7 +131,7 @@ const PrivacePolicy = () => {
                             </p>
                             <p className="mt-2 text-gray-700">
                                 <strong>Email:</strong>
-                                <a href="mailto:pilotbazar.com@gmail.com" className="text-green-600 hover:underline">pilotbazar.com@gmail.com</a><br/>
+                                <a href="mailto:click4details.importer@gmail.com" className="text-green-600 hover:underline">click4details.importer@gmail.com</a><br/>
                                     <strong>Phone:</strong>
                                     <a href="tel:+8801969944400" className="text-green-600 hover:underline">+8801969944400</a>
                             </p>

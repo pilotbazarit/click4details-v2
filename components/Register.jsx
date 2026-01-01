@@ -99,7 +99,7 @@ export default function Register({ isOpen, onClose }) {
         <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
           <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Register in to Pilotbazar Ltd
+              Register in to Click4details
             </h3>
             <button
               type="button"

@@ -155,8 +155,8 @@ const ChatPrivacyPolicy = () => {
                             </p>
                             <p className="mt-4 text-gray-700">
                                 <strong>Email:</strong>{' '}
-                                <a href="mailto:pilotbazar.com@gmail.com" className="text-green-600 hover:underline">
-                                    pilotbazar.com@gmail.com
+                                <a href="mailto:click4details.importer@gmail.com" className="text-green-600 hover:underline">
+                                    click4details.importer@gmail.com
                                 </a>
                                 <br />
                                 <strong>Phone:</strong>{' '}

@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { ProductContextProvider } from "@/context/ProductContext";
 import Login from "@/components/Login";
+import Register from "@/components/Register";
+import ForgotPasswordModal from "@/components/modals/ForgotPasswordModal";
 import { useAppContext } from "@/context/AppContext";
 import LoginService from "@/services/LoginService";
 import { useRouter } from "next/navigation";
@@ -10,6 +12,8 @@ import 'react-phone-input-2/lib/style.css';
 
 const Home = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(true);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [fullPhone, setFullPhone] = useState(""); // Full phone with country code
   const [countryData, setCountryData] = useState(null); // Store country info
   const [password, setPassword] = useState("");
@@ -81,14 +85,20 @@ const Home = () => {
                 </div>
                 <h1 className="text-4xl font-bold">Click4Details</h1>
               </div>
-              <h2 className="text-5xl font-bold mb-6 leading-tight">
-                We Are The Best<br />In Business
+              <h2 className="text-4xl font-bold mb-6 leading-tight">
+                আপনার ব্যবসা এখন আরও সহজ।<br />
+              </h2>
+              <h2 className="text-2xl font-bold mb-6 leading-tight">
+               
+                বিক্রি ও বিজনেস ম্যানেজমেন্ট—একটি বিশ্বাসযোগ্য ডিজিটাল প্ল্যাটফর্মে।
               </h2>
               <p className="text-white/90 text-lg leading-relaxed max-w-md">
-                Increase your workspace efficiency with Galileo's sleek and intuitive best project
-                management platform. It makes it easier for your team to collaborate on the most
-                challenging projects. Perfectly aligned for distributed teams to empower a seamless
-                work process in every aspect.
+                এই প্ল্যাটফর্মটি কাদের জন্য?<br />
+                ✔ Exporter & Importer<br />
+                ✔ Wholesaler<br />
+                ✔ Showroom Owner<br />
+                ✔ Business Owner<br />
+                ✔ Media / Broker
               </p>
             </div>
           </div>
@@ -179,6 +189,30 @@ const Home = () => {
                   )}
                 </div>
 
+                {/* Remember me and Forgot Password */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <input
+                      id="remember"
+                      type="checkbox"
+                      className="w-4 h-4 border border-white/50 rounded bg-white/90 focus:ring-2 focus:ring-white/50"
+                    />
+                    <label
+                      htmlFor="remember"
+                      className="ml-2 text-sm text-white/90"
+                    >
+                      Remember me
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPasswordOpen(true)}
+                    className="text-sm text-white/90 hover:text-white hover:underline transition"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
                 {error && (
                   <p className="text-red-500 text-sm">
                     Email or password is incorrect.
@@ -206,11 +240,18 @@ const Home = () => {
                   </svg>
                 </button>
 
-                {/* <div className="text-center">
-                  <a href="#" className="text-white/90 text-sm hover:text-white transition">
-                    Forgot your Password
-                  </a>
-                </div> */}
+                <div className="text-center mt-4">
+                  <p className="text-white/90 text-sm">
+                    Don't have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterOpen(true)}
+                      className="text-white font-semibold hover:underline transition"
+                    >
+                      Create Account
+                    </button>
+                  </p>
+                </div>
               </form>
             </div>
           </div>
@@ -221,6 +262,17 @@ const Home = () => {
           onClose={() => setIsLoginOpen(false)}
           openForgotPasswordModal={() => {}}
         /> */}
+
+        <Register
+          isOpen={isRegisterOpen}
+          onClose={() => setIsRegisterOpen(false)}
+        />
+
+        <ForgotPasswordModal
+          isOpen={isForgotPasswordOpen}
+          onClose={() => setIsForgotPasswordOpen(false)}
+          openResetPasswordModal={() => setIsForgotPasswordOpen(false)}
+        />
       </div>
       {/* </div> */}
     </ProductContextProvider>
