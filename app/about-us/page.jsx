@@ -34,7 +34,7 @@ const AboutUs = () => {
                                 <div className="w-full aspect-video">
                                     <iframe
                                         className="w-full h-full rounded"
-                                        src="https://www.youtube.com/embed/_eOsa9E7ATE?si=V_PslnciJCcb2qpY"
+                                        src="https://www.youtube.com/embed/7K9Fyhg6_io?si=_7gx3U9A8OalhJKa"
                                         title="YouTube video"
                                         frameBorder="0"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
