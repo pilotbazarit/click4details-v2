@@ -66,15 +66,13 @@ const GeneralProductDetailsDescription = ({ productDetails, basePath }) => {
                 </div>
 
 
-                {
+                {/* {
                     basePath == '/product' && (
                         <>
-                            {/* SEO Description */}
                             <div className="border rounded shadow-sm p-4">
                                 <h2 className="text-md font-medium text-blue-700 mb-4 border-b pb-2">Special Description (PB)</h2>
 
                                 <div className="text-sm font-small space-y-2 leading-normal">
-                                    {/* <p className="">{productDetails?.v_metadata?.vm_description}</p> */}
                                     <div className="font-bold">আমাদের সার্ভিস সমূহঃ</div>
                                     <p>
                                         ৫০%-৬০% দ্রুত ব্যাংক লোনের সুবিধা। ব্যবহৃত গাড়ি এনালাইসিস সেন্টারে চেক করার সুবিধা।
@@ -97,7 +95,7 @@ const GeneralProductDetailsDescription = ({ productDetails, basePath }) => {
                                 </div>
                             </div>
 
-                            {/* Warranty */}
+                            
                             <div className="border rounded shadow-sm p-4">
                                 <h2 className="text-md font-medium text-blue-700 mb-4 border-b pb-2">Warranty </h2>
 
@@ -126,7 +124,7 @@ const GeneralProductDetailsDescription = ({ productDetails, basePath }) => {
                             </div>
                         </>
                     )
-                }
+                } */}
             </div>
         </div>
     )
