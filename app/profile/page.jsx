@@ -27,13 +27,13 @@ import { method } from "lodash";
 const Profile = () => {
 
     const [rows, setRows] = useState([
-        { name: "", address: "" },
+        { name: "", address: "", stock: false },
     ]);
 
     const [user, setUser] = useState({});
 
     const [emails, setEmails] = useState([""]);
-    const [phones, setPhones] = useState([""]);
+    const [phones, setPhones] = useState([{ phone: "", name: "" }]);
     const [facebooks, setFacebooks] = useState([""]);
     const [youtubes, setYoutubes] = useState([""]);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -117,14 +117,20 @@ const Profile = () => {
 
             // Array গুলো null-safe করে সেট করা
             setRows(
-                (profile?.up_biz_address || [{ com: "", addr: "" }]).map(addr => ({
+                (profile?.up_biz_address || [{ com: "", addr: "", stock: false }]).map(addr => ({
                     name: addr?.com ?? "",
-                    address: addr?.addr ?? ""
+                    address: addr?.addr ?? "",
+                    stock: addr?.stock ?? false
                 }))
             );
 
             setEmails((profile?.up_biz_email || [""]).map(e => e ?? ""));
-            setPhones((profile?.up_biz_phone || [""]).map(p => p ?? ""));
+            setPhones(
+                (profile?.up_biz_phone || [{ phone: "", name: "" }]).map(p => ({
+                    phone: p?.phone ?? p ?? "",
+                    name: p?.name ?? ""
+                }))
+            );
             setFacebooks((profile?.up_biz_facebook || [""]).map(f => f ?? ""));
             setYoutubes((profile?.up_biz_youtube || [""]).map(y => y ?? ""));
         }
@@ -166,6 +172,7 @@ const Profile = () => {
                 const i = index;
                 data[`up_biz_address[${i}][com]`] = item?.name;
                 data[`up_biz_address[${i}][addr]`] = item?.address;
+                data[`up_biz_address[${i}][stock]`] = item?.stock ? 1 : 0;
             });
 
             emails.length > 0 && emails.forEach((email, index) => {
@@ -175,7 +182,8 @@ const Profile = () => {
 
             phones.length > 0 && phones.forEach((phone, index) => {
                 const i = index;
-                data[`up_biz_phone[${i}]`] = phone;
+                data[`up_biz_phone[${i}][phone]`] = phone.phone;
+                data[`up_biz_phone[${i}][name]`] = phone.name;
             });
 
             facebooks.length > 0 && facebooks.forEach((facebook, index) => {
@@ -212,7 +220,7 @@ const Profile = () => {
 
     // Add new row
     const handleAdd = () => {
-        setRows([...rows, { name: "", address: "" }]);
+        setRows([...rows, { name: "", address: "", stock: false }]);
     };
 
     // Remove row by index
@@ -241,15 +249,15 @@ const Profile = () => {
         setEmails(updatedEmails);
     };
 
-    const handlePhoneChange = (index, value) => {
+    const handlePhoneChange = (index, field, value) => {
         const updatedPhones = [...phones];
-        updatedPhones[index] = value;
+        updatedPhones[index][field] = value;
         setPhones(updatedPhones);
     };
 
     const handleAddPhone = () => {
         if (phones.length < 4) {
-            setPhones([...phones, ""]);
+            setPhones([...phones, { phone: "", name: "" }]);
         } else {
             toast.error("You can add a maximum of 4 additional phone numbers.");
         }
@@ -533,6 +541,20 @@ const Profile = () => {
                                                     onChange={e => handleChange(index, 'address', e.target.value)}
                                                 />
 
+                                                {/* Stock Checkbox */}
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`stock-${index}`}
+                                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                        checked={row?.stock || false}
+                                                        onChange={e => handleChange(index, 'stock', e.target.checked)}
+                                                    />
+                                                    <label htmlFor={`stock-${index}`} className="text-sm text-gray-700 whitespace-nowrap">
+                                                        Show in Stock List
+                                                    </label>
+                                                </div>
+
                                                 {/* Remove Button */}
                                                 {rows.length > 1 && (
                                                     <button
@@ -613,23 +635,32 @@ const Profile = () => {
                                             <p className="text-xs text-gray-500 mb-2">You can add a maximum of 4 phone numbers.</p>
                                             <div className="grid grid-cols-1 gap-4">
                                                 {phones.map((phone, index) => (
-                                                    <div key={index} className="flex items-center gap-2">
-                                                        <input
-                                                            type="tel"
-                                                            placeholder="Enter additional phone"
-                                                            value={phone}
-                                                            onChange={(e) => handlePhoneChange(index, e.target.value)}
-                                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                        />
-                                                        {phones.length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemovePhone(index)}
-                                                                className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-                                                            >
-                                                                <Minus className="w-5 h-5" />
-                                                            </button>
-                                                        )}
+                                                    <div key={index} className="flex flex-col gap-2">
+                                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Enter name"
+                                                                value={phone.name || ""}
+                                                                onChange={(e) => handlePhoneChange(index, 'name', e.target.value)}
+                                                                className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            />
+                                                            <input
+                                                                type="tel"
+                                                                placeholder="Enter additional phone"
+                                                                value={phone.phone || ""}
+                                                                onChange={(e) => handlePhoneChange(index, 'phone', e.target.value)}
+                                                                className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            />
+                                                            {phones.length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemovePhone(index)}
+                                                                    className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors self-center"
+                                                                >
+                                                                    <Minus className="w-5 h-5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
