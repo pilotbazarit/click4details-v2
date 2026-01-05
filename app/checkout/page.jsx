@@ -164,6 +164,9 @@ const Checkout = () => {
     }
   };
 
+
+  
+
   const handleAddressSelect = (address) => {
     setSelectedAddress(address);
     setIsDropdownOpen(false);
@@ -1200,7 +1203,7 @@ const Checkout = () => {
                           type="radio"
                           name="address"
                           className="w-5 h-5 mt-1 text-blue-600"
-                          checked={selectedAddress?.id === address.id}
+                          checked={selectedAddress?.a_id === address.a_id}
                           onChange={() => handleAddressSelect(address)}
                         />
                         <div className="ml-3 flex-1">
