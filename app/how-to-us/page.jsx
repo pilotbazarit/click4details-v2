@@ -55,13 +55,13 @@ const HowToUse = () => {
             videoId: "2EfnkonVi9Q",
             src: "https://www.youtube.com/embed/2EfnkonVi9Q"
         },
-        // {
-        //     id: 8,
-        //     title: "How to Buy a Car - Complete Guide",
-        //     description: "Step-by-step guide to purchasing your dream car through Click4Details",
-        //     videoId: "UofsXIjvjkc",
-        //     src: "https://www.youtube.com/embed/UofsXIjvjkc"
-        // },
+        {
+            id: 8,
+            title: "How to Buy a Car - Complete Guide",
+            description: "Step-by-step guide to purchasing your dream car through Click4Details",
+            videoId: "W6rr97rgois",
+            src: "https://www.youtube.com/embed/W6rr97rgois"
+        },
         {
             id: 9,
             title: "Advanced Features Tutorial",
