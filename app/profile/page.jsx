@@ -36,6 +36,10 @@ const Profile = () => {
     const [phones, setPhones] = useState([{ phone: "", name: "" }]);
     const [facebooks, setFacebooks] = useState([""]);
     const [youtubes, setYoutubes] = useState([""]);
+    const [googleDrives, setGoogleDrives] = useState([""]);
+    const [bankAccounts, setBankAccounts] = useState([
+        { ac_bank: "", ac_num: "", ac_name: "", ac_branch: "", ac_routing: "", ac_swift: "", stock: false }
+    ]);
     const [isUpdating, setIsUpdating] = useState(false);
     const [countryCode, setCountryCode] = useState("+880");
 
@@ -120,7 +124,7 @@ const Profile = () => {
                 (profile?.up_biz_address || [{ com: "", addr: "", stock: false }]).map(addr => ({
                     name: addr?.com ?? "",
                     address: addr?.addr ?? "",
-                    stock: addr?.stock ?? false
+                    stock: addr?.stock == '1' || addr?.stock === 1 || addr?.stock === true
                 }))
             );
 
@@ -133,6 +137,18 @@ const Profile = () => {
             );
             setFacebooks((profile?.up_biz_facebook || [""]).map(f => f ?? ""));
             setYoutubes((profile?.up_biz_youtube || [""]).map(y => y ?? ""));
+            setGoogleDrives((profile?.up_biz_google_drive || [""]).map(g => g ?? ""));
+            setBankAccounts(
+                (profile?.up_biz_bank_info || [{ ac_bank: "", ac_num: "", ac_name: "", ac_branch: "", ac_routing: "", ac_swift: "", stock: false }]).map(bank => ({
+                    ac_bank: bank?.ac_bank ?? "",
+                    ac_num: bank?.ac_num ?? "",
+                    ac_name: bank?.ac_name ?? "",
+                    ac_branch: bank?.ac_branch ?? "",
+                    ac_routing: bank?.ac_routing ?? "",
+                    ac_swift: bank?.ac_swift ?? "",
+                    stock: bank?.stock == 1 || bank?.stock === '1' || bank?.stock === true
+                }))
+            );
         }
     };
 
@@ -194,6 +210,22 @@ const Profile = () => {
             youtubes.length > 0 && youtubes.forEach((youtube, index) => {
                 const i = index;
                 data[`up_biz_youtube[${i}]`] = youtube;
+            });
+
+            googleDrives.length > 0 && googleDrives.forEach((googleDrive, index) => {
+                const i = index;
+                data[`up_biz_google_drive[${i}]`] = googleDrive;
+            });
+
+            bankAccounts.length > 0 && bankAccounts.forEach((bank, index) => {
+                const i = index;
+                data[`up_biz_bank_info[${i}][ac_bank]`] = bank.ac_bank;
+                data[`up_biz_bank_info[${i}][ac_num]`] = bank.ac_num;
+                data[`up_biz_bank_info[${i}][ac_name]`] = bank.ac_name;
+                data[`up_biz_bank_info[${i}][ac_branch]`] = bank.ac_branch;
+                data[`up_biz_bank_info[${i}][ac_routing]`] = bank.ac_routing;
+                data[`up_biz_bank_info[${i}][ac_swift]`] = bank.ac_swift;
+                data[`up_biz_bank_info[${i}][stock]`] = bank.stock ? 1 : 0;
             });
 
             const res = await UserService.Commands.updateUser(user.id, data);
@@ -304,6 +336,40 @@ const Profile = () => {
     const handleRemoveYoutube = (index) => {
         const updatedYoutubes = youtubes.filter((_, i) => i !== index);
         setYoutubes(updatedYoutubes);
+    };
+
+    const handleGoogleDriveChange = (index, value) => {
+        const updatedGoogleDrives = [...googleDrives];
+        updatedGoogleDrives[index] = value;
+        setGoogleDrives(updatedGoogleDrives);
+    };
+
+    const handleAddGoogleDrive = () => {
+        if (googleDrives.length < 4) {
+            setGoogleDrives([...googleDrives, ""]);
+        } else {
+            toast.error("You can add a maximum of 4 additional google drive links.");
+        }
+    };
+
+    const handleRemoveGoogleDrive = (index) => {
+        const updatedGoogleDrives = googleDrives.filter((_, i) => i !== index);
+        setGoogleDrives(updatedGoogleDrives);
+    };
+
+    const handleBankAccountChange = (index, field, value) => {
+        const updatedBankAccounts = [...bankAccounts];
+        updatedBankAccounts[index][field] = value;
+        setBankAccounts(updatedBankAccounts);
+    };
+
+    const handleAddBankAccount = () => {
+        setBankAccounts([...bankAccounts, { ac_bank: "", ac_num: "", ac_name: "", ac_branch: "", ac_routing: "", ac_swift: "", stock: false }]);
+    };
+
+    const handleRemoveBankAccount = (index) => {
+        const updatedBankAccounts = bankAccounts.filter((_, i) => i !== index);
+        setBankAccounts(updatedBankAccounts);
     };
 
 
@@ -516,18 +582,18 @@ const Profile = () => {
                         <h2 className="text-sm font-semibold mt-5">Business Locations</h2>
 
                         <div className="mt-4">
-                            <div className="w-[60%] bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                            <div className="w-full lg:w-[60%] bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
                                 <div className="p-4">
 
                                     {rows.map((row, index) => (
                                         <div key={index}>
                                             <h2 className="text-sm font-semibold border-b border-gray-200 pb-2 mt-2">{index + 1}. Office/Shop/Outlet </h2>
-                                            <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow w-full mx-auto mt-2">
+                                            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 p-4 bg-white rounded-lg shadow w-full mx-auto mt-2">
                                                 {/* Name Input */}
                                                 <input
                                                     type="text"
                                                     placeholder="Name"
-                                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full md:flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     value={row?.name || ""}
                                                     onChange={e => handleChange(index, 'name', e.target.value)}
                                                 />
@@ -536,35 +602,38 @@ const Profile = () => {
                                                 <input
                                                     type="text"
                                                     placeholder="Address"
-                                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full md:flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     value={row?.address || ""}
                                                     onChange={e => handleChange(index, 'address', e.target.value)}
                                                 />
 
-                                                {/* Stock Checkbox */}
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        id={`stock-${index}`}
-                                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                        checked={row?.stock || false}
-                                                        onChange={e => handleChange(index, 'stock', e.target.checked)}
-                                                    />
-                                                    <label htmlFor={`stock-${index}`} className="text-sm text-gray-700 whitespace-nowrap">
-                                                        Show in Stock List
-                                                    </label>
-                                                </div>
+                                                {/* Stock Checkbox and Remove Button Container */}
+                                                <div className="flex items-center justify-between md:justify-start gap-2">
+                                                    {/* Stock Checkbox */}
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`stock-${index}`}
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                            checked={row?.stock || false}
+                                                            onChange={e => handleChange(index, 'stock', e.target.checked)}
+                                                        />
+                                                        <label htmlFor={`stock-${index}`} className="text-sm text-gray-700 whitespace-nowrap">
+                                                            Show in Stock List
+                                                        </label>
+                                                    </div>
 
-                                                {/* Remove Button */}
-                                                {rows.length > 1 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemove(index)}
-                                                        className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-                                                    >
-                                                        <Minus className="w-5 h-5" />
-                                                    </button>
-                                                )}
+                                                    {/* Remove Button */}
+                                                    {rows.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemove(index)}
+                                                            className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                                                        >
+                                                            <Minus className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -582,9 +651,10 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        <div className="flex flex-col lg:flex-row gap-4 mb-5">
+                        {/* First Row: Email, Phone, Facebook */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                             {/* Additional Email Section */}
-                            <div className="w-full lg:w-1/2">
+                            <div className="w-full">
                                 <h2 className="text-sm font-semibold mt-5">Additional Email</h2>
                                 <div className="mt-4">
                                     <div className="w-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -627,7 +697,7 @@ const Profile = () => {
                             </div>
 
                             {/* Additional Phone Section */}
-                            <div className="w-full lg:w-1/2">
+                            <div className="w-full">
                                 <h2 className="text-sm font-semibold mt-5">Additional Phone</h2>
                                 <div className="mt-4">
                                     <div className="w-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -679,7 +749,7 @@ const Profile = () => {
                             </div>
 
                             {/* Additional Facebook Section */}
-                            <div className="w-full lg:w-1/2">
+                            <div className="w-full">
                                 <h2 className="text-sm font-semibold mt-5">Facebook</h2>
                                 <div className="mt-4">
                                     <div className="w-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -720,9 +790,12 @@ const Profile = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
+                        {/* Second Row: Youtube, Google Drive */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                             {/* Additional Youtube Section */}
-                            <div className="w-full lg:w-1/2">
+                            <div className="w-full">
                                 <h2 className="text-sm font-semibold mt-5">Youtube</h2>
                                 <div className="mt-4">
                                     <div className="w-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -764,10 +837,145 @@ const Profile = () => {
                                 </div>
                             </div>
 
-
+                            {/* Additional Google Drive Section */}
+                            <div className="w-full">
+                                <h2 className="text-sm font-semibold mt-5">Google Drive</h2>
+                                <div className="mt-4">
+                                    <div className="w-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                                        <div className="p-4">
+                                            <p className="text-xs text-gray-500 mb-2">You can add a maximum of 4 google drive links.</p>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {googleDrives.map((googleDrive, index) => (
+                                                    <div key={index} className="flex items-center gap-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter google drive link"
+                                                            value={googleDrive || ""}
+                                                            onChange={(e) => handleGoogleDriveChange(index, e.target.value)}
+                                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                        {googleDrives.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveGoogleDrive(index)}
+                                                                className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                                                            >
+                                                                <Minus className="w-5 h-5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="mt-4 flex items-center justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddGoogleDrive}
+                                                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Plus className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
                         <hr />
+
+                        {/* Bank Account Section */}
+                        <div className="w-full lg:w-full">
+                            <h2 className="text-sm font-semibold mt-5">Bank Account Information</h2>
+                            <div className="mt-4">
+                                <div className="w-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                                    <div className="p-4">
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {bankAccounts.map((bank, index) => (
+                                                <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                                    <h3 className="text-sm font-semibold mb-3 text-gray-700">Bank Account {index + 1}</h3>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Bank Name"
+                                                            value={bank.ac_bank || ""}
+                                                            onChange={(e) => handleBankAccountChange(index, 'ac_bank', e.target.value)}
+                                                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Account Number"
+                                                            value={bank.ac_num || ""}
+                                                            onChange={(e) => handleBankAccountChange(index, 'ac_num', e.target.value)}
+                                                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Account Name"
+                                                            value={bank.ac_name || ""}
+                                                            onChange={(e) => handleBankAccountChange(index, 'ac_name', e.target.value)}
+                                                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Branch Name"
+                                                            value={bank.ac_branch || ""}
+                                                            onChange={(e) => handleBankAccountChange(index, 'ac_branch', e.target.value)}
+                                                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Routing Number"
+                                                            value={bank.ac_routing || ""}
+                                                            onChange={(e) => handleBankAccountChange(index, 'ac_routing', e.target.value)}
+                                                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="SWIFT Code"
+                                                            value={bank.ac_swift || ""}
+                                                            onChange={(e) => handleBankAccountChange(index, 'ac_swift', e.target.value)}
+                                                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                    {/* Show in Stock List Checkbox */}
+                                                    <div className="flex items-center gap-2 mt-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`bank-stock-${index}`}
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                            checked={bank?.stock || false}
+                                                            onChange={(e) => handleBankAccountChange(index, 'stock', e.target.checked)}
+                                                        />
+                                                        <label htmlFor={`bank-stock-${index}`} className="text-sm text-gray-700">
+                                                            Show in Stock List
+                                                        </label>
+                                                    </div>
+                                                    {bankAccounts.length > 1 && (
+                                                        <div className="mt-3 flex justify-end">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveBankAccount(index)}
+                                                                className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                                                            >
+                                                                <Minus className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 flex items-center justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={handleAddBankAccount}
+                                                className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                                            >
+                                                <Plus className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="w-full mt-3 mb-6 border-gray-200 pb-4">
                             <button

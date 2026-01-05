@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 import CopyInput from '../CopyInput'
 import PriceSelectModal from './PriceSelectModal'
 import VehicleStockListModal from './VehicleStockListModal'
+import BankAccountSelectModal from './BankAccountSelectModal'
 import { formatPermissions } from '@/helpers/functions'
 import { useAppContext } from '@/context/AppContext';
 
@@ -22,7 +23,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
     const { selectedCompanyShop } = useAppContext();
 
 
-
+    // console.log("user Infoo:::::", user);
 
 
     useEffect(() => {
@@ -79,6 +80,9 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
     // State for vehicle stock list modal
     const [stockListModalOpen, setStockListModalOpen] = useState(false);
+
+    // State for bank account select modal
+    const [bankAccountModalOpen, setBankAccountModalOpen] = useState(false);
 
     // Function to handle dialog open/close changes
     const handleOpenChange = (isOpen) => {
@@ -208,6 +212,9 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     };
+
+
+
 
     // WhatsApp e share korar function
     const handleBusinessShare = async (option) => {
@@ -917,7 +924,6 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 message = myProfileMessage;
                 break;
 
-
             case 'shareLocation':
                 let locationMessage = ` Check out My Personal Location:\n\n`;
 
@@ -1159,6 +1165,21 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                     }
 
 
+
+
+                                    <div
+                                        className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                        onClick={() => setBankAccountModalOpen(true)}
+                                    >
+                                        <span className='text-gray-700'>Send Bank Account</span>
+                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                            {selectedBusinessOption === 'sendBankAccount' && (
+                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                            )}
+                                        </div>
+                                    </div>
+
+
                                 </>
 
                             )
@@ -1288,6 +1309,15 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 open={stockListModalOpen}
                 setOpen={setStockListModalOpen}
                 user={user}
+            />
+
+            
+
+            {/* Bank Account Select Modal */}
+            <BankAccountSelectModal
+                open={bankAccountModalOpen}
+                setOpen={setBankAccountModalOpen}
+                bankAccounts={user?.profile?.up_biz_bank_info || []}
             />
         </Dialog>
     )

@@ -8,6 +8,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import UserService from "@/services/UserService";
 
 // Yup Validation Schema
 const schema = yup.object().shape({
@@ -59,10 +60,19 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
         country_code: countryCode,
       });
 
+     
+
       if (res.status === "success") {
         localStorage.setItem("auth_token", res.token);
-        localStorage.setItem("user", JSON.stringify(res.data));
-        setUser(JSON.stringify(res.data));
+
+        // console.log("hello world", res?.data?.id);
+
+         const response = await UserService.Queries.getUserById(res?.data?.id);
+
+          // console.log("res----------------", res?.data);
+
+        localStorage.setItem("user", JSON.stringify(response.data));
+        setUser(JSON.stringify(response.data));
 
         onClose(); // close modal
         reset(); // clear form
