@@ -10,65 +10,78 @@ const HowToUse = () => {
             id: 1,
             title: "Getting Started with Click4Details",
             description: "Learn how to browse, search, and find your perfect car on our platform",
-            videoId: "a9Uka5UxOpw",
-            src: "https://www.youtube.com/embed/a9Uka5UxOpw"
+            videoId: "MOuUaB4h-k4",
+            src: "https://www.youtube.com/embed/MOuUaB4h-k4"
         },
         {
             id: 2,
             title: "How to Buy a Car - Complete Guide",
             description: "Step-by-step guide to purchasing your dream car through Click4Details",
-            videoId: "2EfnkonVi9Q",
-            src: "https://www.youtube.com/embed/2EfnkonVi9Q"
-            // src: "https://www.youtube.com/embed/2EfnkonVi9Q"
+            videoId: "7K9Fyhg6_io",
+            src: "https://www.youtube.com/embed/7K9Fyhg6_io"
         },
         {
             id: 3,
             title: "Advanced Features Tutorial",
             description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "ne5ptPMjs6Q",
-            src: "https://www.youtube.com/embed/ne5ptPMjs6Q"
+            videoId: "a9Uka5UxOpw",
+            src: "https://www.youtube.com/embed/a9Uka5UxOpw"
         },
         {
             id: 4,
-            title: "Getting Started with Click4Details",
-            description: "Learn how to browse, search, and find your perfect car on our platform",
-            videoId: "UTiahfY9qf4",
-            src: "https://www.youtube.com/embed/UTiahfY9qf4"
-        },
-        {
-            id: 5,
-            title: "How to Buy a Car - Complete Guide",
-            description: "Step-by-step guide to purchasing your dream car through Click4Details",
-            videoId: "lo2fYJrTSrY",
-            src: "https://www.youtube.com/embed/lo2fYJrTSrY"
-        },
-        {
-            id: 6,
-            title: "Advanced Features Tutorial",
-            description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "xreFNC-ZKBo",
-            src: "https://www.youtube.com/embed/xreFNC-ZKBo"
-        },
-         {
-            id: 7,
             title: "Getting Started with Click4Details",
             description: "Learn how to browse, search, and find your perfect car on our platform",
             videoId: "rqueFRUuUSA",
             src: "https://www.youtube.com/embed/rqueFRUuUSA"
         },
         {
-            id: 8,
+            id: 5,
             title: "How to Buy a Car - Complete Guide",
             description: "Step-by-step guide to purchasing your dream car through Click4Details",
+            videoId: "xreFNC-ZKBo",
+            src: "https://www.youtube.com/embed/xreFNC-ZKBo"
+        },
+        {
+            id: 6,
+            title: "Advanced Features Tutorial",
+            description: "Explore advanced features and tips to get the most out of Click4Details",
             videoId: "UofsXIjvjkc",
             src: "https://www.youtube.com/embed/UofsXIjvjkc"
         },
+         {
+            id: 7,
+            title: "Getting Started with Click4Details",
+            description: "Learn how to browse, search, and find your perfect car on our platform",
+            videoId: "2EfnkonVi9Q",
+            src: "https://www.youtube.com/embed/2EfnkonVi9Q"
+        },
+        // {
+        //     id: 8,
+        //     title: "How to Buy a Car - Complete Guide",
+        //     description: "Step-by-step guide to purchasing your dream car through Click4Details",
+        //     videoId: "UofsXIjvjkc",
+        //     src: "https://www.youtube.com/embed/UofsXIjvjkc"
+        // },
         {
             id: 9,
             title: "Advanced Features Tutorial",
             description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "j-xkpGJxWNc",
-            src: "https://www.youtube.com/embed/j-xkpGJxWNc"
+            videoId: "ne5ptPMjs6Q",
+            src: "https://www.youtube.com/embed/ne5ptPMjs6Q"
+        },
+        {
+            id: 10,
+            title: "Advanced Features Tutorial",
+            description: "Explore advanced features and tips to get the most out of Click4Details",
+            videoId: "UTiahfY9qf4",
+            src: "https://www.youtube.com/embed/UTiahfY9qf4"
+        },
+        {
+            id: 11,
+            title: "Advanced Features Tutorial",
+            description: "Explore advanced features and tips to get the most out of Click4Details",
+            videoId: "oy8KH-aCI6k",
+            src: "https://www.youtube.com/embed/oy8KH-aCI6k"
         }
     ];
 
@@ -165,10 +178,12 @@ const HowToUse = () => {
                                     <div className="relative aspect-video bg-gray-900">
                                         <iframe
                                             className="w-full h-full border-0"
-                                            src={video.src}
+                                            src={`${video.src}?rel=0&modestbranding=1`}
                                             title={video.title}
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                             allowFullScreen
+                                            loading="lazy"
+                                            referrerPolicy="strict-origin-when-cross-origin"
                                         ></iframe>
                                     </div>
                                     {/* <div className="p-6">
