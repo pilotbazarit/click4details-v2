@@ -661,6 +661,7 @@ const UpdateProductForm = ({ productId }) => {
                             _perPage: 1000,
                         });
 
+
                         const fetchedModelData = modelResponse.data?.data.map((model) => ({
                             value: model.vm_id,
                             label: model.vm_name,
@@ -668,7 +669,8 @@ const UpdateProductForm = ({ productId }) => {
 
                         setModelData(fetchedModelData);
 
-                        const isValidModel = fetchedModelData.some(item => item.value === modelId);
+                        const isValidModel = fetchedModelData.some(item => Number(item.value) === Number(modelId));
+                        
                         if (isValidModel) {
                             setTimeout(() => {
                                 setValue('v_model_id', modelId);
@@ -698,7 +700,7 @@ const UpdateProductForm = ({ productId }) => {
 
                         setPackageData(fetchedPackageData);
 
-                        const isValidEdition = fetchedPackageData.some(item => item.value === editionId);
+                        const isValidEdition = fetchedPackageData.some(item => Number(item.value) === Number(editionId));
                         if (isValidEdition) {
                             setTimeout(() => {
                                 setValue('v_edition_id', editionId);
