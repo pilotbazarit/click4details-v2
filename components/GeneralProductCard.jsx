@@ -70,15 +70,16 @@ const GeneralProductCard = ({ product }) => {
     } catch (error) {
       console.error("Failed to parse user data:", error);
     }
-  
-    // console.log("cartItems cart page", cartItems);
+
     // console.log("user Info", parsedUser?.id);
+
+    // console.log("cartItems in product card product", product);
 
 
   const handleAddToCart = (item) => {
     // Implement add to cart functionality here
 
-    let price = product?.prices && product?.prices[0]?.pp_discount_price;
+    let price = product?.prices && product?.prices[0]?.pp_regular_price;
 
     let cartItem = {
       c_user_id: parsedUser?.id || null,

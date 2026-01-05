@@ -75,12 +75,12 @@ const OrderConfirmation = () => {
           >
             Continue Shopping
           </Link>
-          <Link
+          {/* <Link
             href="/my-orders"
             className="px-8 py-3 bg-white border-2 border-green-500 text-green-500 text-center rounded-lg hover:bg-green-50 transition-colors font-semibold"
           >
             View My Orders
-          </Link>
+          </Link> */}
         </div>
 
         {/* Additional Info */}
