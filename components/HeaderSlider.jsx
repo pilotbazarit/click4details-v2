@@ -13,27 +13,27 @@ import slider5 from '../assets/slider5.jpg';
 
 const slides = [
   {
-    image: slider1,
+    image: 'https://res.cloudinary.com/pilotbazar/image/upload/v1767772877/banner1_f3bmns.jpg',
     title: 'Click4Details',
     description: 'click4Details.com',
   },
   {
-    image: slider2,
+    image: 'https://res.cloudinary.com/pilotbazar/image/upload/v1767772877/banner2_ilgbx4.jpg',
     title: 'Click4Details',
     description: 'click4Details.com',
   },
    {
-    image: slider3,
+    image: 'https://res.cloudinary.com/pilotbazar/image/upload/v1767772877/banner3_x1scs0.jpg',
     title: 'Click4Details',
     description: 'click4Details.com',
   },
   {
-    image: slider4,
+    image: 'https://res.cloudinary.com/pilotbazar/image/upload/v1767772877/banner4_gvjism.jpg',
     title: 'Click4Details',
     description: 'click4Details.com',
   },
   {
-    image: slider5,
+    image: 'https://res.cloudinary.com/pilotbazar/image/upload/v1767772877/banner5_j5k7at.jpg',
     title: 'Click4Details',
     description: 'click4Details.com',
   }
@@ -47,13 +47,13 @@ const HeaderSlider = () => {
         autoplay={{ delay: 3500, disableOnInteraction: false }}
         pagination={{ clickable: true }}
         loop={true}
-        className="h-[480px]"
+        className="h-[480px] xl:h-[600px]"
       >
         {slides.map((slide, idx) => (
 
 
         <SwiperSlide key={idx}>
-          <div className="relative w-full h-[320px] md:h-[480px] bg-black">
+          <div className="relative w-full h-[320px] md:h-[480px] xl:h-[600px] bg-black">
             <Image
               src={slide.image}
               alt={slide.title}
