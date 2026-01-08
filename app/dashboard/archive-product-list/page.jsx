@@ -128,7 +128,7 @@ const ProductList = () => {
         _perPage: itemsPerPage,
         _order: 'desc',
         _orderBy: 'v_updated_at',
-        _status: 'inactive',
+        _status: 'archive',
       };
 
       // Only set _user_id if user.mode is not 'pbl'
@@ -280,7 +280,7 @@ const ProductList = () => {
       <main className="mx-auto bg-white rounded-lg shadow-lg border border-gray-200 p-6 my-6 w-full">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-          <h2 className="text-xl text-gray-800">Product List</h2>
+          <h2 className="text-xl text-gray-800">Archived Product List</h2>
           <Button
             onClick={handleAdd}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
@@ -662,7 +662,10 @@ const ProductList = () => {
                           : "bg-red-100 text-red-700"
                           }`}
                       >
-                        {item.v_status === 'active' ? "Active" : "Inactive"}
+                        {
+                          item.v_status
+                        }
+                        {/* {item.v_status === 'active' ? "Active" : "Inactive"} */}
                       </span>
                     </TableCell>
                     <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium py-4">

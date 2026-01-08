@@ -528,7 +528,6 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
-  const isActiveHowToUse = pathname === '/how-to-us/' || pathname === '/how-to-us';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -795,16 +794,6 @@ const NavbarContent = () => {
               Contact
             </Link>
 
-            {/* <Link
-              href="/how-to-use"
-              className={`transition duration-300 ${isActiveContactUs
-                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
-                : 'hover:text-gray-900'
-                }`}
-            >
-              How To Use
-            </Link> */}
-
 
             {/* {
               parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'pbl' ? (
@@ -883,17 +872,6 @@ const NavbarContent = () => {
                   </button>
                 )
             }
-
-
-             <Link
-              href="/how-to-us"
-              className={`transition duration-300 ${isActiveHowToUse
-                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
-                : 'hover:text-gray-900'
-                }`}
-            >
-              How To Use
-            </Link>
 
 
 
