@@ -22,6 +22,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
   const [fieldError, setFieldError] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [error, setError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { setUser } = useAppContext();
 
@@ -154,6 +155,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
                         name: 'login',
                         required: true,
                       }}
+                      autoFormat={false}
                       containerClass="w-full"
                       inputClass="!w-full"
                       buttonClass="!bg-gray-50 dark:!bg-gray-600"
@@ -178,15 +180,56 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
                 >
                   Your password
                 </label>
-                <input
+                <div className="relative">
+                  <input
                   {...register("password")}
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   id="password"
                   required
                   placeholder="••••••••"
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 pr-12 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                 />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <svg
+                        className="w-5 h-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
+                        <path d="M1 1l22 22" />
+                        <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
+                        <path d="M14.12 14.12 9.88 9.88" />
+                        <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-5 h-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-red-500 text-sm mt-2">{errors.password.message}</p>
                 )}
