@@ -128,9 +128,6 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
                                     }`}
                                     onClick={() => handleAccountSelect(account)}
                                 >
-                                    {
-                                        console.log("account==============", account)
-                                    }
                                     <div className='flex items-start justify-between'>
                                         <div className='flex-1'>
                                             <h3 className='font-semibold text-lg mb-2'>{account.bank_name}</h3>

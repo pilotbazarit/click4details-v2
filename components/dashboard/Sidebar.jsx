@@ -111,18 +111,29 @@ const SideBar = () => {
   const defaultMenuItems = [
     {
       name: "Products",
-      path: "/dashboard/product-list/",
       icon: PackageSearch,
-    },
-    {
-      name: "Archive Products",
-      path: "/dashboard/archive-product-list/",
-      icon: PackageSearch,
-    },
-    {
-      name: "General Products",
-      path: "/dashboard/products/general-product/list/",
-      icon: PackageSearch,
+      children: [
+        {
+          name: "Product List",
+          path: "/dashboard/product-list/",
+          icon: PackageSearch,
+        },
+        {
+          name: "Recycled Products",
+          path: "/dashboard/recycled-product-list/",
+          icon: PackageSearch,
+        },
+        {
+          name: "Archived Products",
+          path: "/dashboard/archive-product-list/",
+          icon: PackageSearch,
+        },
+        {
+          name: "General Products",
+          path: "/dashboard/products/general-product/list/",
+          icon: PackageSearch,
+        },
+      ],
     },
     // {
     //   name: "Order List",

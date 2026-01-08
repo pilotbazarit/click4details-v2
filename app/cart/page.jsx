@@ -11,9 +11,6 @@ const Cart = () => {
 
   const { router, cartItems, addToCart, updateCartQuantity, removeCartItem, getCartCount, user, currency } = useAppContext();
 
-  console.log("cartItems in cart page", cartItems);
-
-
   let parsedUser = null;
   try {
     parsedUser = user ? JSON.parse(user) : null;

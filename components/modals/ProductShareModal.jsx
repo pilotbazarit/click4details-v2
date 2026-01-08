@@ -40,6 +40,8 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
     const formattedPermissions = formatPermissions(user?.permissions);
 
+    // console.log("formattedPermissions===================", formattedPermissions);
+    // ShareBankInformation
 
 
     let companyShopId = selectedCompanyShop?.shop?.s_id;
@@ -53,6 +55,18 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 permission.shopId === companyShopId &&
                 (permission.section === "Vehicle" || permission.section === "*") &&
                 (permission.action === priceAction || permission.action === "*")
+        )
+        : false;
+
+    let shareBankInformationAction = "ShareBankInformation";
+
+
+    const hasPermissionShareBankInformation = companyShopId
+        ? formattedPermissions.some(
+            permission =>
+                permission.shopId === companyShopId &&
+                (permission.section === "Vehicle" || permission.section === "*") &&
+                (permission.action === shareBankInformationAction || permission.action === "*")
         )
         : false;
 
@@ -1164,20 +1178,24 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                         )
                                     }
 
+                                  
 
+                                    {
+                                        (hasPermissionShareBankInformation || isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => setBankAccountModalOpen(true)}
+                                            >
+                                                <span className='text-gray-700'>Send Bank Account</span>
+                                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                    {selectedBusinessOption === 'sendBankAccount' && (
+                                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    }
 
-
-                                    <div
-                                        className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                        onClick={() => setBankAccountModalOpen(true)}
-                                    >
-                                        <span className='text-gray-700'>Send Bank Account</span>
-                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                            {selectedBusinessOption === 'sendBankAccount' && (
-                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                            )}
-                                        </div>
-                                    </div>
 
 
                                 </>
@@ -1311,7 +1329,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 user={user}
             />
 
-            
+
 
             {/* Bank Account Select Modal */}
             <BankAccountSelectModal
@@ -1323,4 +1341,4 @@ const ProductShareModal = ({ open, setOpen, product }) => {
     )
 }
 
-export default ProductShareModal
+export default ProductShareModal;
