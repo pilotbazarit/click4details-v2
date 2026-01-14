@@ -17,6 +17,7 @@ const Home = () => {
   const [fullPhone, setFullPhone] = useState(""); // Full phone with country code
   const [countryData, setCountryData] = useState(null); // Store country info
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState(null);
   const [error, setError] = useState(false);
@@ -85,14 +86,15 @@ const Home = () => {
                 </div>
                 <h1 className="text-4xl font-bold">Click4Details</h1>
               </div>
-              <h2 className="text-4xl font-bold mb-6 leading-tight">
-                আপনার ব্যবসা এখন আরও সহজ।<br />
+              {/* font-bangla */}
+              <h2 className="text-4xl font-bold mb-6 leading-tight font-bangla">
+                আপনার বিজনেস এখন আরও সহজ।<br />
               </h2>
-              <h2 className="text-2xl font-bold mb-6 leading-tight">
+              <h2 className="text-2xl font-bold mb-6 leading-tight font-bangla">
                
                 বিক্রি ও বিজনেস ম্যানেজমেন্ট—একটি বিশ্বাসযোগ্য ডিজিটাল প্ল্যাটফর্মে।
               </h2>
-              <p className="text-white/90 text-lg leading-relaxed max-w-md">
+              <p className="text-white/90 text-lg leading-relaxed max-w-md ">
                 এই প্ল্যাটফর্মটি কাদের জন্য?<br />
                 ✔ Exporter & Importer<br />
                 ✔ Wholesaler<br />
@@ -165,6 +167,11 @@ const Home = () => {
                       name: 'login',
                       required: true,
                     }}
+                    autoFormat={false}
+                    containerClass="w-full"
+                    inputClass="!w-full"
+                    buttonClass="!bg-white/90 dark:!bg-gray-600"
+                    dropdownClass="!bg-white dark:!bg-gray-700"
                   />
                   {fieldError?.login && (
                     <p className="text-red-500 text-sm mt-1">
@@ -174,14 +181,55 @@ const Home = () => {
                 </div>
 
                 <div>
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="••••••••"
-                    className="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
-                    onChange={handleChange}
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/50 transition pr-12"
+                      onChange={handleChange}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 transition"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <svg
+                          className="w-5 h-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
+                          <path d="M1 1l22 22" />
+                          <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
+                          <path d="M14.12 14.12 9.88 9.88" />
+                          <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                   {fieldError?.password && (
                     <p className="text-red-500 text-sm mt-1">
                       {fieldError.password[0]}

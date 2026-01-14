@@ -23,6 +23,10 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className={`${outfit.className} antialiased text-gray-700 debug-screens`}>
         <MouseTrail />
