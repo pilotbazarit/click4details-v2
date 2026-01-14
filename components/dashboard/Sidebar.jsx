@@ -135,6 +135,34 @@ const SideBar = () => {
         },
       ],
     },
+
+
+    // {
+    //   name: "Company Products",
+    //   icon: PackageSearch,
+    //   children: [
+    //     {
+    //       name: "Product List",
+    //       path: "/dashboard/company-product-list/",
+    //       icon: PackageSearch,
+    //     },
+    //     {
+    //       name: "Recycled Products",
+    //       path: "/dashboard/recycled-product-list/",
+    //       icon: PackageSearch,
+    //     },
+    //     // {
+    //     //   name: "Archived Products",
+    //     //   path: "/dashboard/archive-product-list/",
+    //     //   icon: PackageSearch,
+    //     // },
+    //     // {
+    //     //   name: "General Products",
+    //     //   path: "/dashboard/products/general-product/list/",
+    //     //   icon: PackageSearch,
+    //     // },
+    //   ],
+    // },
     // {
     //   name: "Order List",
     //   // path: "/dashboard/orders/list/",
