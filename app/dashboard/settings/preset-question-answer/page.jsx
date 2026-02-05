@@ -221,7 +221,7 @@ const PresetQuestionAnswer = () => {
                                         <TableCell className="border-r border-gray-200 font-medium">{item?.pqa_type}</TableCell>
                                         <TableCell className="border-r border-gray-200 font-medium">{item?.pqa_priority}</TableCell>
                                         <TableCell className="border-r border-gray-200 font-medium">
-                                            {item?.pqa_status === 1 ? (
+                                            {Number(item?.pqa_status) === 1 ? (
                                                 <span className="text-green-600 font-medium">Active</span>
                                             ) : (
                                                 <span className="text-red-600 font-medium">Inactive</span>

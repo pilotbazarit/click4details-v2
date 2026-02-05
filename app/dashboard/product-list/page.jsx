@@ -44,6 +44,8 @@ const ProductList = () => {
   const [showCodeSearch, setShowCodeSearch] = useState(false);
   const [editionQuery, setEditionQuery] = useState("");
   const [showEditionSearch, setShowEditionSearch] = useState(false);
+  const [shopFilterId, setShopFilterId] = useState(null);
+  const [showShopSearch, setShowShopSearch] = useState(false);
   const [chassisQuery, setChassisQuery] = useState("");
   const [showChassisSearch, setShowChassisSearch] = useState(false);
   const [priorityQuery, setPriorityQuery] = useState("");
@@ -80,13 +82,15 @@ const ProductList = () => {
   const brandTooltipRef = useRef(null);
   const modelButtonRef = useRef(null);
   const modelTooltipRef = useRef(null);
+  const shopButtonRef = useRef(null);
+  const shopTooltipRef = useRef(null);
   const [sortColumn, setSortColumn] = useState('v_id'); // Default sort column
   const [sortOrder, setSortOrder] = useState('ASC'); // Default sort order
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [pricePreviewProduct, setPricePreviewProduct] = useState(null);
   const [selectedShop, setSelectedShop] = useState("my-shop");
   const [showColumnToggle, setShowColumnToggle] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState(['sl', 'name', 'brand', 'model', 'package', 'chassis', 'color', 'costing-price', 'asking-price', 'fixed-price', 'condition', 'availability', 'package', 'code', 'actions']);
+  const [visibleColumns, setVisibleColumns] = useState(['sl', 'name', 'brand', 'model', 'package', 'shop', 'chassis', 'color', 'costing-price', 'asking-price', 'fixed-price', 'condition', 'availability', 'package', 'shop', 'code', 'actions']);
   const [editingFixedPriceId, setEditingFixedPriceId] = useState(null);
   const [editingFixedPriceValue, setEditingFixedPriceValue] = useState("");
   const [savingFixedPriceId, setSavingFixedPriceId] = useState(null);
@@ -116,8 +120,8 @@ const ProductList = () => {
   const [updatePurchasePricePermission, setUpdatePurchasePricePermission] = useState(true);
   const [updateVariablePricePermission, setUpdateVariablePricePermission] = useState(true);
   const [updateProductPricePermission, setUpdateProductPricePermission] = useState(true);
-
-
+  const [companyShops, setCompanyShops] = useState([]);
+  const [allShop, setAllShop] = useState([]);
 
   useEffect(() => {
 
@@ -202,6 +206,7 @@ const ProductList = () => {
     { key: 'model', label: 'Model' },
     { key: 'capacity', label: 'Capacity' },
     { key: 'package', label: 'Package' },
+    { key: 'shop', label: 'Shop' },
     { key: 'chassis', label: 'Chassis No' },
     { key: 'color', label: 'Color' },
     { key: 'price', label: 'Price' },
@@ -355,7 +360,7 @@ const ProductList = () => {
       const user = JSON.parse(userInfo);
 
 
-      // console.log("user mode:::", user);
+      console.log("shopFilterId::: 363", shopFilterId);
 
 
 
@@ -368,7 +373,8 @@ const ProductList = () => {
         _status: 'active',
       };
 
-      const shopToFilter = shopId !== undefined ? shopId : selectedShop;
+      const shopToFilter =
+        shopId !== undefined ? shopId : shopFilterId !== null ? shopFilterId : selectedShop;
 
       if (shopToFilter) {
         if (shopToFilter === 'my-shop') {
@@ -376,6 +382,15 @@ const ProductList = () => {
             params._user_id = user?.id;
           }
           // params._user_id = user?.id;
+        } else if (shopToFilter === 'company-shop') {
+
+          if (companyShops.length > 0) {
+            companyShops.forEach((item, idx) => {
+              params[`_shop_ids[${idx}]`] = item?.value ?? item;
+            });
+            delete params._user_id; // When filtering by specific company shops, we don't want the default user filter
+          }
+
         } else {
           params['_shop_ids[0]'] = shopToFilter;
           delete params._user_id; // When filtering by a specific company shop, we don't want the default user filter
@@ -440,6 +455,46 @@ const ProductList = () => {
       );
     }
   }
+
+
+  const handleShopData = async (shopType) => {
+
+    const userData = localStorage.getItem("user");
+    const userInfo = userData && JSON.parse(userData);
+    const user = JSON.parse(userInfo);
+
+
+    const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
+    const params = {
+      // _user_id: user?.id,
+      ...(user?.user_mode !== "admin" && user?.user_mode !== "supreme" && { _user_id: user?.id }),
+      _type: type,
+      _page: 1,
+      _perPage: 1000
+    };
+    try {
+      const response = await ShopService.Queries.getShopsWithCompanyShops(params);
+
+      //  console.log("response------`-474", response);
+
+
+      const list = response?.data || [];
+      const shopOptions = list
+        .map((item) => {
+          const shop = item?.shop ?? item;
+          if (!shop?.s_id) return null;
+          return { value: shop.s_id, label: shop.s_title };
+        })
+        .filter(Boolean);
+
+      setAllShop(shopOptions);
+
+
+      // setShopData(shopOptions);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to fetch company shops");
+    }
+  };
 
 
   // console.log("query", query);
@@ -707,6 +762,7 @@ const ProductList = () => {
       const isClickInsideFilterButton =
         (filterButtonRef.current && filterButtonRef.current.contains(event.target)) ||
         (editionButtonRef.current && editionButtonRef.current.contains(event.target)) ||
+        (shopButtonRef.current && shopButtonRef.current.contains(event.target)) ||
         (modelButtonRef.current && modelButtonRef.current.contains(event.target)) ||
         (chassisButtonRef.current && chassisButtonRef.current.contains(event.target)) ||
         (priorityButtonRef.current && priorityButtonRef.current.contains(event.target)) ||
@@ -717,6 +773,7 @@ const ProductList = () => {
       const isClickInsideTooltip =
         (tooltipRef.current && tooltipRef.current.contains(event.target)) ||
         (editionTooltipRef.current && editionTooltipRef.current.contains(event.target)) ||
+        (shopTooltipRef.current && shopTooltipRef.current.contains(event.target)) ||
         (modelTooltipRef.current && modelTooltipRef.current.contains(event.target)) ||
         (chassisTooltipRef.current && chassisTooltipRef.current.contains(event.target)) ||
         (priorityTooltipRef.current && priorityTooltipRef.current.contains(event.target)) ||
@@ -729,6 +786,7 @@ const ProductList = () => {
       if (!isClickInsideFilterButton && !isClickInsideTooltip && !isClickInsideReactSelect) {
         setShowCodeSearch(false);
         setShowEditionSearch(false);
+        setShowShopSearch(false);
         setShowModelSearch(false);
         setShowChassisSearch(false);
         setShowPrioritySearch(false);
@@ -741,7 +799,7 @@ const ProductList = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [tooltipRef, filterButtonRef, editionTooltipRef, editionButtonRef, modelTooltipRef, modelButtonRef, chassisTooltipRef, chassisButtonRef, priorityTooltipRef, priorityButtonRef, ownerTooltipRef, ownerButtonRef, brandTooltipRef, brandButtonRef]);
+  }, [tooltipRef, filterButtonRef, editionTooltipRef, editionButtonRef, shopTooltipRef, shopButtonRef, modelTooltipRef, modelButtonRef, chassisTooltipRef, chassisButtonRef, priorityTooltipRef, priorityButtonRef, ownerTooltipRef, ownerButtonRef, brandTooltipRef, brandButtonRef]);
 
 
   const handleDelete = async (id) => {
@@ -811,7 +869,9 @@ const ProductList = () => {
         label: shop.s_title,
       }));
 
-      setShopData((prevShopData) => {
+      // console.log("======================shopOptions===============================", shopOptions);
+
+      setAllShop((prevShopData) => {
         const newShops = shopOptions.filter(
           (newShop) => !prevShopData.find((s) => s.value === newShop.value)
         );
@@ -823,6 +883,9 @@ const ProductList = () => {
   };
 
 
+  // console.log("-----------allShop----------", allShop);
+
+
   useEffect(() => {
 
     const userData = localStorage.getItem("user");
@@ -831,66 +894,77 @@ const ProductList = () => {
       setUser(JSON.parse(userInfo));
     }
 
-    // getShopData();
+    handleShopData('my-shop');
   }, []);
 
 
 
-  const fetchCompanyShops = useCallback(async () => {
-    try {
-      const response = await ShopService.Queries.getCompanyShops(user?.id);
+  // const fetchCompanyShops = useCallback(async () => {
+  //   try {
+  //     const params = {
+  //       order: "desc",
+  //       orderBy: "s_id",
+  //       _page: 1,
+  //       _perPage: 1000,
+  //       _user_id: user?.id,
+  //       _type: "company"
+  //     };
+  //     const response = await ShopService.Queries.getShopsWithCompanyShops(user?.id);
 
-      if (response.status == 'success') {
-        let shopArrayData = [];
+  //     if (response.status == 'success') {
+  //       let shopArrayData = [];
 
-        response?.data.forEach((item) => {
-          if (item.shop) {
-            // console.log("item.shop.s_id:", item.shop.s_id);
-            // console.log("permissionList:", permissionList);
+  //       response?.data.forEach((item) => {
+  //         if (item.shop) {
+  //           // console.log("item.shop.s_id:", item.shop.s_id);
+  //           // console.log("permissionList:", permissionList);
 
-            let companyShopId = item.shop.s_id;
-            let priceAction = "Create"
+  //           let companyShopId = item.shop.s_id;
+  //           let priceAction = "Create"
 
-            const hasCreatePermission = hasPermission(permissionList, companyShopId, "Vehicle", priceAction);
+  //           const hasCreatePermission = hasPermission(permissionList, companyShopId, "Vehicle", priceAction);
 
-            // console.log("hasCreatePermission:", hasCreatePermission);
-            if (hasCreatePermission) {
-              shopArrayData.push({
-                value: item.shop.s_id,
-                label: item.shop.s_title,
-              });
-            }
+  //           // console.log("hasCreatePermission:", hasCreatePermission);
+  //           if (hasCreatePermission) {
+  //             shopArrayData.push({
+  //               value: item.shop.s_id,
+  //               label: item.shop.s_title,
+  //             });
+  //           }
 
-          }
-        });
-
-
-        setShopData((prevShopData) => {
-          const newShops = shopArrayData.filter(
-            (newShop) => !prevShopData.find((s) => s.value === newShop.value)
-          );
-
-          const finalData = [...prevShopData, ...newShops];
-
-          return finalData;
-        });
-        // setCompanyShops(response?.data);
-      }
-    } catch (error) {
-      console.log("Error fetching shops:", error);
-    }
-  }, [user?.id]);
+  //         }
+  //       });
 
 
+  //       setCompanyShops(shopArrayData);
 
-  // console.log("user", user);
+
+  //       setShopData((prevShopData) => {
+  //         const newShops = shopArrayData.filter(
+  //           (newShop) => !prevShopData.find((s) => s.value === newShop.value)
+  //         );
+
+  //         const finalData = [...prevShopData, ...newShops];
+
+  //         return finalData;
+  //       });
+  //       // setCompanyShops(response?.data);
+  //     }
+  //   } catch (error) {
+  //     console.log("Error fetching shops:", error);
+  //   }
+  // }, [user?.id]);
 
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchCompanyShops();
-    }
-  }, [user?.id, fetchCompanyShops]);
+
+  // console.log("companyShops 903000000000000", companyShops);
+
+
+  // useEffect(() => {
+  //   if (user?.id) {
+  //     fetchCompanyShops();
+  //   }
+  // }, [user?.id, fetchCompanyShops]);
 
 
   // console.log("ssetSelectedShophopData", selectedShop);
@@ -917,8 +991,10 @@ const ProductList = () => {
               value={selectedShop}
               onChange={(e) => {
                 const newShopId = e.target.value;
+                setShopFilterId(null);
                 setSelectedShop(newShopId);
                 setCurrentPage(1);
+                handleShopData(newShopId);
                 getProducts(
                   codeQuery,
                   editionQuery,
@@ -934,9 +1010,10 @@ const ProductList = () => {
             >
               <option value="">Select Company Shop</option>
               <option value="my-shop">My Shop</option>
-              {shopData.map((shop) => (
+              <option value="company-shop">Company Shop</option>
+              {/* {shopData.map((shop) => (
                 <option key={shop.value} value={shop.value}>{shop.label}</option>
-              ))}
+              ))} */}
             </select>
           </div>
 
@@ -990,7 +1067,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowBrandSearch(!showBrandSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
+                          onClick={() => { setShowBrandSearch(!showBrandSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowShopSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={brandButtonRef}
                         >
@@ -1056,7 +1133,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowModelSearch(!showModelSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowBrandSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
+                          onClick={() => { setShowModelSearch(!showModelSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowShopSearch(false); setShowBrandSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={modelButtonRef}
                         >
@@ -1122,7 +1199,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowEditionSearch(!showEditionSearch); setShowCodeSearch(false); setShowModelSearch(false); setShowBrandSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
+                          onClick={() => { setShowEditionSearch(!showEditionSearch); setShowCodeSearch(false); setShowShopSearch(false); setShowModelSearch(false); setShowBrandSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={editionButtonRef}
                         >
@@ -1184,7 +1261,90 @@ const ProductList = () => {
                   </TableHead>
                 )}
 
-             
+
+                {isColumnVisible('shop') && (
+                  <TableHead className="border-r border-gray-300 relative">
+                    <div className="flex items-center justify-between relative">
+                      <span>Shop</span>
+
+                      <div className="relative">
+                        <button
+                          onClick={() => { setShowShopSearch(!showShopSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowModelSearch(false); setShowBrandSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); }}
+                          className="ml-2 focus:outline-none"
+                          ref={shopButtonRef}
+                        >
+                          <Funnel className={`w-4 h-4 ${shopFilterId !== null ? 'text-orange-500' : ''}`} />
+                        </button>
+
+                        {showShopSearch && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-[2px] w-0 h-0 border-l-6 border-r-6 border-b-6 border-transparent border-b-gray-300" />
+                        )}
+                      </div>
+                    </div>
+                    {showShopSearch && (
+                      <div className="relative" ref={shopTooltipRef}>
+                        <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white z-20" />
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-white border border-gray-300 rounded-md shadow-lg z-50 w-48 flex flex-col items-end">
+                          <div className="flex items-center w-full mb-2">
+                            <Select
+                              options={[
+                                { value: '', label: 'All Shops' },
+                                // { value: 'my-shop', label: 'My Shop' },
+                                ...allShop
+                              ]}
+                              value={(() => {
+                                const currentValue = shopFilterId !== null ? shopFilterId : selectedShop;
+                                const options = [
+                                  { value: '', label: 'All Shops' },
+                                  // { value: 'my-shop', label: 'My Shop' },
+                                  ...allShop
+                                ];
+                                const found = options.find((option) => option.value === currentValue);
+                                if (found) return found;
+                                if (!currentValue) return { value: '', label: 'All Shops' };
+                                return { value: currentValue, label: 'Selected Shop' };
+                              })()}
+                              onChange={(selectedOption) =>
+                                setShopFilterId(selectedOption ? selectedOption.value : null)
+                              }
+                              placeholder="Select Shop"
+                              isClearable={true}
+                              className="w-full text-sm"
+                              classNamePrefix="react-select"
+                            />
+
+                            {shopFilterId !== null && (
+                              <button
+                                onClick={() => {
+                                  setShopFilterId(null);
+                                  getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, ownerQuery, brandQuery, modelQuery, query, selectedShop);
+                                  setShowShopSearch(false);
+                                }}
+                                className="ml-2 text-gray-500 hover:text-red-500 focus:outline-none"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              const shopIdToApply = shopFilterId !== null ? shopFilterId : selectedShop;
+                              getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, ownerQuery, brandQuery, modelQuery, query, shopIdToApply);
+                              setShowShopSearch(false);
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 focus:outline-none"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </TableHead>
+                )}
+
+
 
 
 
@@ -1195,7 +1355,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowChassisSearch(!showChassisSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowModelSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); setShowBrandSearch(false); }}
+                          onClick={() => { setShowChassisSearch(!showChassisSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowShopSearch(false); setShowModelSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); setShowBrandSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={chassisButtonRef}
                         >
@@ -1328,7 +1488,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowOwnerSearch(!showOwnerSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowBrandSearch(false); }}
+                          onClick={() => { setShowOwnerSearch(!showOwnerSearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowShopSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowBrandSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={ownerButtonRef}
                         >
@@ -1403,7 +1563,7 @@ const ProductList = () => {
                 )}
 
 
-                 {isColumnVisible('grade') && (
+                {isColumnVisible('grade') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
                       Grade
@@ -1412,8 +1572,8 @@ const ProductList = () => {
                 )}
 
 
-                
-                 {isColumnVisible('milage') && (
+
+                {isColumnVisible('milage') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
                       Milage
@@ -1422,7 +1582,7 @@ const ProductList = () => {
                 )}
 
 
-                   {isColumnVisible('fuel') && (
+                {isColumnVisible('fuel') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
                       Fuel
@@ -1438,7 +1598,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowPrioritySearch(!showPrioritySearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowOwnerSearch(false); setShowBrandSearch(false); }}
+                          onClick={() => { setShowPrioritySearch(!showPrioritySearch); setShowCodeSearch(false); setShowEditionSearch(false); setShowShopSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowOwnerSearch(false); setShowBrandSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={priorityButtonRef}
                         >
@@ -1519,7 +1679,7 @@ const ProductList = () => {
 
                       <div className="relative">
                         <button
-                          onClick={() => { setShowCodeSearch(!showCodeSearch); setShowEditionSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); setShowBrandSearch(false); }}
+                          onClick={() => { setShowCodeSearch(!showCodeSearch); setShowEditionSearch(false); setShowShopSearch(false); setShowModelSearch(false); setShowChassisSearch(false); setShowPrioritySearch(false); setShowOwnerSearch(false); setShowBrandSearch(false); }}
                           className="ml-2 focus:outline-none"
                           ref={filterButtonRef}
                         >
@@ -1611,6 +1771,7 @@ const ProductList = () => {
                     {isColumnVisible('brand') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_brand_name}</TableCell>}
                     {isColumnVisible('model') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_model_name}</TableCell>}
                     {isColumnVisible('package') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_edition_name}</TableCell>}
+                    {isColumnVisible('shop') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_shop_name}</TableCell>}
                     {isColumnVisible('chassis') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_chassis}</TableCell>}
                     {isColumnVisible('capacity') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_capacity}</TableCell>}
                     {isColumnVisible('color') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_color_name}</TableCell>}

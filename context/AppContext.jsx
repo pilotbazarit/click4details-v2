@@ -26,6 +26,7 @@ export const AppContextProvider = ({ children }) => {
   const [userData, setUserData] = useState(false);   // Additional user data (if needed)
   const [isSeller, setIsSeller] = useState(true);    // Seller status
   const [cartItems, setCartItems] = useState([]);    // Cart items (array of objects with product details + quantity)
+  const [cartId, setCartId] = useState(null);    
   const [user, setUser] = useState(null);            // User object
   const [loading, setLoading] = useState(false);     // Loading state
   const [shops, setShops] = useState([]);           // Shops list
@@ -117,6 +118,19 @@ export const AppContextProvider = ({ children }) => {
 
   const fetchCartItems = async () => {
     try {
+      // Parse user fresh inside the function to avoid stale closure
+      let currentUser = null;
+      try {
+        const userString = localStorage.getItem("user");
+        currentUser = userString ? JSON.parse(userString) : null;
+        if (currentUser && typeof currentUser === "string") {
+          currentUser = JSON.parse(currentUser);
+        }
+      } catch (error) {
+        console.error("Failed to parse user:", error);
+        currentUser = null;
+      }
+
       const params = {
         _page: 1,
         _perPage: 1000,
@@ -126,34 +140,39 @@ export const AppContextProvider = ({ children }) => {
       };
 
       // If user is logged in, use _user_id. Otherwise, use c_session_id
-      if (parsedUser?.id) {
-        params._user_id = parsedUser.id;
+      if (currentUser?.id) {
+        params._user_id = currentUser.id;
       } else {
         params._session_id = getSessionId();
       }
 
       const response = await CartService.Queries.getCartList(params);
 
-      if (response.status === "success") {
-        // Set cart items from database
-        // console.log("response.data.data");
-        // console.log(response.data.data);
 
+      console.log("App context 152 get cart response::", response);
+
+      if (response.status === "success") {
         // Transform cart data to required format - loop through all carts
         const transformedCartItems = [];
 
-        response?.data?.data?.forEach(cart => {
+        response?.data?.data.length > 0 && response?.data?.data?.forEach(cart => {
+          // setCartId(cart.c_id);
+          console.log("App context 160 cart", cart);
           cart?.items?.forEach(item => {
             transformedCartItems.push({
+              cart_id: cart.c_id,
               ci_product_id: item.ci_product_id,
               ci_type_id: item.ci_type_id,
               ci_qty: item.ci_qty,
               ci_price: item.ci_price,
               ci_url: item?.ci_product_details?.image || '',
-              ci_name: item?.ci_product_details?.name || 'product name'
+              ci_name: item?.ci_product_details?.name || '',
+              ci_product_price_id: item.ci_product_price_id,
             });
           });
         });
+
+        // setCartId(response?.data?.data[0]?.c_id);
 
         setCartItems(transformedCartItems);
       }
@@ -170,49 +189,11 @@ export const AppContextProvider = ({ children }) => {
   // Add an item to the cart (increments quantity)
   const addToCart = async (itemId, productData = null) => {
     try {
-      // Prepare cart data for API
-      // const cartData = {
-      //   product_id: itemId,
-      //   quantity: 1,
-      // };
-
       // Call API to store cart in database
       const response = await CartService.Commands.storeCart(productData);
 
-      // If API call is successful, update local state
       if (response.data) {
-        // setCartItems((prev) => {
-        //   // Check if item already exists in cart
-        //   const existingItemIndex = prev.findIndex((item) => item.p_id === itemId || item._id === itemId);
-
-
-        //   if (existingItemIndex !== -1) {
-        //     // If item already exists, increment quantity
-        //     const updatedCart = [...prev];
-        //     updatedCart[existingItemIndex] = {
-        //       ...updatedCart[existingItemIndex],
-        //       quantity: updatedCart[existingItemIndex].quantity + 1,
-        //     };
-        //     return updatedCart;
-        //   } else {
-        //     // If new item, find product details from products array
-        //     const product = productData || products.find((p) => p.p_id === itemId || p._id === itemId);
-        //     if (!product) return prev; // If product not found, don't add
-
-        //     // Add new item to cart
-        //     return [
-        //       ...prev,
-        //       {
-        //         ...product,
-        //         quantity: 1,
-        //       },
-        //     ];
-        //   }
-        // });
-
         fetchCartItems();
-
-        // Show toast message once after state update
         toast.success("Product added to cart");
       }
     } catch (error) {
@@ -244,49 +225,6 @@ export const AppContextProvider = ({ children }) => {
         fetchCartItems();
         // toast.success("Product added to cart");
       }
-
-
-      // if (quantity === 0) {
-      //   // Prepare data for delete API
-      //   const deleteData = {
-      //     product_id: itemId,
-      //   };
-
-      //   // Call API to remove item from cart in database
-      //   const response = await CartService.Commands.deleteCart(deleteData);
-
-      //   // If API call is successful, update local state
-      //   if (response.data) {
-      //     setCartItems((prev) => {
-      //       // Remove item if quantity is 0
-      //       return prev.filter((item) => item.p_id !== itemId && item._id !== itemId);
-      //     });
-      //     toast.success("Product removed from cart");
-      //   }
-      // } else {
-      //   // Prepare data for update API
-      //   const updateData = {
-      //     product_id: itemId,
-      //     quantity: quantity,
-      //   };
-
-      //   // Call API to update cart in database
-      //   // const response = await CartService.Commands.updateCart(itemId, updateData);
-
-      //   // If API call is successful, update local state
-      //   // if (response.data) {
-      //   //   setCartItems((prev) => {
-      //   //     // Update quantity of existing item
-      //   //     return prev.map((item) => {
-      //   //       if (item.p_id === itemId || item._id === itemId) {
-      //   //         return { ...item, quantity };
-      //   //       }
-      //   //       return item;
-      //   //     });
-      //   //   });
-      //   //   toast.success("Cart updated successfully");
-      //   // }
-      // }
     } catch (error) {
       console.error("Error updating cart:", error);
       toast.error("Failed to update cart");
@@ -343,6 +281,7 @@ export const AppContextProvider = ({ children }) => {
     getCartCount,
     getCartAmount,
     user,
+    parsedUser,
     setUser,
     loading,
     shops,

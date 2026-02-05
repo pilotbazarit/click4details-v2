@@ -69,8 +69,6 @@ const Cart = () => {
                 {cartItems.map((item, index) => {
                   if (!item || item.quantity <= 0) return null;
 
-                  // console.log("cart items", item);
-
                   const itemId = item.ci_product_id;
                   return (
                     <tr key={index}>

@@ -392,7 +392,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                             autoComplete="off"
                                             onChange={e => {
                                                 const value = e.target.value;
-                                                if (value.length === 11) {
+                                                if (value.length === 10) {
                                                     getUsers(value);
                                                 } else {
                                                     setUsers([]);

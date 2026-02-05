@@ -2,7 +2,7 @@
 
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import FeedbackTemplateModal from "@/components/modals/FeedbackTemplateModal";
-import FeedbackTemplateService from "@/services/PresetQuestionService";
+import FeedbackTemplateService from "@/services/FeedbackTemplateService";
 import { Copy, Edit, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";

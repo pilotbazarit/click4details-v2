@@ -11,15 +11,19 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Loading from "@/components/Loading";
 import LoginPromptModal from "@/components/LoginPromptModal";
 import toast from "react-hot-toast";
-import { ChevronDown, House, Info, LayoutDashboard, ListFilterPlus, LogOut, Pencil, PhoneCall, Plus, ShoppingCart, SquareChartGantt, Store, Trash2, User, UserPen } from "lucide-react";
+import { Bell, ChevronDown, House, Info, LayoutDashboard, ListFilterPlus, LogOut, Pencil, PhoneCall, Plus, ShoppingCart, SquareChartGantt, Store, Trash2, User, UserPen } from "lucide-react";
 import LoginService from "@/services/LoginService";
 import { useMyShopProductContext } from "@/context/MyShopProductContext";
 import ShopDropdown from "./ShopDropdown";
 import CompanyShopDropdown from "./CompanyShopDropdown";
 import ForgotPasswordModal from "./modals/ForgotPasswordModal";
 import ResetPasswordModal from "./modals/ResetPasswordModal";
+import NotificationModal from "./modals/NotificationModal";
+import ProductChatModal from "./modals/ProductChatModal";
 import CategoryService from "@/services/CategoryService";
 import SearchBar from "@/components/SearchBar";
+import ConversationModal from "./modals/ConversationModal";
+import ConversationService from "@/services/ConversationService";
 
 
 // Recursive Category Menu Item Component (Desktop & Mobile)
@@ -181,7 +185,9 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
 const NavbarContent = () => {
   const [cartItemCount, setCartItemCount] = useState(0);
 
-  const { cartItems, setCartItems, addToCart } = useAppContext();
+  // const { cartItems, setCartItems, addToCart } = useAppContext();
+
+  const { cartItems, setCartItems, addToCart, isSeller, router, user, setUser, shops, selectedShop, setSelectedShop } = useAppContext();
 
   // console.log("cartItems Navbar:::", cartItems.length);
 
@@ -192,11 +198,16 @@ const NavbarContent = () => {
   // }, []);
 
 
-  const { isSeller, router, user, setUser, shops, selectedShop, setSelectedShop } = useAppContext();
+
   const [loginOpen, setLoginOpen] = useState(false);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isConversationOpen, setIsConversationOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatProduct, setChatProduct] = useState(null);
+  const [chatConversationId, setChatConversationId] = useState(0);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -208,6 +219,13 @@ const NavbarContent = () => {
   const [shopOptions, setShopOptions] = useState([]);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const categoryRef = useRef(null);
+
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  // const notifications = [
+  //   { id: 1, title: "New message", description: "You have a new message in chat.", time: "2m ago" },
+  //   { id: 2, title: "Order update", description: "Your order has been shipped.", time: "1h ago" },
+  //   { id: 3, title: "Promo", description: "Check out the latest deals today.", time: "3h ago" },
+  // ];
 
   // Demo category data with unlimited nested structure
   const categoriesOld = [
@@ -473,6 +491,24 @@ const NavbarContent = () => {
 
 
 
+  const getUnreadNotifications = async () => {
+    try {
+      // const response = await LoginService.Queries.getUnreadNotifications();
+
+      const response = await ConversationService.Queries.getUnreadNotifications();
+      if (response && response.status === "success") {
+        const nextCount = Number(response?.data?.unread_count);
+        setUnreadNotificationCount(nextCount);
+      }
+    } catch (error) {
+      console.log("Error fetching unread notifications:", error);
+    }
+  };
+
+
+  // console.log("unreadNotificationCount", unreadNotificationCount);
+
+
 
   // useEffect(() => {
   //   console.log("call useEffect");
@@ -710,6 +746,18 @@ const NavbarContent = () => {
     setIsResetPasswordModalOpen(false);
   };
 
+
+
+  useEffect(() => {
+    if (!parsedUser) return; // Only run if user is logged in
+
+    const intervalId = setInterval(() => {
+      getUnreadNotifications();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [parsedUser]);
+
   return (
     <>
       <nav className="flex items-center justify-between px-4 md:px-16 lg:px-32 py-1 border-b border-gray-300 text-gray-700">
@@ -910,7 +958,13 @@ const NavbarContent = () => {
           {user ? (
             <>
               <div className="flex items-center gap-4">
-                {user && <MyHomePopover setLogout={setLogout} />}
+                {user &&
+                  <MyHomePopover
+                    setLogout={setLogout}
+                    setIsNotificationOpen={setIsNotificationOpen}
+                    unreadNotificationCount={unreadNotificationCount}
+                  />
+                }
               </div>
             </>
           ) : (
@@ -922,6 +976,7 @@ const NavbarContent = () => {
             </button>
           )}
 
+
           <Link
             href="/cart"
             className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative"
@@ -932,9 +987,47 @@ const NavbarContent = () => {
                 <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {cartItems.length}
                 </span>
-              )}  
+              )}
             </div>
           </Link>
+
+
+
+
+
+          <button
+            type="button"
+            onClick={() => setIsConversationOpen(true)}
+            className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition"
+          >
+            <svg
+              className="h-7 w-7 text-blue-500"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="currentColor"
+            >
+              <path d="M12 2C6.48 2 2 6.11 2 11.2c0 2.9 1.42 5.52 3.74 7.24V22l3.38-1.87c1.02.28 2.11.43 3.24.43 5.52 0 10-4.11 10-9.16S17.52 2 12 2zm.07 12.35l-2.55-2.72-4.87 2.72 5.34-5.68 2.55 2.72 4.87-2.72-5.34 5.68z" />
+            </svg>
+          </button>
+
+
+
+          {/* <button
+            type="button"
+            onClick={() => setIsNotificationOpen(true)}
+            className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition"
+          >
+            <svg
+              className="h-7 w-7 text-blue-500"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="currentColor"
+            >
+              <path d="M12 2C6.48 2 2 6.11 2 11.2c0 2.9 1.42 5.52 3.74 7.24V22l3.38-1.87c1.02.28 2.11.43 3.24.43 5.52 0 10-4.11 10-9.16S17.52 2 12 2zm.07 12.35l-2.55-2.72-4.87 2.72 5.34-5.68 2.55 2.72 4.87-2.72-5.34 5.68z" />
+            </svg>
+          </button> */}
+
+
 
         </ul>
 
@@ -976,6 +1069,7 @@ const NavbarContent = () => {
       {isSearchOpen && (
         <div className="fixed inset-0 bg-[#71abca] bg-opacity-90 z-[9999] flex items-center justify-center">
           <div className="relative bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl border border-gray-700">
+
             <button
               onClick={() => setIsSearchOpen(false)}
               className="absolute top-2 right-2 text-gray-300 hover:text-white"
@@ -995,6 +1089,8 @@ const NavbarContent = () => {
                 ></path>
               </svg>
             </button>
+
+
             <SearchBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -1003,6 +1099,41 @@ const NavbarContent = () => {
           </div>
         </div>
       )}
+
+
+      {/* setIsConversationOpen */}
+
+      <ConversationModal
+        isOpen={isConversationOpen}
+        onClose={() => setIsConversationOpen(false)}
+        onOpenChat={(item) => {
+          setChatProduct(item?.product || null);
+          setChatConversationId(item?.conversationId || 0);
+          setIsConversationOpen(false);
+          setChatOpen(true);
+        }}
+      />
+
+
+      <NotificationModal
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onOpenChat={(item) => {
+          setChatProduct(item?.product || null);
+          setChatConversationId(item?.conversationId || 0);
+          setIsNotificationOpen(false);
+          setChatOpen(true);
+        }}
+      />
+
+
+
+      <ProductChatModal
+        open={chatOpen}
+        setOpen={setChatOpen}
+        // product={chatProduct}
+        conversationId={chatConversationId}
+      />
 
       {/* Mobile Drawer Menu */}
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}>

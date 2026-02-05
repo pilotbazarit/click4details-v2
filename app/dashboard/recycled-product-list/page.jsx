@@ -724,14 +724,14 @@ const ProductList = () => {
                                                 <Pencil size={18} />
                                             </button>
 
-                                            <button
+                                            {/* <button
                                                 onClick={() => handlePermanentDelete(item.v_id)}
                                                 title="Permanent Delete"
                                                 className="text-red-600 hover:text-red-800"
                                                 aria-label={`Permanent Delete ${item.s_title}`}
                                             >
                                                 <Trash2 size={18} />
-                                            </button>
+                                            </button> */}
 
                                             <button
                                                 onClick={() => handleArchiveDelete(item.v_id)}

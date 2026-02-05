@@ -173,6 +173,10 @@ const Checkout = () => {
     setIsAddressModalOpen(false);
   };
 
+
+
+   console.log("checkout 178 cartItems:::", cartItems);
+
   const handlePlaceOrder = async () => {
     // Validation
     if (!paymentMethod) {
@@ -339,12 +343,13 @@ const Checkout = () => {
         orderData[`oi_unit_price[${key}]`] = item.ci_price;
         orderData[`oi_discount_price[${key}]`] = 0;
         orderData[`oi_total_price[${key}]`] = item.ci_qty * item.ci_price;
+        orderData[`oi_product_price_id[${key}]`] = item.ci_product_price_id;
       });
 
 
       // return
 
-      console.log("orderData:::", orderData);
+     
 
       // Create order
       // Pass token for guest users who just registered
@@ -382,7 +387,7 @@ const Checkout = () => {
         toast.error(errorMessage);
       }
     } catch (error) {
-      console.error('Error placing order:', error);
+      console.log('Error placing order:', error);
 
       // Show user-friendly error message
       const errorMessage = error.response?.data?.message

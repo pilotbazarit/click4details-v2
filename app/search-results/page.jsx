@@ -7,8 +7,10 @@ import { useSearchParams, usePathname } from 'next/navigation';
 import { useEffect, useState } from "react";
 import SearchService from "@/services/SearchService";
 import Loading from "@/components/Loading";
+import { useAppContext } from "@/context/AppContext";
 
 const SearchResultsContent = () => {
+  const { user, parsedUser } = useAppContext();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const [products, setProducts] = useState([]);
@@ -45,7 +47,7 @@ const SearchResultsContent = () => {
       const newUserId = url.searchParams.get('user_id');
       const newSource = url.searchParams.get('source');
       const newShopId = url.searchParams.get('_shop_id');
-      
+
       if (newQuery && newQuery !== searchQuery) {
         // Update query and reset state
         setSearchQuery(newQuery);
@@ -85,7 +87,7 @@ const SearchResultsContent = () => {
       const userId = searchParamsState.userId || userIdParam;
       const source = searchParamsState.source || sourceParam;
       const shopId = searchParamsState.shopId || shopIdParam;
-      
+
       if (userId) {
         params.user_id = userId;
       }
@@ -136,6 +138,9 @@ const SearchResultsContent = () => {
     };
   }, [hasMore, loading]);
 
+
+  // console.log("=======user from AppContext-========:", parsedUser);
+
   return (
     <>
       <Navbar />
@@ -163,7 +168,7 @@ const SearchResultsContent = () => {
           max-w-screen-5xl"
         >
           {products.map((product, index) => (
-            <ProductCard key={index} product={product} />
+            <ProductCard key={index} product={product} parsedUser={parsedUser} />
           ))}
         </div>
 
@@ -199,6 +204,7 @@ const SearchResultsContent = () => {
 };
 
 const SearchResults = () => {
+
   return (
     <Suspense fallback={<Loading />}>
       <SearchResultsContent />

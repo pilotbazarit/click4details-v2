@@ -490,6 +490,7 @@ const GeneralProductEdit = (productId) => {
     const selectedCountryId = watch("country");
     const selectedProductTypeId = watch("p_type_id");
 
+
     // console.log("00000000000000000000000000, ", selectedProductTypeId)
     // console.log("selectedProductTypeId, selectedModelId", watch("model"))
 
@@ -974,7 +975,7 @@ const GeneralProductEdit = (productId) => {
 
     const onSubmit = async (data) => {
         setIsSubmitting(true);
-        console.log("Data", data);
+        // console.log("Data", data);
         const formData = new FormData();
         formData.append("p_name", data.productName || '');
         // formData.append("p_code", data.code);
@@ -1727,9 +1728,12 @@ const GeneralProductEdit = (productId) => {
                                             </button>
                                         </div>
                                     ))}
-                                    {[...Array(12 - imagesPreview.length)].map((_, index) => (
-                                        <div key={`placeholder-${index}`} className="h-28 w-28 flex items-center justify-center rounded-md shadow-lg bg-gray-100 border border-gray-300 text-gray-400 text-2xl">
-                                            <span className="">+</span>
+                                    {imagesPreview.length < 12 && [...Array(12 - imagesPreview.length)].map((_, index) => (
+                                        <div
+                                            key={`placeholder-${index}`}
+                                            className="h-28 w-28 flex items-center justify-center rounded-md shadow-lg bg-gray-100 border border-gray-300 text-gray-400 text-2xl"
+                                        >
+                                            <span>+</span>
                                         </div>
                                     ))}
                                 </div>

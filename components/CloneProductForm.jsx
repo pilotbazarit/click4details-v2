@@ -32,7 +32,7 @@ const schema = yup.object().shape({
     // v_code: yup.string().required("Code is Required")
 });
 
-const UpdateProductForm = ({ productId }) => {
+const CloneProductForm = ({ productId }) => {
     const [loading, setLoading] = useState(false);
     const [frontImageFile, setFrontImageFile] = useState(null);
     const [preview, setPreview] = useState(null);
@@ -364,7 +364,7 @@ const UpdateProductForm = ({ productId }) => {
             const response = await ShopService.Queries.getShops({
                 order: "desc",
                 orderBy: "md_id",
-                ...(user?.user_mode !== "admin" && { _user_id: user?.id }),
+                // ...(user?.user_mode !== "admin" && { _user_id: user?.id }),
                 _page: 1,
                 _perPage: 1000
             });
@@ -633,9 +633,16 @@ const UpdateProductForm = ({ productId }) => {
     //Fetch and Populate Data
     const fetchProductDetails = async () => {
         try {
-            const res = await VehicleService.Queries.getVehicleDetailById(productId);
+            const params = {
+                _id: productId,
+            };
+
+            const res = await VehicleService.Queries.getVehiclesWithLogin(params);
+
+            console.log("clone product from 642 res", res);
+
             if (res.status === 'success') {
-                const data = res.data;
+                const data = res?.data?.data[0];
 
                 // Set brand and model IDs
                 const brandId = data.v_brand_id;
@@ -670,7 +677,7 @@ const UpdateProductForm = ({ productId }) => {
                         setModelData(fetchedModelData);
 
                         const isValidModel = fetchedModelData.some(item => Number(item.value) === Number(modelId));
-                        
+
                         if (isValidModel) {
                             setTimeout(() => {
                                 setValue('v_model_id', modelId);
@@ -722,8 +729,10 @@ const UpdateProductForm = ({ productId }) => {
                     });
                 }
 
-                setAdditionalPreviews(vehicleImgArr);
-                setPreview(data?.vehicle_front_image?.url);
+                // setAdditionalPreviews(vehicleImgArr);
+                setAdditionalPreviews([]);
+                // setPreview(data?.vehicle_front_image?.url);
+                setPreview(null);
 
                 // Populate other form fields
                 setValue('v_condition_id', data?.v_condition_id);
@@ -971,10 +980,13 @@ const UpdateProductForm = ({ productId }) => {
         });
 
         // ✅ Append method override
-        formData.append('_method', 'PUT');
+        // formData.append('_method', 'PUT');
 
         try {
-            const response = await VehicleService.Commands.updateVehicle(productId, formData);
+            // const response = await VehicleService.Commands.updateVehicle(productId, formData);
+            const response = await VehicleService.Commands.storeVehicle(formData);
+
+            console.log("987 response", response);
 
             if (response.status === 'success') {
                 setAdditionalImages([]);
@@ -1016,10 +1028,10 @@ const UpdateProductForm = ({ productId }) => {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white shadow-sm rounded-lg mb-6 border border-gray-200">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-800">
-                                    ✏️ Edit Vehicle
+                                    ✏️ Clone Vehicle
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Update existing vehicle details.
+                                    Clone existing vehicle details.
                                 </p>
                             </div>
                             <div className="text-right">
@@ -2312,7 +2324,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("v_is_saleBy_pbl")}
                                             />
                                             <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                 <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                     Terms and Conditions
                                                 </Link>. Please Sale My Product and Increase My Profit.
@@ -2331,7 +2343,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("want_to_be_partner")}
                                             />
                                             <label htmlFor="want_to_be_partner" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                                                I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                                             </label>
                                         </div>
 
@@ -2375,4 +2387,4 @@ const UpdateProductForm = ({ productId }) => {
     );
 };
 
-export default UpdateProductForm;
+export default CloneProductForm;

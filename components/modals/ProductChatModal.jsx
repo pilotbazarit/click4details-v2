@@ -46,6 +46,12 @@ const generatePriceOptionsOld = () => {
 
 const priceOptionsOld = generatePriceOptionsOld();
 
+const formatIndianNumber = (value) => {
+    const digits = String(value).replace(/\D+/g, '');
+    if (!digits) return '';
+    return new Intl.NumberFormat('en-IN').format(Number(digits));
+};
+
 const buildPriceOptions = (baseValue) => {
     if (baseValue === null || baseValue === undefined) {
         return [];
@@ -58,7 +64,7 @@ const buildPriceOptions = (baseValue) => {
 
     return Array.from({ length: 5 }, (_, i) => {
         const value = `${normalized}${'0'.repeat(i)}`;
-        return { value, label: value };
+        return { value, label: formatIndianNumber(value) };
     });
 };
 
@@ -439,7 +445,7 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                             <DialogTitle className="text-lg font-semibold text-gray-900">
                                 <div className="flex items-center gap-2">
                                     <span>
-                                        {product?.v_title?.slice(0, 18) || 'Importer'}
+                                        {'Chat With Importer'}
                                     </span>
                                     <Link
                                         target='_blank'
@@ -454,7 +460,9 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                                     </Link>
                                 </div>
                             </DialogTitle>
-                            <p className="text-xs text-gray-500">Online</p>
+                            <p className="text-xs text-gray-500">
+                                {product?.v_title?.slice(0, 60)}
+                            </p>
                         </div>
 
 
@@ -465,6 +473,7 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                 <div className="relative flex-1 bg-[#f7f7f7] px-5 py-4 overflow-y-auto">
                     <div className="space-y-4">
                         {messages.length > 0 && messages.map((msg, index) => {
+                            console.log("msgggggggg", msg);
                             const isNumericText = (() => {
                                 if (typeof msg.text === 'number') return true;
                                 if (typeof msg.text !== 'string') return false;
@@ -473,49 +482,50 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                             })();
 
                             return (
-                            <div key={index} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'items-end gap-2'}`}>
+                                <div key={index} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'items-end gap-2'}`}>
 
-                                {msg.sender === 'me' ? (
-                                    <div className="max-w-[75%] rounded-2xl rounded-br-none bg-[#b7dcb1] px-4 py-3 text-sm text-gray-900 shadow">
-                                        {msg.text}
-                                        <div className="mt-1 text-xs text-gray-600">{msg.time}</div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="max-w-[70%] rounded-2xl rounded-bl-none bg-white px-4 py-3 text-sm text-gray-900 shadow">
-                                            {
-                                                msg.text
-                                            }
-                                            <div className="mt-1 text-xs text-gray-400">{msg.time}</div>
+                                    {msg.sender === 'me' ? (
+                                        <div className="max-w-[75%] rounded-2xl rounded-br-none bg-[#b7dcb1] px-4 py-3 text-sm text-gray-900 shadow">
+                                            {msg.text}
+                                            <div className="mt-1 text-xs text-gray-600">{msg.time}</div>
                                         </div>
-                                        {
-                                            msg.preset && (
-                                                <div>
-                                                    <button
-                                                        onClick={() => handleAnswerClick(msg)}
-                                                        type="button"
-                                                        className="rounded-full bg-gray-200 px-4 py-1 text-xs font-medium text-gray-700"
-                                                    >
-                                                        Answer
-                                                    </button>
-
-                                                    {isNumericText && (
+                                    ) : (
+                                        <>
+                                            <div className="max-w-[70%] rounded-2xl rounded-bl-none bg-white px-4 py-3 text-sm text-gray-900 shadow">
+                                                {
+                                                    msg.text
+                                                }
+                                                <div className="mt-1 text-xs text-gray-400">{msg.time}</div>
+                                            </div>
+                                            {
+                                                msg.preset && (
+                                                    <div>
                                                         <button
-                                                            onClick={() => handleAcceptClick(msg)}
+                                                            onClick={() => handleAnswerClick(msg)}
                                                             type="button"
                                                             className="rounded-full bg-gray-200 px-4 py-1 text-xs font-medium text-gray-700"
                                                         >
-                                                            Accept
+                                                            Answer
                                                         </button>
-                                                    )}
-                                                </div>
-                                            )
-                                        }
+                                                    </div>
+                                                )
+                                            }
 
-                                    </>
-                                )}
-                            </div>
-                        )})}
+                                            {isNumericText && (
+                                                <button
+                                                    onClick={() => handleAcceptClick(msg)}
+                                                    type="button"
+                                                    className="rounded-full bg-gray-200 px-4 py-1 text-xs font-medium text-gray-700"
+                                                >
+                                                    Accept
+                                                </button>
+                                            )}
+
+                                        </>
+                                    )}
+                                </div>
+                            )
+                        })}
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
@@ -564,7 +574,7 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                             value={selectedPrice}
                             onChange={handlePriceSelect}
                             onInputChange={handlePriceInputChange}
-                            placeholder="Select Price"
+                            placeholder="Enter Price"
                             isClearable
                             menuPlacement="top"
                         />

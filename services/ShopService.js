@@ -25,6 +25,8 @@ const Queries = {
     getShops: (params) => commandApi.get("/api/shop", {params}),
     getCompanyShops: (id) => commandApi.get(`/api/user/shopAsEmployee/${id}`),
 
+    getShopsWithCompanyShops: (params) => commandApi.get("/api/shop/with-company-shop", {params}),
+
     getShopEmployee: (id) => commandApi.get(`/api/shop/shopEmployee/${id}`),
 };
 

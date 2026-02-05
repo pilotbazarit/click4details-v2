@@ -1,13 +1,13 @@
 import React from 'react'
 import * as Popover from "@radix-ui/react-popover";
-import { LayoutDashboard, LogOut, ShoppingCart, User, UserPen } from 'lucide-react';
+import { Bell, LayoutDashboard, List, LogOut, ShoppingCart, User, UserPen } from 'lucide-react';
 import LoginService from '@/services/LoginService';
 import { useAppContext } from '@/context/AppContext';
 import { usePathname } from "next/navigation";
 import Link from 'next/link';
 // import { Cross2Icon } from "@radix-ui/react-icons";
 
-const MyHomePopover = ({ setLogout }) => {
+const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCount }) => {
     const { router, user, setUser } = useAppContext();
 
     const pathname = usePathname();
@@ -55,19 +55,40 @@ const MyHomePopover = ({ setLogout }) => {
         <div>
             <Popover.Root>
                 <Popover.Trigger asChild>
-                    <button className="flex items-center gap-2 border px-4 py-1.5 rounded-full text-sm hover:bg-gray-100 transition">
-                        <User className="h-4 w-4" />
-                        <span>
-                            {(() => {
-                                try {
-                                    const parsedUser = JSON.parse(user);
-                                    return parsedUser?.name || "Login";
-                                } catch {
-                                    return "Login";
-                                }
-                            })()}
-                        </span>
-                    </button>
+                    <div className="relative inline-flex">
+                        <button className="flex items-center gap-2 border px-4 py-1.5 rounded-full text-sm hover:bg-gray-100 transition">
+                            <User className="h-4 w-4" />
+                            <span>
+                                {(() => {
+                                    try {
+                                        const parsedUser = JSON.parse(user);
+                                        return parsedUser?.name || "Login";
+                                    } catch {
+                                        return "Login";
+                                    }
+                                })()}
+                            </span>
+                        </button>
+
+
+                        {
+                            unreadNotificationCount > 0 && (
+                                <span
+                                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white ring-2 ring-white"
+                                    aria-label="Notifications"
+                                >
+                                    <span>{unreadNotificationCount}</span>
+                                </span>
+                            )
+                        }
+
+
+
+
+
+
+
+                    </div>
                 </Popover.Trigger>
 
                 <Popover.Portal>
@@ -86,6 +107,26 @@ const MyHomePopover = ({ setLogout }) => {
                                     >
                                         <UserPen className="h-4 w-4" />
                                         Profile
+                                    </Link>
+                                </li>
+
+                                {/* <li className={`${isActiveProfile ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                    <Link
+                                        href="/conversation-list"
+                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                    >
+                                        <UserPen className="h-4 w-4" />
+                                        Conversation List
+                                    </Link>
+                                </li> */}
+
+                                <li className={`${isActiveMyShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                    <Link
+                                        href="/my-order-list"
+                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                    >
+                                        <List className="h-4 w-4" />
+                                       Order List
                                     </Link>
                                 </li>
 
@@ -145,6 +186,34 @@ const MyHomePopover = ({ setLogout }) => {
                                         <LayoutDashboard className="h-4 w-4" />
                                         Dashboard
                                     </Link>
+                                </li>
+
+
+                                <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
+                                    <button
+                                        onClick={() => {
+                                            setIsNotificationOpen(true);
+                                        }}
+                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                    >
+                                        <Bell className="h-4 w-4" />
+                                        Notification
+                                    </button>
+
+
+                                    {
+                                        unreadNotificationCount > 0 && (
+                                            <span
+                                                className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white ring-2 ring-white"
+                                                aria-label="Notifications"
+                                            >
+                                                <span>{unreadNotificationCount}</span>
+                                            </span>
+                                        )
+                                    }
+
+
+
                                 </li>
 
 

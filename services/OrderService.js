@@ -41,6 +41,21 @@ const Commands = {
     }),
 
 
+    addOrderItem: (data) => commandApi.post("/api/order/add-item", data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+             Accept: "application/json",
+        }
+    }),
+
+    // updateOrderItem: (id, data) => commandApi.post(`/api/order/${id}`, data, {
+    //     headers: {
+    //         "Content-Type": "multipart/form-data",
+    //         Accept: "application/json",
+    //     }
+    // }),
+
+
     // saveAddress: (data) => commandApi.post("/api/address", data, {
     //     headers: {
     //         "Content-Type": "multipart/form-data",

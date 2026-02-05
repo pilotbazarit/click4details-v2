@@ -401,6 +401,11 @@ const SideBar = () => {
         return parsedUser?.user_mode === "supreme";
       }
 
+      // Conversation List sudhu supreme ebong admin dekhte parbe
+      if (item.name === "Conversation List") {
+        return parsedUser?.user_mode === "supreme" || parsedUser?.user_mode === "admin";
+      }
+
       // pbl user specific menus hide korbe
       if (parsedUser?.user_mode === "pbl") {
         const hiddenMenusForPbl = ["Products", "Archive Products", "General Products", "Shop List", "Settings"];

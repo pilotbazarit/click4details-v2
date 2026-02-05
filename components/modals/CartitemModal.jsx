@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem }) => {
     const items = selectedItem?.items || [];
 
-    console.log("selectedItem====", selectedItem);
+    // console.log("selectedItem====", selectedItem);
 
     const handleDelete = async (id) => {
 
@@ -149,7 +149,7 @@ const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem
                                             </TableCell>
 
                                             <TableCell className="border-r border-gray-200 font-medium">
-                                                {item?.ci_qty}
+                                                {item?.ci_qty} 
                                             </TableCell>
 
                                             <TableCell className="border-r border-gray-200">

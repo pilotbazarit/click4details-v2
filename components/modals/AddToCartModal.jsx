@@ -15,6 +15,8 @@ const AddToCartModal = ({ open, setOpen, product, onAddToCart }) => {
     }
   }, [open, product]);
 
+  // console.log("selectedVariant", selectedVariant);
+
   const formatPrice = (price) => {
     const numericPrice = parseFloat(price);
     if (isNaN(numericPrice)) {
@@ -30,10 +32,6 @@ const AddToCartModal = ({ open, setOpen, product, onAddToCart }) => {
     onAddToCart(product, selectedVariant);
     setOpen(false);
   };
-
-
-  // console.log("add to cart modal product", product);
-  // console.log("add to cart modal selectedVariant", selectedVariant);
 
   if (!open) return null;
 

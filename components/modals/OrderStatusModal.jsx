@@ -24,7 +24,7 @@ const OrderStatusModal = ({ open, setOpen, order, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(order?.o_status || "");
   const [loading, setLoading] = useState(false);
 
-  console.log("order===========", order);
+  // console.log("order===========", order);
 
   const handleStatusChange = async () => {
     if (!newStatus || newStatus === order?.o_status) {
@@ -66,10 +66,11 @@ const OrderStatusModal = ({ open, setOpen, order, onStatusUpdate }) => {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Change Order Status</DialogTitle>
-          <DialogDescription>
+          {/* <DialogDescription>
             Update the status for order <strong>{order?.o_id}</strong>
-          </DialogDescription>
+          </DialogDescription> */}
         </DialogHeader>
+        <hr/>
 
         <div className="grid gap-4 py-4">
           <div className="flex flex-col gap-2">

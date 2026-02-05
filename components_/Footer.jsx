@@ -157,7 +157,7 @@ const Footer = () => {
         </div>
       </div>
       <p className="py-4 text-center text-xs md:text-sm">
-        Copyright 2025 © pilotbazar.com All Right Reserved.
+        Copyright 2025 © click4details.com All Right Reserved.
       </p>
     </footer>
   );

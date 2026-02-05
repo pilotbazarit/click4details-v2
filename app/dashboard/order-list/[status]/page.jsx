@@ -71,6 +71,9 @@ const OrderListByStatus = () => {
         _page: currentPage,
         _perPage: itemsPerPage,
         _status: status, // Add status filter from URL parameter
+        _orderBy: "o_id",
+        _order: "DESC"
+        // _p_name: value,
       });
 
       if (response?.status == "success") {
@@ -95,7 +98,7 @@ const OrderListByStatus = () => {
   };
 
   const handleShow = (item) => {
-    console.log("itemmmm", item);
+    console.log("itemmmm ds", item);
     setSelectedModel(item);
     setOpen(true);
   }

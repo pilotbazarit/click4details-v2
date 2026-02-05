@@ -41,11 +41,26 @@ const Commands = {
         }
     }),
 
+
+    sendOtp: (data) => commandApi.post(`/api/send-otp`, data, {
+        headers: {
+            "Content-Type": "application/json",
+             Accept: "application/json",
+        }
+    }),
+
+    verifyOtp: (data) => commandApi.post("/api/verify-otp", data, {
+        headers: {
+            "Content-Type": "application/json",
+             Accept: "application/json",
+        }
+    }),
+
     
 };
 
 const Queries = {
-    //
+    isVerifyPhone: (params) => commandApi.get(`/api/is-verify-phone/${params}`),
 };
 
 export default {

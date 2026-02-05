@@ -18,6 +18,7 @@ const GeneralProductCard = ({ product }) => {
 
   const { cartItems, setCartItems, addToCart, user } = useAppContext();
 
+
   const handleCopy = (e) => {
     e.preventDefault();
     if (product?.p_code) {
@@ -79,7 +80,11 @@ const GeneralProductCard = ({ product }) => {
   const handleAddToCart = (item) => {
     // Implement add to cart functionality here
 
+
+    console.log("item::::::;;", item);
+
     let price = product?.prices && product?.prices[0]?.pp_regular_price;
+    let priceId = product?.prices && product?.prices[0]?.pp_id;
 
     let cartItem = {
       c_user_id: parsedUser?.id || null,
@@ -91,6 +96,7 @@ const GeneralProductCard = ({ product }) => {
       ci_url: item.p_primary_image?.url || '',
       ci_name: item.p_name,
       ci_subtotal: price * 1,
+      ci_product_price_id: priceId,
     }
 
     addToCart(item.p_id, cartItem);
