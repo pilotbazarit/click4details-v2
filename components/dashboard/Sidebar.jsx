@@ -208,6 +208,11 @@ const SideBar = () => {
       path: "/dashboard/shop/",
       icon: Store,
     },
+     {
+      name: "Conversation List",
+      path: "/dashboard/conversation/",
+      icon: Store,
+    },
     {
       name: "Users",
       icon: Users,
@@ -242,6 +247,11 @@ const SideBar = () => {
           name: "Master Data",
           path: "/dashboard/settings/master-data/",
           icon: Database,
+        },
+        {
+          name: "Preset Queestion & Answer",
+          path: "/dashboard/settings/preset-question-answer/",
+          icon: Box,
         },
         {
           name: "Models",

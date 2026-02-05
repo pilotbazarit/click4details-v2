@@ -2,22 +2,26 @@
 import React, { useEffect, useState } from "react";
 import { assets } from "@/assets/assets";
 import Image from "next/image";
-import { FireExtinguisher, GitBranch, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing } from "lucide-react"
+import { FireExtinguisher, GitBranch, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing, MessageCircle } from "lucide-react"
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
 import ProductShareModal from "./modals/ProductShareModal";
 import ShopSelectModal from "./modals/ShopSelectModal";
+import ProductChatModal from "./modals/ProductChatModal";
 import { usePathname } from "next/navigation";
 import { formatPrice } from "@/helpers/functions";
+import Login from "./Login";
 
 
 const ProductCard = ({ product, parsedUser = null }) => {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shopModalOpen, setShopModalOpen] = useState(false);
-
+  const [chatOpen, setChatOpen] = useState(false);
 
   // console.log("parsedUser", parsedUser?.user_mode);
+
+  // console.log("---parsedUser----", parsedUser);
 
 
 
@@ -41,7 +45,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
       : `/product/${product?.v_id}`;
 
 
-      // console.log("pathname", pathname);
+  // console.log("pathname", pathname);
 
 
   // ID বাদ দিয়ে basePath বের করা
@@ -52,6 +56,34 @@ const ProductCard = ({ product, parsedUser = null }) => {
       .filter(Boolean) // খালি string বাদ দেবে
       .slice(0, -1) // শেষের ID বাদ দেবে
       .join("/");
+
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const handleChatOpen = () => {
+    // parsedUser ? setChatOpen(true) : setShopModalOpen(true);
+    if (parsedUser) {
+      setChatOpen(true);
+
+    } else {
+      setLoginOpen(true);
+    }
+
+  }
+
+
+  const closeLoginModal = () => {
+    setLoginOpen(false);
+  };
+
+  const openForgotPasswordModal = () => {
+    setLoginOpen(false);
+    // setIsForgotPasswordModalOpen(true);
+  };
+
+
+  // console.log("loginOpen=============", loginOpen);
+
+  // console.log("parsedUser", parsedUser);
 
   return (
     <div className="h-full relative group">
@@ -87,6 +119,20 @@ const ProductCard = ({ product, parsedUser = null }) => {
             </div>
           </div>
         )}
+
+        {/* Message Notification Badge */}
+        {/* <div 
+          onClick={() => setChatOpen(true)}
+          className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-2.5 py-1.5 rounded-full text-xs font-bold shadow-lg z-30 flex items-center gap-1 animate-pulse cursor-pointer hover:from-red-600 hover:to-red-700 transition-all duration-200 md:hidden"
+        >
+          <span className="flex h-2 w-2 relative">
+            <span className="inline-flex absolute h-full w-full rounded-full bg-white opacity-75 animate-ping"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+          </span>
+          <span>2 msg</span>
+        </div> */}
+
+
         <Link href={href} target="_blank">
           <div className="relative overflow-hidden rounded-xl group/image">
             {product?.vehicle_front_image?.url && (
@@ -98,12 +144,12 @@ const ProductCard = ({ product, parsedUser = null }) => {
             )}
 
             {/* {(parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'supreme') && ( */}
-              <div
-                onClick={handleCopy}
-                className="absolute bottom-6 right-3 bg-gray-600/80 backdrop-blur-sm rounded-full px-3 py-1.5 leading-4 text-xs text-white font-medium z-10 cursor-pointer hover:bg-gray-700/90 transition-all duration-200 shadow-lg"
-              >
-                {copied ? "✓ Copied!" : product?.v_code}
-              </div>
+            <div
+              onClick={handleCopy}
+              className="absolute bottom-6 right-3 bg-gray-600/80 backdrop-blur-sm rounded-full px-3 py-1.5 leading-4 text-xs text-white font-medium z-10 cursor-pointer hover:bg-gray-700/90 transition-all duration-200 shadow-lg"
+            >
+              {copied ? "✓ Copied!" : product?.v_code}
+            </div>
             {/* // )} */}
 
           </div>
@@ -191,33 +237,78 @@ const ProductCard = ({ product, parsedUser = null }) => {
 
 
         <div className="py-2 border-t border-gray-100 flex-grow flex flex-col justify-end">
-          <div className="font-extrabold text-gray-900 text-xl mb-1">
-            {product?.vehicle_price?.user_price !== 'Call for Price' && ''}
-            {product?.vehicle_price?.user_price !== 'Call for Price' && 'TK. '}
-            {(pathname === '/my-shop/'|| pathname === '/company-shop/')
-              ? formatPrice(product?.vehicle_price?.user_price)
-              : formatPrice(product?.vehicle_price?.pbl_price)
-            }
-            {/* {product?.vehicle_price?.user_price != 'Call for Price' && 'TK.'} {pathname == '/my-shop/' ? product?.vehicle_price?.user_price : product?.vehicle_price?.pbl_price} */}
-          </div>
 
-          {
-            pathname !== '/pb-home/' ? (
-              <span className="text-gray-500 text-xs font-medium mb-1">
-                {product?.vehicle_db_price?.vp_pbl_price_status
-                  ? String(product.vehicle_db_price.vp_pbl_price_status).charAt(0).toUpperCase() +
-                  String(product.vehicle_db_price.vp_pbl_price_status).slice(1)
-                  : ''}
-              </span>
-            ) : (
-              <span className="text-gray-500 text-xs font-medium mb-1">
-                {product?.vehicle_db_price?.vp_user_price_status
-                  ? String(product.vehicle_db_price.vp_user_price_status).charAt(0).toUpperCase() +
-                  String(product.vehicle_db_price.vp_user_price_status).slice(1)
-                  : ''}
-              </span>
-            )
-          }
+          <div className="flex justify-between mb-2">
+
+            <div>
+              <div className="font-extrabold text-gray-900 text-xl mb-1">
+                {product?.vehicle_price?.user_price !== 'Call for Price' && ''}
+                {product?.vehicle_price?.user_price !== 'Call for Price' && 'TK. '}
+                {(pathname === '/my-shop/' || pathname === '/company-shop/')
+                  ? formatPrice(product?.vehicle_price?.user_price)
+                  : formatPrice(product?.vehicle_price?.pbl_price)
+                }
+                {/* {product?.vehicle_price?.user_price != 'Call for Price' && 'TK.'} {pathname == '/my-shop/' ? product?.vehicle_price?.user_price : product?.vehicle_price?.pbl_price} */}
+              </div>
+
+              {
+                pathname !== '/pb-home/' ? (
+                  <span className="text-gray-500 text-xs font-medium mb-1">
+                    {product?.vehicle_db_price?.vp_pbl_price_status
+                      ? String(product.vehicle_db_price.vp_pbl_price_status).charAt(0).toUpperCase() +
+                      String(product.vehicle_db_price.vp_pbl_price_status).slice(1)
+                      : ''}
+                  </span>
+                ) : (
+                  <span className="text-gray-500 text-xs font-medium mb-1">
+                    {product?.vehicle_db_price?.vp_user_price_status
+                      ? String(product.vehicle_db_price.vp_user_price_status).charAt(0).toUpperCase() +
+                      String(product.vehicle_db_price.vp_user_price_status).slice(1)
+                      : ''}
+                  </span>
+                )
+              }
+            </div>
+
+            {
+              Number(parsedUser?.id) !== Number(product?.v_user_id) && (
+              <button
+                // onClick={() => setChatOpen(true)}
+                onClick={() => handleChatOpen()}
+                className="
+                  px-3
+                  lg:px-4
+                  md:px-5
+                  xl:px-3
+                  3xl:px-4
+                  py-2
+                  border-2
+                border-red-300
+                rounded-lg
+                text-red-800
+                font-semibold
+                bg-yellow-50
+                hover:bg-red-50
+                hover:border-red-400
+                active:scale-95
+                transition-all
+                duration-200
+                w-48
+                h-10
+                relative"
+              >
+                <div
+                  className="flex items-center justify-center gap-2"
+                >
+                  <span className="text-sm">Offer Your Price</span>
+                </div>
+              </button>
+              )
+            }
+
+
+
+          </div>
 
           <div className="flex justify-between gap-2">
             {pathname === '/pb-home/' && (
@@ -252,6 +343,11 @@ const ProductCard = ({ product, parsedUser = null }) => {
                 </div>
               </button>
             )}
+
+
+
+
+
             <button
               onClick={() => setOpen(true)}
               className="
@@ -315,7 +411,15 @@ const ProductCard = ({ product, parsedUser = null }) => {
 
       <ProductShareModal open={open} setOpen={setOpen} product={product} />
       <ShopSelectModal open={shopModalOpen} setOpen={setShopModalOpen} product={product} />
+      <ProductChatModal 
+        open={chatOpen} 
+        setOpen={setChatOpen} 
+        productInfo={product} 
+      />
 
+      <Login isOpen={loginOpen} onClose={closeLoginModal} openForgotPasswordModal={openForgotPasswordModal} />
+
+      {/* <Login open={loginOpen} setOpen={setLoginOpen} /> */}
     </div>
   );
 };

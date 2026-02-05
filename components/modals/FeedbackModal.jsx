@@ -3,7 +3,7 @@
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import FeedbackCategoryService from "@/services/FeedbackCategoryService";
-import FeedbackTemplateService from "@/services/FeedbackTemplateService";
+import FeedbackTemplateService from "@/services/PresetQuestionService";
 import FeedbackTemplateModal from "@/components/modals/FeedbackTemplateModal";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Select from "react-select";

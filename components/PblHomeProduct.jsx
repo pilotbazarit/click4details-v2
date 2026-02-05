@@ -3,10 +3,12 @@ import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductSkeleton";
 import { usePblHomeProductContext } from "@/context/PblHomeProductContext";
 
-const PblHomeProduct = () => {
+const PblHomeProduct = ({ user }) => {
   const { products, loading, hasMore, getAllProduct } = usePblHomeProductContext();
   const observerRef = useRef();
   const [loadingNewData, setLoadingNewData] = useState(false);
+
+  // console.log("useruseruseruseruseruseruseruser", user);
 
   const lastProductRef = useCallback(
     (node) => {
@@ -53,11 +55,11 @@ const PblHomeProduct = () => {
           if (index === products.length - 1) {
             return (
               <div ref={lastProductRef} key={index}>
-                <ProductCard product={product} className="pb-20" />
+                <ProductCard product={product} parsedUser={user} className="pb-20" />
               </div>
             );
           }
-          return <ProductCard key={index} product={product} />;
+          return <ProductCard key={index} product={product} parsedUser={user} />;
         })}
 
         {/* {loading &&

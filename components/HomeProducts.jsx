@@ -4,7 +4,7 @@ import { useProductContext } from "@/context/ProductContext";
 import ProductCardSkeleton from "./ProductSkeleton";
 
 const HomeProducts = () => {
-  const { products, productLoading, loading, hasMore, getAllProduct } = useProductContext();
+  const { products, productLoading, loading, hasMore, getAllProduct, user } = useProductContext();
   const observerRef = useRef();
   const [loadingNewData, setLoadingNewData] = useState(false);
 
@@ -79,11 +79,11 @@ const HomeProducts = () => {
             if (index === products.length - 1) {
               return (
                 <div ref={lastProductRef} key={index}>
-                  <ProductCard product={product} className="pb-20" />
+                  <ProductCard product={product} user={user} className="pb-20" />
                 </div>
               );
             }
-            return <ProductCard key={index} product={product} />;
+            return <ProductCard key={index} product={product} user={user} />;
           })}
 
           {/* {loading &&

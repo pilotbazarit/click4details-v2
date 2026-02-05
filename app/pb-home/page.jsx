@@ -19,6 +19,9 @@ const PblHome = () => {
     }
   }, []);
 
+
+  // console.log("useruseruseruseruseruseruseruser", user);
+
   return (
     <PblHomeProductContextProvider>
       <Header />
@@ -27,7 +30,7 @@ const PblHome = () => {
         <div className="hidden md:block">
           <HeaderSlider />
         </div>
-        <PblHomeProduct />
+        <PblHomeProduct user={user} />
         {/* <NewsLetter /> */}
       </div>
       {
