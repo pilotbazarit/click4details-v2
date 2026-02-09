@@ -1078,7 +1078,10 @@ const FilterProducts = () => {
         getCarExchangeCategory(),
         getLocations(),
       ]);
-      getAllProduct(initialFilterData || filterFields, true);
+      const initialParams = initialFilterData || filterFields;
+      const params = { ...initialParams };
+      if (Array.isArray(params.budget) && params.budget.length === 2 && Number(params.budget[0]) === 0 && Number(params.budget[1]) === 500000000) delete params.budget;
+      getAllProduct(params, true);
     };
 
     const prepopulatedData = localStorage.getItem("prepopulatedFilterData");
@@ -1152,6 +1155,10 @@ const FilterProducts = () => {
     }
   }, [normalizedUser?.id]);
 
+  // Default budget 0–500000000: omit from request so backend doesn't filter by it
+  const isDefaultBudget = (b) =>
+    Array.isArray(b) && b.length === 2 && Number(b[0]) === 0 && Number(b[1]) === 500000000;
+
   const executeSearch = async (e) => {
     const formattedFilterFields = {
       ...filterFields,
@@ -1165,7 +1172,9 @@ const FilterProducts = () => {
       v_insurance_exp_date_from: filterFields.v_insurance_exp_date_from ? dayjs(filterFields.v_insurance_exp_date_from).format("YYYY-MM-DD") : null,
       v_insurance_exp_date_to: filterFields.v_insurance_exp_date_to ? dayjs(filterFields.v_insurance_exp_date_to).format("YYYY-MM-DD") : null,
     };
-    getAllProduct(formattedFilterFields, true);
+    const paramsForProduct = { ...formattedFilterFields };
+    if (isDefaultBudget(paramsForProduct.budget)) delete paramsForProduct.budget;
+    getAllProduct(paramsForProduct, true);
 
     if (canSeeCustomerInfo && customerMobile) {
       const customerInfo = {
@@ -1196,6 +1205,7 @@ const FilterProducts = () => {
       const searchParamsForSave = { ...formattedFilterFields };
       delete searchParamsForSave.readyBudget;
       delete searchParamsForSave.clientLastPurchaseDate;
+      if (isDefaultBudget(searchParamsForSave.budget)) delete searchParamsForSave.budget;
 
       const searchData = {
         search_params: searchParamsForSave,
@@ -1357,8 +1367,10 @@ const FilterProducts = () => {
                           setOperationType("update_search");
                           setOldHistoryId(historyItem.id);
 
-                          // Immediately trigger search, as per prepopulatedData logic
-                          getAllProduct(formattedSearchParams, true);
+                          // Immediately trigger search, as per prepopulatedData logic (omit default budget 0–500000000)
+                          const paramsForHistory = { ...formattedSearchParams };
+                          if (Array.isArray(paramsForHistory.budget) && paramsForHistory.budget.length === 2 && Number(paramsForHistory.budget[0]) === 0 && Number(paramsForHistory.budget[1]) === 500000000) delete paramsForHistory.budget;
+                          getAllProduct(paramsForHistory, true);
 
                           toast.success("History loaded and search results updated.");
                         }}
@@ -1446,6 +1458,7 @@ const FilterProducts = () => {
                             value={customerMobile}
                             onChange={async (e) => {
                               setCustomerMobile(e.target.value);
+                              setOldHistoryId(null);
                             }}
                           />
                           {isLoading && (

@@ -160,8 +160,8 @@ const ChatPrivacyPolicy = () => {
                                 </a>
                                 <br />
                                 <strong>Phone:</strong>{' '}
-                                <a href="tel:+8801969944400" className="text-green-600 hover:underline">
-                                    +8801969944400
+                                <a href="tel:+8809638660077" className="text-green-600 hover:underline">
+                                    +8809638660077
                                 </a>
                             </p>
                         </div>

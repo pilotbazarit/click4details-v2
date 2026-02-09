@@ -441,28 +441,41 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                         <button type="button" className="mt-1 rounded-full p-1 text-gray-700 hover:bg-gray-100">
                             <ArrowLeft className="h-5 w-5" />
                         </button>
-                        <div className="flex-1">
-                            <DialogTitle className="text-lg font-semibold text-gray-900">
-                                <div className="flex items-center gap-2">
-                                    <span>
-                                        {'Chat With Importer'}
-                                    </span>
-                                    <Link
-                                        target='_blank'
-                                        href={`/product/${product?.v_id}`}
-                                        title="Product Details"
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-700"
-                                    >
-                                        <Info
-                                            className="h-6 w-6"
-                                            title="Show Product Details"
-                                        />
-                                    </Link>
-                                </div>
-                            </DialogTitle>
-                            <p className="text-xs text-gray-500">
-                                {product?.v_title?.slice(0, 60)}
-                            </p>
+                        <div className='flex justify-between gap-4'>
+                            <div className="flex-1">
+                                <DialogTitle className="text-lg font-semibold text-gray-900">
+                                    <div className="flex items-center gap-2">
+                                        <span>
+                                            {'Chat With Importer'}
+                                        </span>
+                                        <Link
+                                            target='_blank'
+                                            href={`/product/${product?.v_id}`}
+                                            title="Product Details"
+                                            className="inline-flex items-center text-blue-600 hover:text-blue-700"
+                                        >
+                                            <Info
+                                                className="h-6 w-6"
+                                                title="Show Product Details"
+                                            />
+                                        </Link>
+                                    </div>
+                                </DialogTitle>
+                                <p className="text-xs text-gray-500">
+                                    {product?.v_title?.slice(0, 60)}
+                                </p>
+                            </div>
+
+                            <div>
+                                <a
+                                    href="https://www.youtube.com/watch?v=KZmZ6vyn5ww"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                                >
+                                    How to use
+                                </a>
+                            </div>
                         </div>
 
 

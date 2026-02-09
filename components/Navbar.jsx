@@ -21,9 +21,11 @@ import ResetPasswordModal from "./modals/ResetPasswordModal";
 import NotificationModal from "./modals/NotificationModal";
 import ProductChatModal from "./modals/ProductChatModal";
 import CategoryService from "@/services/CategoryService";
+import NotificationService from "@/services/NotificationService";
 import SearchBar from "@/components/SearchBar";
 import ConversationModal from "./modals/ConversationModal";
 import ConversationService from "@/services/ConversationService";
+import * as Popover from "@radix-ui/react-popover";
 
 
 // Recursive Category Menu Item Component (Desktop & Mobile)
@@ -218,6 +220,9 @@ const NavbarContent = () => {
   const menuRef = useRef(null);
   const [shopOptions, setShopOptions] = useState([]);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [recentNotifications, setRecentNotifications] = useState([]);
+  const [notificationRefreshTrigger, setNotificationRefreshTrigger] = useState(0);
   const categoryRef = useRef(null);
 
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
@@ -697,6 +702,51 @@ const NavbarContent = () => {
     };
   }, [isMobileMenuOpen]);
 
+  // Listen for notifications updated (e.g. mark as read on notifications page) so bell count updates immediately
+  useEffect(() => {
+    const onUpdated = () => setNotificationRefreshTrigger((t) => t + 1);
+    window.addEventListener("notificationsUpdated", onUpdated);
+    return () => window.removeEventListener("notificationsUpdated", onUpdated);
+  }, []);
+
+  // Fetch notification count and recent unread when user is logged in or auth_token exists; refresh every 2 minutes and when notificationsUpdated fires
+  const NOTIFICATION_POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+  useEffect(() => {
+    const hasAuth = !!user || (typeof window !== "undefined" && !!localStorage.getItem("auth_token"));
+    if (!hasAuth) {
+      setNotificationCount(0);
+      setRecentNotifications([]);
+      return;
+    }
+    let cancelled = false;
+    const fetchNotifications = async () => {
+      try {
+        const response = await NotificationService.Queries.getNotifications({
+          filter: "unread",
+          page: 1,
+          per_page: 5,
+        });
+        if (cancelled) return;
+        const ok = response?.status === "success" || response?.success;
+        const payload = response?.data ?? response;
+        if (ok && payload) {
+          setNotificationCount(payload.counts?.unread ?? 0);
+          setRecentNotifications(Array.isArray(payload.data) ? payload.data : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setNotificationCount(0);
+          setRecentNotifications([]);
+        }
+      }
+    };
+    fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, NOTIFICATION_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [user, pathname, notificationRefreshTrigger]);
 
   const setLogout = async () => {
     try {
@@ -1028,6 +1078,62 @@ const NavbarContent = () => {
           </button> */}
 
 
+          {notificationCount > 0 && (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') && false ? (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative focus:outline-none"
+                  aria-label="Notifications"
+                >
+                  <div className="relative">
+                    <Bell className="w-6 h-6" />
+                    <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                      {notificationCount}
+                    </span>
+                  </div>
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  sideOffset={8}
+                  align="end"
+                  className="rounded-lg bg-white p-0 shadow-lg border border-gray-200 w-80 max-h-96 overflow-hidden z-[9999]"
+                >
+                  <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3">
+                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  </div>
+                  <ul className="overflow-y-auto max-h-72">
+                    {recentNotifications.map((n) => (
+                      <li key={n.id} className="border-b border-gray-100 last:border-b-0">
+                        <Popover.Close asChild>
+                          <Link
+                            href={`/dashboard/notifications?highlight=${n.id}`}
+                            className="block px-4 py-3 hover:bg-gray-50 transition cursor-pointer"
+                          >
+                            <p className="font-medium text-gray-900 text-sm truncate">{n.customer_name ?? "—"}</p>
+                            <p className="text-gray-600 text-xs mt-0.5 truncate" title={n.search_history}>{n.search_history ?? "—"}</p>
+                            <p className="text-gray-400 text-xs mt-1">{n.search_date_time ? new Date(n.search_date_time).toLocaleString() : "—"}</p>
+                          </Link>
+                        </Popover.Close>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-2">
+                    <Popover.Close asChild>
+                      <Link
+                        href="/dashboard/notifications"
+                        className="block text-center text-sm font-medium hover:opacity-90 transition"
+                        style={{ color: 'rgb(1 103 162)' }}
+                      >
+                        View all notifications
+                      </Link>
+                    </Popover.Close>
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          ) : ''}
 
         </ul>
 

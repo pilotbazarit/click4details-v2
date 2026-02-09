@@ -32,7 +32,7 @@ const Header = () => {
                         user ? (
                             <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
                         ) : (
-                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8801969944400</a>
+                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
                         )
                     }
                 </h1> */}
@@ -44,7 +44,7 @@ const Header = () => {
                         user && pathname !== '/pb-home/' ? (
                             <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
                         ) : (
-                            <a href="tel:+8801969944400" className="hover:text-blue-300 transition-colors">+8801969944400</a>
+                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
                         )
                     }
                 </h1>
@@ -57,7 +57,7 @@ const Header = () => {
                         user ? (
                             <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
                         ) : (
-                            <a href="tel:+8801969944400" className="hover:text-blue-300 transition-colors">+8801969944400</a>
+                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
                         )
                     }
                 </h1> */}

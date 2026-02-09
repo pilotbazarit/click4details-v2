@@ -9,7 +9,7 @@ import constData from "@/lib/constant";
 import CartService from "@/services/CartService";
 import _ from "lodash";
 import Select from "react-select";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import OrderService from "@/services/OrderService";
 import LoginService from "@/services/LoginService";
 
@@ -41,8 +41,9 @@ const Checkout = () => {
     landmark: '',
     postal_code: '',
     post_office: '',
-    is_default: false
+    is_default: true
   });
+  const [addressErrors, setAddressErrors] = useState({});
 
   // Guest user registration data
   const [guestFormData, setGuestFormData] = useState({
@@ -95,11 +96,30 @@ const Checkout = () => {
       ...prev,
       [id]: value
     }));
+    setAddressErrors(prev => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   // Handle address form submit
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
+
+    const nextErrors = {};
+    if (!addressFormData.name.trim()) nextErrors.name = 'Name is required';
+    if (!addressFormData.phone.trim()) nextErrors.phone = 'Phone is required';
+    if (!addressFormData.country) nextErrors.country = 'Country is required';
+    // District/Upazila are optional
+    if (!addressFormData.address_line.trim()) nextErrors.address_line = 'Address line is required';
+
+    if (Object.keys(nextErrors).length > 0) {
+      setAddressErrors(nextErrors);
+      toast.error('Please fill all required fields');
+      return;
+    }
 
     // Format data for API call
     const formattedAddressData = {
@@ -117,8 +137,6 @@ const Checkout = () => {
       postal_code: addressFormData.postal_code,
       post_office: addressFormData.post_office
     };
-
-    // console.log('Formatted Address Data for API:', formattedAddressData);
 
     try {
       let formData = {
@@ -174,10 +192,10 @@ const Checkout = () => {
   };
 
 
-
-   console.log("checkout 178 cartItems:::", cartItems);
-
   const handlePlaceOrder = async () => {
+
+    
+
     // Validation
     if (!paymentMethod) {
       toast.error('Please select a payment method');
@@ -190,8 +208,12 @@ const Checkout = () => {
       return;
     }
 
+    
+
     // === FOR GUEST USER (Not logged in) ===
     if (!user) {
+
+     
       // Validate guest registration form
       if (!guestFormData.name || !guestFormData.phone || !guestFormData.email) {
         toast.error('Please fill in all registration fields');
@@ -217,8 +239,15 @@ const Checkout = () => {
     }
     // === FOR LOGGED-IN USER ===
     else {
+
+       
+
+
       // Validate address selection for logged-in users
       if (!selectedAddress) {
+
+        
+
         toast.error('Please select a delivery address');
         return;
       }
@@ -249,13 +278,10 @@ const Checkout = () => {
 
           const registerResponse = await LoginService.Commands.registration(registerFormData);
 
-          console.log('Registration response::', registerResponse);
-
           // Check if registration was successful
           if (registerResponse.status === 'success') {
             userId = registerResponse.data?.id;
             token = registerResponse.token;
-            console.log('New user ID:', userId);
           } else {
             // If registration fails, stop the checkout process
             const errorMessage = registerResponse.message || 'Registration failed. Please try again.';
@@ -272,10 +298,6 @@ const Checkout = () => {
           setIsPlacingOrder(false);
           return;
         }
-
-
-        console.log('Registration response user Id::', userId);
-
 
         // Step 2: Save guest address
         try {
@@ -298,7 +320,6 @@ const Checkout = () => {
 
           if (addressResponse.status === 'success') {
             shippingAddressId = addressResponse.data?.address_id || addressResponse.data?.a_id || 0;
-            console.log('Guest address saved, ID:', shippingAddressId);
           } else {
             // If address save fails, stop the checkout process
             const errorMessage = addressResponse.message || 'Failed to save delivery address.';
@@ -355,7 +376,6 @@ const Checkout = () => {
       // Pass token for guest users who just registered
       const response = await OrderService.Commands.createOrder(orderData, token);
 
-      console.log("response order::::", response);
 
       if (response.status === 'success') {
         // Success - show message
@@ -364,7 +384,6 @@ const Checkout = () => {
         // Clear cart after successful order
         try {
           const res = await CartService.Commands.clearCart(cartItems[0].cart_id);
-          console.log("clear cart response", res);
           setCartItems([]);
         } catch (clearError) {
           console.error('Error clearing cart:', clearError);
@@ -387,8 +406,6 @@ const Checkout = () => {
         toast.error(errorMessage);
       }
     } catch (error) {
-      console.log('Error placing order:', error);
-
       // Show user-friendly error message
       const errorMessage = error.response?.data?.message
         || error.message
@@ -417,7 +434,6 @@ const Checkout = () => {
     }
   }
 
-  // console.log("country data::", countryData);
   const getDistrictData = async () => {
     try {
       const params = {
@@ -429,7 +445,6 @@ const Checkout = () => {
 
       const response = await CartService.Queries.getDistrictList(params);
       if (response.status == 'success') {
-        // console.log("Response::::", response);
         const districtMasterData = response.data?.data;
         // Format data for react-select
         const formattedDistricts = districtMasterData.map((district) => ({
@@ -441,13 +456,10 @@ const Checkout = () => {
 
 
     } catch (error) {
-      console.log(error.message || "Something went wrong");
-      // toast.error(error.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong");
     }
   }
 
-
-  // console.log("districtData:::", districtData);
 
   const getThanaData = async (districtId) => {
     try {
@@ -468,8 +480,7 @@ const Checkout = () => {
         setThanaData(formattedThanas);
       }
     } catch (error) {
-      // console.log("error", error.message);
-      // toast.error(error.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong");
     }
   }
 
@@ -492,12 +503,9 @@ const Checkout = () => {
         setAreaData(formattedAreas);
       }
     } catch (error) {
-      // console.log("error", error.message);
-      // toast.error(error.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong");
     }
   }
-
-  // console.log("user....................", user);
 
 
   const fetchUserAddresses = async () => {
@@ -520,9 +528,6 @@ const Checkout = () => {
     }
   };
 
-
-
-  //  console.log("response userAddresses-----------------------", userAddresses);
 
   // Get default address
   const defaultAddress = userAddresses.find(address => address.a_is_default == 1);
@@ -1005,11 +1010,6 @@ const Checkout = () => {
               )
             }
 
-
-            {
-              // console.log("cartItems::::", cartItems)
-            }
-
             {/* Products Section */}
             <div className="bg-white border border-gray-200 p-6 mb-6">
               <h2 className="text-xl font-medium text-gray-700 mb-4">
@@ -1277,7 +1277,7 @@ const Checkout = () => {
                         htmlFor="name"
                         className="block mb-2 text-xs font-medium text-gray-500"
                       >
-                        Name
+                        Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -1285,9 +1285,12 @@ const Checkout = () => {
                         placeholder="John Doe"
                         value={addressFormData.name}
                         onChange={handleAddressInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded w-full p-2.5"
+                        className={`bg-gray-50 border text-gray-900 text-sm rounded w-full p-2.5 ${addressErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                         required
                       />
+                      {addressErrors.name && (
+                        <p className="mt-1 text-xs text-red-600">{addressErrors.name}</p>
+                      )}
                     </div>
 
                     <div>
@@ -1295,7 +1298,7 @@ const Checkout = () => {
                         htmlFor="phone"
                         className="block mb-2 text-xs font-medium text-gray-500"
                       >
-                        Phone
+                        Phone <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -1303,9 +1306,12 @@ const Checkout = () => {
                         placeholder="1234567890"
                         value={addressFormData.phone}
                         onChange={handleAddressInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded w-full p-2.5"
+                        className={`bg-gray-50 border text-gray-900 text-sm rounded w-full p-2.5 ${addressErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
                         required
                       />
+                      {addressErrors.phone && (
+                        <p className="mt-1 text-xs text-red-600">{addressErrors.phone}</p>
+                      )}
                     </div>
                   </div>
 
@@ -1316,13 +1322,13 @@ const Checkout = () => {
                         htmlFor="country"
                         className="block mb-2 text-xs font-medium text-gray-500"
                       >
-                        Country
+                        Country <span className="text-red-500">*</span>
                       </label>
                       <select
                         id="country"
                         value={addressFormData.country}
                         onChange={handleAddressInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-600 text-sm rounded w-full p-2.5"
+                        className={`bg-gray-50 border text-gray-600 text-sm rounded w-full p-2.5 ${addressErrors.country ? 'border-red-500' : 'border-gray-300'}`}
                         required
                       >
                         <option value="">Select Country</option>
@@ -1332,6 +1338,9 @@ const Checkout = () => {
                           </option>
                         ))}
                       </select>
+                      {addressErrors.country && (
+                        <p className="mt-1 text-xs text-red-600">{addressErrors.country}</p>
+                      )}
                     </div>
 
                     <div>
@@ -1344,7 +1353,15 @@ const Checkout = () => {
                       <Select
                         id="district"
                         value={selectedDistrict}
-                        onChange={setSelectedDistrict}
+                        onChange={(option) => {
+                          setSelectedDistrict(option);
+                          setAddressErrors(prev => {
+                            if (!prev.district) return prev;
+                            const next = { ...prev };
+                            delete next.district;
+                            return next;
+                          });
+                        }}
                         options={districtData}
                         placeholder="Select District"
                         isClearable
@@ -1355,9 +1372,9 @@ const Checkout = () => {
                             ...base,
                             minHeight: '42px',
                             backgroundColor: '#f9fafb',
-                            borderColor: '#d1d5db',
+                            borderColor: addressErrors.district ? '#ef4444' : '#d1d5db',
                             '&:hover': {
-                              borderColor: '#9ca3af'
+                              borderColor: addressErrors.district ? '#ef4444' : '#9ca3af'
                             }
                           }),
                           menu: (base) => ({
@@ -1381,7 +1398,15 @@ const Checkout = () => {
                       <Select
                         id="upazila"
                         value={selectedThana}
-                        onChange={setSelectedThana}
+                        onChange={(option) => {
+                          setSelectedThana(option);
+                          setAddressErrors(prev => {
+                            if (!prev.upazila) return prev;
+                            const next = { ...prev };
+                            delete next.upazila;
+                            return next;
+                          });
+                        }}
                         options={thanaData}
                         placeholder="Select Upazila"
                         isClearable
@@ -1393,9 +1418,9 @@ const Checkout = () => {
                             ...base,
                             minHeight: '42px',
                             backgroundColor: '#f9fafb',
-                            borderColor: '#d1d5db',
+                            borderColor: addressErrors.upazila ? '#ef4444' : '#d1d5db',
                             '&:hover': {
-                              borderColor: '#9ca3af'
+                              borderColor: addressErrors.upazila ? '#ef4444' : '#9ca3af'
                             }
                           }),
                           menu: (base) => ({
@@ -1449,7 +1474,7 @@ const Checkout = () => {
                         htmlFor="address_line"
                         className="block mb-2 text-xs font-medium text-gray-500"
                       >
-                        Address Line
+                        Address Line <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -1457,9 +1482,12 @@ const Checkout = () => {
                         placeholder="Dhaka"
                         value={addressFormData.address_line}
                         onChange={handleAddressInputChange}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded w-full p-2.5"
+                        className={`bg-gray-50 border text-gray-900 text-sm rounded w-full p-2.5 ${addressErrors.address_line ? 'border-red-500' : 'border-gray-300'}`}
                         required
                       />
+                      {addressErrors.address_line && (
+                        <p className="mt-1 text-xs text-red-600">{addressErrors.address_line}</p>
+                      )}
                     </div>
 
                     <div>

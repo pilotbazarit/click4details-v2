@@ -382,14 +382,14 @@ const ProductList = () => {
             params._user_id = user?.id;
           }
           // params._user_id = user?.id;
-        } else if (shopToFilter === 'company-shop') {
+        } else if(shopToFilter === 'company-shop'){
 
-          if (companyShops.length > 0) {
-            companyShops.forEach((item, idx) => {
-              params[`_shop_ids[${idx}]`] = item?.value ?? item;
-            });
-            delete params._user_id; // When filtering by specific company shops, we don't want the default user filter
-          }
+            if (companyShops.length > 0) {
+              companyShops.forEach((item, idx) => {
+                params[`_shop_ids[${idx}]`] = item?.value ?? item;
+              });
+              delete params._user_id; // When filtering by specific company shops, we don't want the default user filter
+            }
 
         } else {
           params['_shop_ids[0]'] = shopToFilter;
@@ -459,19 +459,22 @@ const ProductList = () => {
 
   const handleShopData = async (shopType) => {
 
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
-    const user = JSON.parse(userInfo);
+   
+    // if (shopType !== "company-shop") {
+    //   setShopData([]);
+    //   return;
+    // }
 
+    // console.log("shopType", shopType);
 
     const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
     const params = {
       // _user_id: user?.id,
-      ...(user?.user_mode !== "admin" && user?.user_mode !== "supreme" && { _user_id: user?.id }),
+       ...(user?.user_mode !== "admin" && user?.user_mode !== "supreme" && { _user_id: user?.id }),
       _type: type,
       _page: 1,
       _perPage: 1000
-    };
+    }; 
     try {
       const response = await ShopService.Queries.getShopsWithCompanyShops(params);
 
@@ -899,72 +902,72 @@ const ProductList = () => {
 
 
 
-  // const fetchCompanyShops = useCallback(async () => {
-  //   try {
-  //     const params = {
-  //       order: "desc",
-  //       orderBy: "s_id",
-  //       _page: 1,
-  //       _perPage: 1000,
-  //       _user_id: user?.id,
-  //       _type: "company"
-  //     };
-  //     const response = await ShopService.Queries.getShopsWithCompanyShops(user?.id);
+  const fetchCompanyShops = useCallback(async () => {
+    try {
+      const params = {
+        order: "desc",
+        orderBy: "s_id",
+        _page: 1,
+        _perPage: 1000,
+        _user_id: user?.id,
+        _type: "company"
+      };
+      const response = await ShopService.Queries.getShopsWithCompanyShops(user?.id);
 
-  //     if (response.status == 'success') {
-  //       let shopArrayData = [];
+      if (response.status == 'success') {
+        let shopArrayData = [];
 
-  //       response?.data.forEach((item) => {
-  //         if (item.shop) {
-  //           // console.log("item.shop.s_id:", item.shop.s_id);
-  //           // console.log("permissionList:", permissionList);
+        response?.data.forEach((item) => {
+          if (item.shop) {
+            // console.log("item.shop.s_id:", item.shop.s_id);
+            // console.log("permissionList:", permissionList);
 
-  //           let companyShopId = item.shop.s_id;
-  //           let priceAction = "Create"
+            let companyShopId = item.shop.s_id;
+            let priceAction = "Create"
 
-  //           const hasCreatePermission = hasPermission(permissionList, companyShopId, "Vehicle", priceAction);
+            const hasCreatePermission = hasPermission(permissionList, companyShopId, "Vehicle", priceAction);
 
-  //           // console.log("hasCreatePermission:", hasCreatePermission);
-  //           if (hasCreatePermission) {
-  //             shopArrayData.push({
-  //               value: item.shop.s_id,
-  //               label: item.shop.s_title,
-  //             });
-  //           }
+            // console.log("hasCreatePermission:", hasCreatePermission);
+            if (hasCreatePermission) {
+              shopArrayData.push({
+                value: item.shop.s_id,
+                label: item.shop.s_title,
+              });
+            }
 
-  //         }
-  //       });
-
-
-  //       setCompanyShops(shopArrayData);
+          }
+        });
 
 
-  //       setShopData((prevShopData) => {
-  //         const newShops = shopArrayData.filter(
-  //           (newShop) => !prevShopData.find((s) => s.value === newShop.value)
-  //         );
+        setCompanyShops(shopArrayData);
 
-  //         const finalData = [...prevShopData, ...newShops];
 
-  //         return finalData;
-  //       });
-  //       // setCompanyShops(response?.data);
-  //     }
-  //   } catch (error) {
-  //     console.log("Error fetching shops:", error);
-  //   }
-  // }, [user?.id]);
+        setShopData((prevShopData) => {
+          const newShops = shopArrayData.filter(
+            (newShop) => !prevShopData.find((s) => s.value === newShop.value)
+          );
+
+          const finalData = [...prevShopData, ...newShops];
+
+          return finalData;
+        });
+        // setCompanyShops(response?.data);
+      }
+    } catch (error) {
+      console.log("Error fetching shops:", error);
+    }
+  }, [user?.id]);
 
 
 
   // console.log("companyShops 903000000000000", companyShops);
 
 
-  // useEffect(() => {
-  //   if (user?.id) {
-  //     fetchCompanyShops();
-  //   }
-  // }, [user?.id, fetchCompanyShops]);
+  useEffect(() => {
+    if (user?.id) {
+      // fetchCompanyShops();
+    }
+  }, [user?.id, fetchCompanyShops]);
 
 
   // console.log("ssetSelectedShophopData", selectedShop);
@@ -1344,7 +1347,7 @@ const ProductList = () => {
                   </TableHead>
                 )}
 
-
+             
 
 
 
@@ -1563,7 +1566,7 @@ const ProductList = () => {
                 )}
 
 
-                {isColumnVisible('grade') && (
+                 {isColumnVisible('grade') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
                       Grade
@@ -1572,8 +1575,8 @@ const ProductList = () => {
                 )}
 
 
-
-                {isColumnVisible('milage') && (
+                
+                 {isColumnVisible('milage') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
                       Milage
@@ -1582,7 +1585,7 @@ const ProductList = () => {
                 )}
 
 
-                {isColumnVisible('fuel') && (
+                   {isColumnVisible('fuel') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
                       Fuel
