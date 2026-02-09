@@ -411,7 +411,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
             </button>
             <button
               onClick={() => {
-                const phoneNumber = parsedUser?.phone || '+8801969944400';
+                const phoneNumber = parsedUser?.phone || '+8809638660077';
                 window.location.href = `tel:${phoneNumber}`;
               }}
               className="
@@ -438,7 +438,7 @@ const ProductCard = ({ product, parsedUser = null }) => {
 
             <button
               // onClick={() => {
-              //   const phoneNumber = parsedUser?.phone || '+8801969944400';
+              //   const phoneNumber = parsedUser?.phone || '+8809638660077';
               //   window.location.href = `tel:${phoneNumber}`;
               // }}
               onClick={() => handleAddToCart(product)}

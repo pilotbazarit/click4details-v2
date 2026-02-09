@@ -42,7 +42,7 @@ const ContactUs = () => {
                                 </div>
                                 <div>
                                     <strong>📞 Phone:</strong>
-                                    <p>+8801969944400</p>
+                                    <p>+8809638660077</p>
                                 </div>
                                 <div>
                                     <strong>✉️ Email:</strong>
