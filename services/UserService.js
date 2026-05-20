@@ -6,6 +6,14 @@ const commandApi = createApiRequest(API_URL);
 
 const Commands = {
 
+    masterLogin: (id, data) => commandApi.post(`/api/user/master-login/${id}`, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+             Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+    }),
+
     updateUser: (id, data) => commandApi.post(`/api/user/${id}`, data, {
         headers: {
             "Content-Type": "multipart/form-data",
@@ -33,11 +41,22 @@ const Commands = {
              Accept: "application/json",
         }
     }),
+
+
+    sendPartnerRequest: () => commandApi.post("/api/user/send-partner-request", {
+        headers: {
+            "Content-Type": "multipart/form-data",
+             Accept: "application/json",
+        }
+    }),
+
+
 };
 
 const Queries = {
    
     getUsers: (params) => commandApi.get(`/api/user`, { params }),
+    getUserList: (params) => commandApi.get(`/api/user/list`, { params }),
 
     getUserPermissionName: (params) => commandApi.get(`/api/permission-name-list`, { params }),
 

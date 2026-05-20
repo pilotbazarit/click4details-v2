@@ -88,7 +88,7 @@ const MyShopProducts = () => {
 
   return (
     <div className="flex flex-col items-start pt-4">
-      <div className="w-[100%] px-4 mb-6">
+      <div className="w-[100%] px-4 mb-6 flex justify-end">
         <MyShopFilter />
       </div>
 

@@ -15,10 +15,7 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
     const { parsedUser } = useAppContext();
     const [selectedShop, setSelectedShop] = useState(null);
     const [shopData, setShopData] = useState([]);
-
-
-    // console.log("parsedUser?.id", shopData);
-
+    const [isSaving, setIsSaving] = useState(false);
 
 
     const getShops = async () => {
@@ -33,7 +30,7 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
                 }
             );
 
-            console.log("responseresponseresponse", response);
+            // console.log("responseresponseresponse", response);
             const shopOptions = response.data.data.map((shop) => ({
                 value: shop.s_id,
                 label: shop.s_title,
@@ -60,6 +57,10 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
 
     // Function to handle dialog open/close changes
     const handleOpenChange = (isOpen) => {
+        if (!isOpen && isSaving) {
+            return;
+        }
+
         setOpen(isOpen);
         if (!isOpen) {
             setSelectedShop(null);
@@ -68,36 +69,33 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
 
     // Function to handle shop selection
     const handleShopSelect = (shop) => {
+        if (isSaving) return;
         setSelectedShop(shop);
     };
 
     // Function to handle save/ok button
     const handleSave = async () => {
-        if (selectedShop) {
-            console.log('Selected shop:', selectedShop);
-            console.log('Product to copy:', product);
-            // TODO: Implement the actual copy logic here
-            // You can add API call or any other functionality
+        if (!selectedShop || isSaving) {
+            return;
+        }
 
+        setIsSaving(true);
 
-            // const response = await VehicleService.Commands.cloneVehicle({
-            //     id: product.v_id,
-            //     shopId: selectedShop.value,
-            // });
-
+        try {
             const response = await VehicleService.Commands.cloneVehicle(product.v_id, selectedShop.value)
-
-            // console.log("response", response);
 
             if (response.status === "success") {
                 setOpen(false);
                 setSelectedShop(null);
                 toast.success("Product copied successfully!");
+            } else {
+                toast.error(response?.message || "Failed to copy product. Please try again.");
             }
-
-            // Close the modal after save
-            // setOpen(false);
-            // setSelectedShop(null);
+        } catch (error) {
+            console.log("error", error);
+            toast.error(error?.message || "An error occurred while copying the product. Please try again.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -118,7 +116,11 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
                         shopData.map((shop, index) => (
                             <div
                                 key={index}
-                                className='flex items-center gap-4 border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition'
+                                className={`flex items-center gap-4 border border-gray-200 rounded-lg p-4 transition ${
+                                    isSaving
+                                        ? 'cursor-not-allowed opacity-60'
+                                        : 'cursor-pointer hover:bg-gray-50'
+                                }`}
                                 onClick={() => handleShopSelect(shop)}
                             >
                                 <div className='flex items-center justify-center w-12 h-12 bg-teal-100 rounded-lg'>
@@ -146,7 +148,12 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
                 <div className='flex gap-3 pt-4 border-t'>
                     <button
                         onClick={() => handleOpenChange(false)}
-                        className='flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition'
+                        disabled={isSaving}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg font-medium transition ${
+                            isSaving
+                                ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                                : 'text-gray-700 hover:bg-gray-50'
+                        }`}
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -164,13 +171,36 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={!selectedShop}
-                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition ${selectedShop
+                        disabled={!selectedShop || isSaving}
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 ${selectedShop && !isSaving
                             ? 'bg-teal-600 text-white hover:bg-teal-700'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
+                        aria-busy={isSaving}
                     >
-                        Save
+                        {isSaving && (
+                            <svg
+                                className="h-5 w-5 animate-spin"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                />
+                                <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                />
+                            </svg>
+                        )}
+                        {isSaving ? 'Saving...' : 'Save'}
                     </button>
                 </div>
             </DialogContent>

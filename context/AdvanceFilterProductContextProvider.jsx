@@ -58,7 +58,7 @@ export const AdvanceFilterProductContextProvider = ({ children }) => {
                 setTotal(0);
             }
         } catch (error) {
-            console.log("get product error", error);
+            // console.log("get product error", error);
         } finally {
             setLoading(false);
         }

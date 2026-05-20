@@ -38,10 +38,14 @@ const Commands = {
 const Queries = {
   getCustomers: (params) => commandApi.get(`/api/customers`, { params }),
 
+  getCustomerList: (params) => commandApi.get(`/api/customers/list`, { params }),
+
   getCustomerById: (id) => commandApi.get(`/api/customers/${id}`),
 };
 
-export default {
+const CustomerService = {
   Commands,
   Queries,
 };
+
+export default CustomerService;

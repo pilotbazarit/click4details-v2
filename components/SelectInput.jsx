@@ -8,6 +8,8 @@ const SelectInput = ({
     options,
     value,
     onChange,
+    onInputChange,
+    selectRef,
     placeholder = 'Select...',
     isMulti = false,
     isSearchable = true,
@@ -32,11 +34,13 @@ const SelectInput = ({
                 options={options}
                 value={value}
                 onChange={handleChange}
+                onInputChange={onInputChange}
                 placeholder={placeholder}
                 isMulti={isMulti}
                 isSearchable={isSearchable}
                 classNamePrefix="react-select"
                 className={`react-select-container ${error ? 'border-red-500' : 'border-gray-400'}`}
+                ref={selectRef}
                 {...props}
             />
             {error && <p className="text-red-500 text-sm mt-1">{error}</p>}

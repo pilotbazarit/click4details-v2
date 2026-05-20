@@ -1,41 +1,271 @@
-import React, { useEffect, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { usePathname } from "next/navigation";
+import { Info } from 'lucide-react';
+import { usePathname, useRouter } from "next/navigation";
 
 import CopyInput from '../CopyInput'
 import PriceSelectModal from './PriceSelectModal'
 import VehicleStockListModal from './VehicleStockListModal'
 import BankAccountSelectModal from './BankAccountSelectModal'
-import { formatPermissions } from '@/helpers/functions'
+import OutletLocationSelectModal from './OutletLocationSelectModal'
+import ProfileShareModal from './ProfileShareModal'
+import BusinessCardEditModal from './BusinessCardEditModal'
+import { formatPermissions, formatPrice } from '@/helpers/functions'
 import { useAppContext } from '@/context/AppContext';
+import { hasPermission } from '@/lib/utils';
 
+const cleanShareValue = (value) => {
+    if (value === null || value === undefined) return "";
+
+    const stringValue = String(value).trim();
+    if (!stringValue || stringValue.toLowerCase() === "null") return "";
+
+    return stringValue;
+};
+
+const formatPhoneForShare = (value) => {
+    const phoneValue = cleanShareValue(value);
+    if (!phoneValue) return "";
+    if (phoneValue.startsWith("+")) return phoneValue;
+    if (phoneValue.startsWith("880")) return `+${phoneValue}`;
+    if (/^\d+$/.test(phoneValue)) return `+880${phoneValue}`;
+    return phoneValue;
+};
+
+const extractProductDocUrl = (doc) => cleanShareValue(
+    typeof doc === "string"
+        ? doc
+        : doc?.doc?.secure_url || doc?.doc?.url || doc?.secure_url || doc?.url
+);
+
+const extractProductDocName = (doc, docUrl, index) => {
+    const explicitName = cleanShareValue(
+        typeof doc === "string" ? "" : doc?.name || doc?.title
+    );
+    if (explicitName) return explicitName;
+
+    const publicId = cleanShareValue(
+        typeof doc === "string" ? "" : doc?.doc?.public_id || doc?.public_id
+    );
+    if (publicId) {
+        const parts = publicId.split("/");
+        return parts[parts.length - 1];
+    }
+
+    if (docUrl) {
+        try {
+            const pathName = new URL(docUrl).pathname;
+            const lastSegment = decodeURIComponent(pathName.split("/").pop() || "");
+            if (lastSegment) return lastSegment;
+        } catch (error) {
+            const lastSegment = decodeURIComponent(String(docUrl).split("/").pop() || "");
+            if (lastSegment) return lastSegment;
+        }
+    }
+
+    return `document-${index + 1}`;
+};
+
+const inferExtensionFromMimeType = (mimeType) => {
+    switch (mimeType) {
+        case "application/pdf":
+            return ".pdf";
+        case "image/jpeg":
+            return ".jpg";
+        case "image/png":
+            return ".png";
+        case "image/webp":
+            return ".webp";
+        default:
+            return "";
+    }
+};
+
+const ensureFileNameHasExtension = (fileName, mimeType) => {
+    const cleanedName = cleanShareValue(fileName) || "document";
+    if (/\.[a-z0-9]+$/i.test(cleanedName)) return cleanedName;
+
+    const extension = inferExtensionFromMimeType(mimeType);
+    return `${cleanedName}${extension}`;
+};
+
+const normalizeShareList = (value) => {
+    if (value === undefined || value === null) {
+        return [];
+    }
+
+    let rawItems = [];
+
+    if (Array.isArray(value)) {
+        rawItems = value;
+    } else if (typeof value === "string") {
+        const trimmedValue = value.trim();
+
+        if (!trimmedValue) {
+            rawItems = [];
+        } else {
+            try {
+                const parsedValue = JSON.parse(trimmedValue);
+                rawItems = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
+            } catch (error) {
+                rawItems = trimmedValue.includes(",") ? trimmedValue.split(",") : [trimmedValue];
+            }
+        }
+    } else if (typeof value === "object") {
+        rawItems = Object.values(value);
+    } else {
+        rawItems = [value];
+    }
+
+    return rawItems
+        .map((item) => {
+            if (item === undefined || item === null) return "";
+
+            if (typeof item === "object") {
+                return cleanShareValue(
+                    item.value ??
+                    item.email ??
+                    item.phone ??
+                    item.url ??
+                    item.website ??
+                    item.name ??
+                    item.label ??
+                    ""
+                );
+            }
+
+            return cleanShareValue(item);
+        })
+        .filter(Boolean);
+};
+
+const getShareListFromSource = (source, keys) => {
+    for (const key of keys) {
+        const values = normalizeShareList(source?.[key]);
+        if (values.length > 0) {
+            return values;
+        }
+    }
+
+    return [];
+};
+
+const SHARE_OPTION_INFO = {
+    featureAndSpecification: {
+        title: 'Copy - Share Image - Paste Text',
+        description: 'প্রোডাক্টের ছবি এবং বিস্তারিত তথ্য কপি হয়ে যাবে। কাস্টমারের ইনবক্সে গিয়ে প্রথমে ছবি পেস্ট করুন। তারপর টেক্সট বক্সে তথ্য পেস্ট করুন। ছবি ও তথ্য এক ক্লিকে চলে যাবে।',
+    },
+    copyAllTextWithPriceLink: {
+        title: 'Copy All Text (With Price & Link)',
+        description: 'প্রোডাক্টের দাম এবং সরাসরি দেখার লিংকসহ সব টেক্সট একসাথে কপি করার জন্য এটি ব্যবহার করুন। লিংক থেকে কাস্টমার ছবি ডাউনলোড করতে পারবে এবং তথ্য কপি করতে পারবে।',
+    },
+    allImages: {
+        title: 'All Image',
+        description: 'প্রোডাক্টের সবকটি ছবি একসাথে ডাউনলোড বা শেয়ার করার জন্য এই অপশনটি সিলেক্ট করুন।',
+    },
+    detailsWithPrice: {
+        title: 'Details with Price',
+        description: 'শুধুমাত্র প্রোডাক্টের টেকনিক্যাল তথ্য এবং দাম শেয়ার করতে এটি ব্যবহার করুন।',
+    },
+    detailsWithoutPrice: {
+        title: 'Details without Price',
+        description: 'যদি কাস্টমারকে দাম না জানিয়ে শুধু প্রোডাক্টের স্পেসিফিকেশন বা তথ্য পাঠাতে চান, তবে এটি বেছে নিন।',
+    },
+    oneImageShortDetails: {
+        title: 'One Image, Short Details, Link',
+        description: 'কাস্টমারকে সংক্ষেপে ধারণা দেওয়ার জন্য একটি মূল ছবি, অল্প কিছু তথ্য এবং অ্যাপের লিংক পাঠানোর সেরা মাধ্যম।',
+    },
+    priceLinkDetailsImage: {
+        title: 'Price, Link, Details, Image',
+        description: 'এটি একটি কমপ্লিট প্যাকেজ। কাস্টমার একসাথেই দাম, ছবি, লিংক এবং বিস্তারিত সব তথ্য পেয়ে যাবেন।',
+    },
+    priceLinkDetails: {
+        title: 'Price, Link, Details',
+        description: 'ছবি ছাড়া শুধুমাত্র দাম, বিস্তারিত তথ্য এবং লিংক পাঠানোর জন্য এই অপশনটি কার্যকর।',
+    },
+    shareLocation: {
+        title: 'Share Outlet Location',
+        description: 'আপনার শোরুম বা আউটলেটটি ঠিক কোথায় অবস্থিত, তার গুগল ম্যাপ লোকেশন কাস্টমারকে পাঠাতে এটি ব্যবহার করুন।',
+    },
+    sendMyProfile: {
+        title: 'Send My Profile',
+        description: 'আপনার ব্যক্তিগত পেশাদার প্রোফাইল বা ভিজিটিং কার্ড কাস্টমারের সাথে শেয়ার করুন।',
+    },
+    sendBusinessProfile: {
+        title: 'Send Business Profile',
+        description: 'আপনার পুরো প্রতিষ্ঠানের তথ্য, লোগো এবং কাজের বিবরণ কাস্টমারকে একবারে পাঠানোর জন্য এটি ব্যবহার করুন।',
+    },
+    sendBankAccount: {
+        title: 'Send Bank Information',
+        description: 'লেনদেনের সুবিধার্থে আপনার প্রতিষ্ঠানের ব্যাংক একাউন্ট ডিটেইলস সরাসরি কাস্টমারকে পাঠিয়ে দিন।',
+    },
+    stockList: {
+        title: 'Stock List',
+        description: 'আপনার কাছে বর্তমানে কী কী প্রোডাক্ট স্টকে আছে, তার একটি পূর্ণাঙ্গ তালিকা এক ক্লিকেই তৈরি করে শেয়ার করুন। কাস্টমার উক্ত স্টক লিস্ট থেকে আপনার প্রতিটি গাড়ির ছবি, তথ্য, মূল্য তালিকা এবং আরও অনেক কিছু আপনাকে ফোন না করে জানতে পারবে।',
+    },
+    sendBusinessCard: {
+        title: 'Send Business Card',
+        description: 'আপনার প্রতিষ্ঠানের সংক্ষিপ্ত বিজনেস কার্ড বা পরিচিতিমূলক কার্ড কাস্টমারের কাছে পাঠাতে এটি ব্যবহার করুন।',
+    },
+    profileShare: {
+        title: 'Send Essential Documents',
+        description: 'আপনার প্রয়োজনীয় ব্যক্তিগত বা পেশাগত ডকুমেন্ট একসাথে কাস্টমারের কাছে শেয়ার করতে এই অপশনটি ব্যবহার করুন।',
+    },
+    productShareDocuments: {
+        title: 'Send Product Documents/Auction Sheet/Brochure',
+        description: 'এই প্রোডাক্টের সাথে সম্পর্কিত ডকুমেন্ট, অকশন শিট বা ব্রোশার কাস্টমারের কাছে পাঠাতে এটি ব্যবহার করুন।',
+    },
+};
+
+const SHARE_INFO_SECTIONS = [
+    {
+        title: 'SEND FOR BUSINESS PURPOSE (ব্যবসায়িক প্রয়োজনে)',
+        items: ['featureAndSpecification', 'copyAllTextWithPriceLink', 'allImages', 'detailsWithPrice', 'detailsWithoutPrice'],
+    },
+    {
+        title: 'SEND FOR DIRECT CUSTOMER (সরাসরি কাস্টমারের জন্য)',
+        items: [
+            'oneImageShortDetails',
+            'priceLinkDetailsImage',
+            'priceLinkDetails',
+            'shareLocation',
+            'sendMyProfile',
+            'sendBusinessProfile',
+            'sendBankAccount',
+            'stockList',
+            'sendBusinessCard',
+            'profileShare',
+            'productShareDocuments',
+        ],
+    },
+];
 
 
 const ProductShareModal = ({ open, setOpen, product }) => {
 
     const pathname = usePathname();
-    const [user, setUser] = useState(null);
-    const { selectedCompanyShop } = useAppContext();
-
-
-    // console.log("user Infoo:::::", user);
-
-
-    useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
-        if (userInfo) {
-            setUser(JSON.parse(userInfo));
+    const router = useRouter();
+    const { selectedCompanyShop, user: appUser } = useAppContext();
+    const user = useMemo(() => {
+        if (!appUser) return null;
+        if (typeof appUser === "string") {
+            try {
+                return JSON.parse(appUser);
+            } catch (error) {
+                console.error("Failed to parse app user in ProductShareModal:", error);
+                return null;
+            }
         }
-    }, []);
+        return appUser;
+    }, [appUser]);
 
 
-    // console.log("product in share modal User:::::", user);
+    // console.log("product in share modal User:::::", selectedCompanyShop);
 
 
     const formattedPermissions = formatPermissions(user?.permissions);
@@ -71,8 +301,18 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         : false;
 
 
+    let shareOutletLocationAction = "ShareOutletLocation";
+
+    const hasPermissionShareOutletLocation = companyShopId
+        ? formattedPermissions.some(
+            permission =>
+                permission.shopId === companyShopId &&
+                (permission.section === "Vehicle" || permission.section === "*") &&
+                (permission.action === shareOutletLocationAction || permission.action === "*")
+        )
+        : false;
     // console.log("-------------------------------------");
-    // console.log("model user", user);
+    // console.log("model user pathname 75", pathname);
     // console.log("selectedCompanyShop", selectedCompanyShop?.shop?.s_id);
     // console.log("Formatted Permissions:", formattedPermissions);
 
@@ -80,10 +320,57 @@ const ProductShareModal = ({ open, setOpen, product }) => {
     // ---------- Custom Helper ----------
     let isMyShop = pathname.includes("my-shop");
     let isCompanyShop = pathname.includes("company-shop");
+    let isStock = pathname.includes("pb-home") || pathname == "/";
+    const hasPermissionShowSendBusinessProfileButton =
+        isCompanyShop &&
+        hasPermission(
+            formattedPermissions,
+            Number(companyShopId),
+            "Vehicle",
+            "ShowSendBusinessProfileShareButton"
+        );
+    const hasPermissionShowSendProductDocumentsShareButton =
+        isCompanyShop &&
+        hasPermission(
+            formattedPermissions,
+            Number(companyShopId),
+            "Vehicle",
+            "ShowSendProductDocumentsShareButton"
+        );
+    const hasPermissionShowSelectPriceDialog =
+        isCompanyShop &&
+        hasPermission(
+            formattedPermissions,
+            Number(companyShopId),
+            "Vehicle",
+            "ShowSelectPriceDialog"
+        );
+    const shouldUseUserPrice = pathname === '/my-shop/' || pathname === '/company-shop/';
+    const shouldOpenPriceSelectModal =
+        !isStock && (!isCompanyShop || hasPermissionShowSelectPriceDialog);
+
+    const getShareDisplayPrice = () => {
+        const rawPrice = shouldUseUserPrice
+            ? product?.vehicle_price?.user_price
+            : product?.vehicle_price?.pbl_price;
+        const formattedPrice = formatPrice(rawPrice);
+        const currency = cleanShareValue(product?.vehicle_db_price?.vp_currency);
+
+        if (!formattedPrice) return "";
+        if (formattedPrice === 'Call for Price') return formattedPrice;
+
+        return currency ? `${currency}. ${formattedPrice}` : String(formattedPrice);
+    };
 
     const domain = 'https://click4details.app';
     // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.app';
-    const url = `${domain}/product/${product?.v_slug}`;
+
+
+    const url = isMyShop || isCompanyShop
+        ? `${domain}/product/my-shop/${product?.v_id}`
+        : `${domain}/product/${product?.v_id}`;
+
+    // const url = `${domain}/product/${product?.v_slug}`;
 
     // State to track selected option (kon option select hoise seta track korbe)
     const [selectedBusinessOption, setSelectedBusinessOption] = useState('');
@@ -97,14 +384,484 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
     // State for bank account select modal
     const [bankAccountModalOpen, setBankAccountModalOpen] = useState(false);
+    const [locationModalOpen, setLocationModalOpen] = useState(false);
+    const [profileShareModalOpen, setProfileShareModalOpen] = useState(false);
+    const [businessCardModalOpen, setBusinessCardModalOpen] = useState(false);
+    const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+    const [activeInfoKey, setActiveInfoKey] = useState('overview');
 
     // Function to handle dialog open/close changes
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen);
     };
 
+    const handleProfileEditClick = (e) => {
+        e.stopPropagation();
+        setOpen(false);
+        setProfileShareModalOpen(false);
+        router.push('/profile');
+    };
+
+    const handleBusinessProfileClick = (e) => {
+        e.stopPropagation();
+        setSelectedBusinessOption('sendBusinessProfile');
+        setOpen(false);
+        setProfileShareModalOpen(false);
+        router.push('/profile#business-profile-section');
+    };
+
+    const handleBusinessCardEditClick = (e) => {
+        e.stopPropagation();
+        setBusinessCardModalOpen(true);
+    };
+
+    const openInfoDialog = (infoKey = 'overview') => {
+        setActiveInfoKey(infoKey);
+        setInfoDialogOpen(true);
+    };
+
+    const activeShareInfo = activeInfoKey === 'overview' ? null : SHARE_OPTION_INFO[activeInfoKey];
+
+    const renderInfoButton = (infoKey) => (
+        <button
+            type='button'
+            className='shrink-0 rounded-full border border-sky-500 p-1 text-sky-600 transition hover:bg-sky-50'
+            onClick={(e) => {
+                e.stopPropagation();
+                openInfoDialog(infoKey);
+            }}
+            aria-label={`Show info for ${SHARE_OPTION_INFO[infoKey]?.title || 'this option'}`}
+        >
+            <Info className='h-4 w-4' />
+        </button>
+    );
+
+    const getProductShareImageUrls = () => (
+        [
+            extractProductDocUrl(product?.vehicle_front_image),
+            ...(Array.isArray(product?.vehicle_images)
+                ? product.vehicle_images.map((image) => extractProductDocUrl(image))
+                : []),
+        ].filter((imageUrl, index, array) => imageUrl && array.indexOf(imageUrl) === index)
+    );
+
+    const buildFeatureAndSpecificationMessage = () => {
+        let featureMessage = `*${product?.v_title || product?.v_title}*\n\n`;
+        featureMessage += `Features & Specifications:\n`;
+
+        if (product?.feature_specification?.length > 0) {
+            const featureText = product.feature_specification
+                .map((feature) => {
+                    if (!feature?.specification?.length) {
+                        return null;
+                    }
+
+                    const selectedItems = feature.specification
+                        .filter((item) => item.is_selected)
+                        .map((item) => item.fs_title);
+
+                    const specificationTitles =
+                        selectedItems.length > 0
+                            ? selectedItems
+                            : feature.specification
+                                .map((item) => item.fs_title)
+                                .filter(Boolean);
+
+                    if (!specificationTitles.length) {
+                        return null;
+                    }
+
+                    return `${feature.md_title}: ${specificationTitles.join(", ")}`;
+                })
+                .filter(Boolean)
+                .join("\n");
+
+            if (featureText) {
+                featureMessage += `${featureText}\n`;
+            } else {
+                featureMessage += `No feature specification found.\n`;
+            }
+        } else {
+            featureMessage += `No feature specification found.\n`;
+        }
+
+        featureMessage += `\n View & Download All Images and Copy Product Features form below Link:\n${url}`;
+
+        return featureMessage;
+    };
+
+    const buildPriceLinkDetailsMessage = () => {
+        const productName = product?.v_title || product?.v_title;
+        const price = getShareDisplayPrice();
+
+        let priceLinkDetailsMessage = `*${productName}*\n\n`;
+
+        if (product?.v_brand_name) {
+            priceLinkDetailsMessage += `Brand: ${product.v_brand_name}\n`;
+        }
+        if (product?.v_model_name) {
+            priceLinkDetailsMessage += `Model: ${product.v_model_name}\n`;
+        }
+        if (product?.v_edition_name) {
+            priceLinkDetailsMessage += `Package: ${product.v_edition_name}\n`;
+        }
+        if (product?.v_condition_name) {
+            priceLinkDetailsMessage += `Condition: ${product.v_condition_name}\n`;
+        }
+        if (product?.v_mod_year) {
+            priceLinkDetailsMessage += `Model Yr: ${product.v_mod_year}\n`;
+        }
+        if (product?.v_registration) {
+            priceLinkDetailsMessage += `Reg Yr: ${product.v_registration}\n`;
+        }
+        if (product?.v_grade_name) {
+            priceLinkDetailsMessage += `Grade: ${product.v_grade_name}\n`;
+        }
+        if (product?.v_ext_grade_name) {
+            priceLinkDetailsMessage += `Exterior Grd: ${product.v_ext_grade_name}\n`;
+        }
+        if (product?.v_int_grade_name) {
+            priceLinkDetailsMessage += `Interior Grd: ${product.v_int_grade_name}\n`;
+        }
+        if (product?.v_mileage) {
+            priceLinkDetailsMessage += `Mileage: ${product.v_mileage} km\n`;
+        }
+        if (product?.v_color_name) {
+            priceLinkDetailsMessage += `Color: ${product.v_color_name}\n`;
+        }
+        if (product?.v_fuel_name) {
+            priceLinkDetailsMessage += `Fuel: ${product.v_fuel_name}\n`;
+        }
+        if (product?.v_transmission_name) {
+            priceLinkDetailsMessage += `Option: ${product.v_transmission_name}\n`;
+        }
+        if (product?.v_capacity) {
+            priceLinkDetailsMessage += `CC: ${product.v_capacity}\n`;
+        }
+        if (product?.v_skeleton_name) {
+            priceLinkDetailsMessage += `Body: ${product.v_skeleton_name}\n`;
+        }
+        if (product?.v_seat_name) {
+            priceLinkDetailsMessage += `Seat: ${product.v_seat_name}\n`;
+        }
+        if (product?.v_chassis && product.v_chassis !== 'null') {
+            priceLinkDetailsMessage += `Chassis No: ${product.v_chassis}\n`;
+        }
+        if (product?.v_engine && product.v_engine !== 'null') {
+            priceLinkDetailsMessage += `Engine No: ${product.v_engine}\n`;
+        }
+        if (product?.v_tax_token_exp_date) {
+            priceLinkDetailsMessage += `Tax Token: ${product.v_tax_token_exp_date}\n`;
+        }
+        if (product?.v_fitness_exp_date) {
+            priceLinkDetailsMessage += `Fitness: ${product.v_fitness_exp_date}\n`;
+        }
+
+        if (product?.feature_specification && product.feature_specification.length > 0) {
+            priceLinkDetailsMessage += `\n Features:\n`;
+
+            const featureText = product.feature_specification
+                .map((feature) => {
+                    if (
+                        feature?.specification?.length > 0 &&
+                        feature.specification.some((item) => item.is_selected)
+                    ) {
+                        const selectedItems = feature.specification
+                            .filter((item) => item.is_selected)
+                            .map((item) => item.fs_title)
+                            .join(", ");
+
+                        return `${feature.md_title}: ${selectedItems}`;
+                    }
+                    return null;
+                })
+                .filter(Boolean)
+                .join("\n");
+
+            if (featureText) {
+                priceLinkDetailsMessage += featureText + '\n';
+            }
+        }
+
+        if (price) {
+            priceLinkDetailsMessage += `\n Price: ${price}\n`;
+        }
+
+        priceLinkDetailsMessage += `\n View & Download All Images and Copy Product Features form below Link:\n${url}`;
+
+        return priceLinkDetailsMessage;
+    };
+
+    const buildVehicleDetailsMessage = ({ includePrice = false } = {}) => {
+        const productName = product?.v_title || product?.v_title;
+        const price = getShareDisplayPrice();
+
+        let detailsMessage = `*${productName}*\n\n`;
+
+        if (product?.v_brand_name) {
+            detailsMessage += `Brand: ${product.v_brand_name}\n`;
+        }
+        if (product?.v_model_name) {
+            detailsMessage += `Model: ${product.v_model_name}\n`;
+        }
+        if (product?.v_edition_name) {
+            detailsMessage += `Package: ${product.v_edition_name}\n`;
+        }
+        if (product?.v_condition_name) {
+            detailsMessage += `Condition: ${product.v_condition_name}\n`;
+        }
+        if (product?.v_mod_year) {
+            detailsMessage += `Model Yr: ${product.v_mod_year}\n`;
+        }
+        if (product?.v_registration) {
+            detailsMessage += `Reg Yr: ${product.v_registration}\n`;
+        }
+        if (product?.v_grade_name) {
+            detailsMessage += `Grade: ${product.v_grade_name}\n`;
+        }
+        if (product?.v_ext_grade_name) {
+            detailsMessage += `Exterior Grd: ${product.v_ext_grade_name}\n`;
+        }
+        if (product?.v_int_grade_name) {
+            detailsMessage += `Interior Grd: ${product.v_int_grade_name}\n`;
+        }
+        if (product?.v_mileage) {
+            detailsMessage += `Mileage: ${product.v_mileage} km\n`;
+        }
+        if (product?.v_color_name) {
+            detailsMessage += `Color: ${product.v_color_name}\n`;
+        }
+        if (product?.v_fuel_name) {
+            detailsMessage += `Fuel: ${product.v_fuel_name}\n`;
+        }
+        if (product?.v_transmission_name) {
+            detailsMessage += `Option: ${product.v_transmission_name}\n`;
+        }
+        if (product?.v_capacity) {
+            detailsMessage += `CC: ${product.v_capacity}\n`;
+        }
+        if (product?.v_skeleton_name) {
+            detailsMessage += `Body: ${product.v_skeleton_name}\n`;
+        }
+        if (product?.v_seat_name) {
+            detailsMessage += `Seat: ${product.v_seat_name}\n`;
+        }
+        if (product?.v_chassis && product.v_chassis !== 'null') {
+            detailsMessage += `Chassis No: ${product.v_chassis}\n`;
+        }
+        if (product?.v_engine && product.v_engine !== 'null') {
+            detailsMessage += `Engine No: ${product.v_engine}\n`;
+        }
+        if (product?.v_tax_token_exp_date) {
+            detailsMessage += `Tax Token: ${product.v_tax_token_exp_date}\n`;
+        }
+        if (product?.v_fitness_exp_date) {
+            detailsMessage += `Fitness: ${product.v_fitness_exp_date}\n`;
+        }
+
+        if (product?.feature_specification && product.feature_specification.length > 0) {
+            detailsMessage += `\n Features:\n`;
+
+            const featureText = product.feature_specification
+                .map((feature) => {
+                    if (
+                        feature?.specification?.length > 0 &&
+                        feature.specification.some((item) => item.is_selected)
+                    ) {
+                        const selectedItems = feature.specification
+                            .filter((item) => item.is_selected)
+                            .map((item) => item.fs_title)
+                            .join(", ");
+
+                        return `${feature.md_title}: ${selectedItems}`;
+                    }
+                    return null;
+                })
+                .filter(Boolean)
+                .join("\n");
+
+            if (featureText) {
+                detailsMessage += featureText + '\n';
+            }
+        }
+
+        if (includePrice && price) {
+            detailsMessage += `\n Price: ${price}\n`;
+        }
+
+        detailsMessage += `\n View & Download All Images and Copy Product Features form below Link:\n${url}`;
+
+        return detailsMessage;
+    };
+
+    const buildBusinessCardMessage = () => {
+        const businessCardSource = selectedCompanyShop || {};
+        const companyName = cleanShareValue(
+            businessCardSource?.shop?.s_title ||
+            businessCardSource?.up_company ||
+            businessCardSource?.company_name ||
+            businessCardSource?.name
+        );
+
+        const businessEmails = getShareListFromSource(businessCardSource, [
+            'urp_com_email',
+            'urp_com_emails',
+            'com_email',
+            'emails',
+        ]);
+        const businessPhones = getShareListFromSource(businessCardSource, [
+            'urp_com_phone',
+            'urp_com_phones',
+            'com_phone',
+            'phones',
+        ]);
+        const businessFacebooks = getShareListFromSource(businessCardSource, [
+            'urp_com_facebook',
+            'com_facebook',
+            'facebook',
+            'facebooks',
+        ]);
+        const businessYoutubes = getShareListFromSource(businessCardSource, [
+            'urp_com_youtube',
+            'com_youtube',
+            'youtube',
+            'youtubes',
+        ]);
+        const businessWebsites = getShareListFromSource(businessCardSource, [
+            'urp_com_web',
+            'urp_com_website',
+            'com_web',
+            'website',
+            'web',
+        ]);
+
+        const sections = [];
+
+        if (businessEmails.length > 0) {
+            sections.push(`*Business Emails*:\n${businessEmails.map((email) => `- ${email}`).join("\n")}`);
+        }
+
+        if (businessPhones.length > 0) {
+            sections.push(`*Business Phones*:\n${businessPhones.map((phone) => `- ${cleanShareValue(phone)}`).join("\n")}`);
+        }
+
+        if (businessFacebooks.length > 0) {
+            sections.push(`*Business Facebooks*:\n${businessFacebooks.map((facebook) => `- ${facebook}`).join("\n")}`);
+        }
+
+        if (businessYoutubes.length > 0) {
+            sections.push(`*Business YouTubes*:\n${businessYoutubes.map((youtube) => `- ${youtube}`).join("\n")}`);
+        }
+
+        if (businessWebsites.length > 0) {
+            sections.push(`*Business Website*:\n${businessWebsites.map((website) => `- ${website}`).join("\n")}`);
+        }
+
+        let businessCardMessage = `Here is my Business Card:\n\n`;
+
+        if (user?.name) {
+            businessCardMessage += `Name: ${user.name}\n\n`;
+        }
+
+        businessCardMessage += `Company: ${companyName || "N/A"}`;
+
+       
+
+        if (sections.length > 0) {
+            businessCardMessage += `\n\n${sections.join("\n\n")}`;
+        }
+
+        return businessCardMessage;
+    };
+
+    const shareProductImagesWithFallback = async (shareMessage) => {
+        const imageUrls = getProductShareImageUrls();
+        const canUseWebShare =
+            typeof navigator !== "undefined" &&
+            typeof navigator.share === "function" &&
+            typeof navigator.canShare === "function";
+
+        if (imageUrls.length > 0 && canUseWebShare) {
+            try {
+                const shareableFiles = await Promise.all(
+                    imageUrls.map(async (imageUrl, index) => {
+                        try {
+                            const response = await fetch(imageUrl);
+                            if (!response.ok) {
+                                throw new Error(`Failed to fetch image ${index + 1}`);
+                            }
+
+                            const blob = await response.blob();
+                            const fileName = ensureFileNameHasExtension(
+                                extractProductDocName(imageUrl, imageUrl, index),
+                                blob.type
+                            );
+
+                            return new File([blob], fileName, {
+                                type: blob.type || "image/jpeg",
+                            });
+                        } catch (error) {
+                            console.error(`Share image ${index + 1} load error:`, error);
+                            return null;
+                        }
+                    })
+                );
+
+                const validFiles = shareableFiles.filter(Boolean);
+
+                if (validFiles.length > 0) {
+                    const shareData = {
+                        title: product?.v_title || product?.v_title,
+                        text: shareMessage,
+                        files: validFiles,
+                    };
+
+                    if (navigator.canShare(shareData)) {
+                        await navigator.share(shareData);
+                        return true;
+                    }
+                }
+            } catch (shareError) {
+                console.log("Product image share failed:", shareError?.message || shareError);
+            }
+        }
+
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+        window.open(whatsappUrl, '_blank');
+        return false;
+    };
+
+
+    // console.log("isStock 109", isStock);
+
     // Function to handle price selection and share
-    const handlePriceShare = (priceData) => {
+    const handlePriceShare = async (priceData) => {
+        if (priceModalType === 'allImages') {
+            handleBusinessShare('allImages');
+            return;
+        }
+        if (priceModalType === 'details') {
+            handleBusinessShare('details');
+            return;
+        }
+        if (priceModalType === 'oneImageShortDetails') {
+            handleBusinessShare('oneImageShortDetails');
+            return;
+        }
+        if (priceModalType === 'priceLinkDetailsImage') {
+            handleBusinessShare('priceLinkDetailsImage');
+            return;
+        }
+        if (priceModalType === 'priceLinkDetails') {
+            handleBusinessShare('priceLinkDetails');
+            return;
+        }
+        if (priceModalType === 'featureAndSpecification') {
+            setSelectedBusinessOption('featureAndSpecification');
+            await shareProductImagesWithFallback(buildFeatureAndSpecificationMessage());
+            return;
+        }
+
         // Build message based on priceModalType
         const productName = product?.v_title || product?.v_title;
 
@@ -217,10 +974,24 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         }
 
         // Product Link
-        message += `\n🔗 View Details & Download Images:\n${url}`;
+        // message += `\n🔗 View & Download All Images and Copy Product Features form below Link:\n${url}`;
 
         // Mark the option as selected
-        setSelectedBusinessOption(priceModalType === 'withPrice' ? 'detailsWithPrice' : 'detailsWithoutPrice');
+        setSelectedBusinessOption(
+            priceModalType === 'withPrice'
+                ? 'detailsWithPrice'
+                : priceModalType === 'allImages'
+                    ? 'allImages'
+                    : priceModalType === 'details'
+                        ? 'details'
+                        : priceModalType === 'oneImageShortDetails'
+                            ? 'oneImageShortDetails'
+                            : priceModalType === 'priceLinkDetailsImage'
+                                ? 'priceLinkDetailsImage'
+                                : priceModalType === 'withoutPrice'
+                                    ? 'detailsWithoutPrice'
+                                    : 'featureAndSpecification'
+        );
 
         // WhatsApp open korbe message niye
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
@@ -236,25 +1007,125 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         setSelectedBusinessOption(option);
 
         const productName = product?.v_title || product?.v_title;
-        // const price = product?.v_price || product?.price || 'N/A';
-        const price =
-            product?.vehicle_price?.user_price !== 'Call for Price'
-                ? `TK. ${product?.vehicle_price?.user_price}`
-                : 'Call for Price';
+        const price = getShareDisplayPrice();
 
         const details = product?.v_description || product?.p_description || '';
+
+        if (option === 'productShareDocuments') {
+            const productDocs = Array.isArray(product?.v_docs) ? product.v_docs : [];
+            const validDocs = productDocs
+                .map((doc, index) => {
+                    const docUrl = extractProductDocUrl(doc);
+                    if (!docUrl) return null;
+
+                    return {
+                        id: `product-doc-${index}`,
+                        name: extractProductDocName(doc, docUrl, index),
+                        url: docUrl,
+                    };
+                })
+                .filter(Boolean);
+
+            if (validDocs.length > 0) {
+                const canUseWebShare =
+                    typeof navigator !== "undefined" &&
+                    typeof navigator.share === "function" &&
+                    typeof navigator.canShare === "function";
+
+                if (canUseWebShare) {
+                    try {
+                        const shareableFiles = await Promise.all(
+                            validDocs.map(async (doc, index) => {
+                                try {
+                                    const response = await fetch(doc.url);
+                                    if (!response.ok) {
+                                        throw new Error(`Failed to fetch document ${index + 1}`);
+                                    }
+
+                                    const blob = await response.blob();
+                                    const fileName = ensureFileNameHasExtension(doc.name, blob.type);
+
+                                    return new File([blob], fileName, {
+                                        type: blob.type || "application/octet-stream",
+                                    });
+                                } catch (error) {
+                                    console.error(`Document ${index + 1} load error:`, error);
+                                    return null;
+                                }
+                            })
+                        );
+
+                        const validFiles = shareableFiles.filter(Boolean);
+
+                        if (validFiles.length > 0) {
+                            const shareData = {
+                                title: productName,
+                                text: `${productName}\n\n${url}`,
+                                files: validFiles,
+                            };
+
+                            if (navigator.canShare(shareData)) {
+                                await navigator.share(shareData);
+                                return;
+                            }
+                        }
+                    } catch (shareError) {
+                        console.log("Product documents share failed:", shareError?.message || shareError);
+                    }
+                }
+            }
+
+            let productDocsMessage = `*${productName}*\n\n`;
+
+            if (validDocs.length > 0) {
+                productDocsMessage += `Product Documents:\n\n`;
+                validDocs.forEach((doc, index) => {
+                    productDocsMessage += `${index + 1}. ${doc.name}: ${doc.url}\n\n`;
+                });
+            } else {
+                productDocsMessage += `No product documents found.\n\n`;
+            }
+
+            productDocsMessage += `Product Link:\n${url}`;
+
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(productDocsMessage)}`;
+            window.open(whatsappUrl, '_blank');
+            return;
+        }
 
         // All Images option er jonno special handling - Image files share korbe
         if (option === 'allImages') {
             const images = product?.vehicle_images || [];
 
+            if (isStock) {
+                let imageMessage = `*${productName}*\n\n`;
+
+                if (images.length > 0) {
+                    imageMessage += `All Images:\n\n`;
+                    images.forEach((img, index) => {
+                        if (img?.url) {
+                            imageMessage += `${index + 1}. ${img.url}\n`;
+                        }
+                    });
+                } else {
+                    imageMessage += `No images found.\n`;
+                }
+
+                imageMessage += `\nView Details:\n${url}`;
+                const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(imageMessage)}`;
+                window.open(whatsappUrl, '_blank');
+                return;
+            }
+
             if (images.length > 0) {
                 try {
-                    // Step 1: Mobile e Web Share API try kora (best option)
-                    // Check if mobile device AND Web Share API available
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    // Step 1: Native Web Share API (files) try kora
+                    const canUseWebShare =
+                        typeof navigator !== "undefined" &&
+                        typeof navigator.share === "function" &&
+                        typeof navigator.canShare === "function";
 
-                    if (isMobile && navigator.share && navigator.canShare) {
+                    if (canUseWebShare) {
                         try {
 
                             // Sob image download kore File object banano
@@ -285,7 +1156,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                 // Check if files share supported
                                 if (navigator.canShare(shareData)) {
                                     await navigator.share(shareData);
-                                    console.log(" Web Share API successful");
+                                    // console.log(" Web Share API successful");
                                     return;
                                 } else {
                                     console.log(" Files not shareable, falling back...");
@@ -298,94 +1169,20 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                         }
                     }
 
-                    // Step 2: Desktop/Fallback - Images download kore WhatsApp e pathano
+                    // Step 2: Fallback - WhatsApp e shob image URL pathano
+                    let imageMessage = `*${productName}*\n\n`;
+                    imageMessage += `All Images:\n\n`;
 
-                    // Check if desktop
-                    const isDesktop = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-                    if (isDesktop && images.length <= 10) {
-                        // Desktop e: Download images using fetch + blob (CORS safe)
-
-                        // Download all images using fetch (CORS friendly)
-                        const downloadPromises = images.map(async (img, index) => {
-                            try {
-
-                                // Fetch image as blob
-                                const response = await fetch(img.url);
-                                if (!response.ok) {
-                                    console.error(`Failed to fetch image ${index + 1}:`, response.status);
-                                    return false;
-                                }
-
-                                const blob = await response.blob();
-
-                                // Get file extension from URL or use jpg as default
-                                const urlParts = img.url.split('.');
-                                const extension = urlParts[urlParts.length - 1].split('?')[0] || 'jpg';
-
-                                // Create download link
-                                const blobUrl = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = blobUrl;
-                                link.download = `${productName.replace(/[^a-z0-9]/gi, '_')}_image_${index + 1}.${extension}`;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-
-                                // Clean up blob URL
-                                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-
-                                console.log(` Image ${index + 1} downloaded successfully`);
-                                return true;
-                            } catch (error) {
-                                console.error(` Error downloading image ${index + 1}:`, error);
-                                return false;
-                            }
-                        });
-
-                        // Wait for all downloads with delay
-                        Promise.all(downloadPromises).then((results) => {
-                            const successCount = results.filter(r => r === true).length;
-                            console.log(`Download complete: ${successCount}/${images.length} images downloaded`);
-
-                            // WhatsApp message with download status
-                            let desktopMessage = `*${productName}*\n\n`;
-
-                            if (successCount === images.length) {
-                                desktopMessage += ` ${images.length} ta image download hoye geche!\n\n`;
-                            } else {
-                                desktopMessage += ` ${successCount}/${images.length} ta image download hoyeche\n\n`;
-                            }
-
-                            desktopMessage += ` Images attach :\n`;
-                            desktopMessage += `1. Download folder e jacchen\n`;
-                            desktopMessage += `2. Images select korun\n`;
-                            desktopMessage += `3. WhatsApp e attach korun\n\n`;
-                            desktopMessage += ` Product Link:\n${url}`;
-
-                            // Open WhatsApp with message
-                            setTimeout(() => {
-                                const whatsappUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(desktopMessage)}`;
-                                window.open(whatsappUrl, '_blank');
-                            }, 500);
-                        });
-
-                    } else {
-                        // Fallback: Just send URLs in message
-                        let imageMessage = `*${productName}*\n\n`;
-                        imageMessage += ` Total ${images.length} ta image:\n\n`;
-
-                        // Prottek image URL alag alag line e
-                        images.forEach((img, index) => {
+                    images.forEach((img, index) => {
+                        if (img?.url) {
                             imageMessage += `${index + 1}. ${img.url}\n\n`;
-                        });
+                        }
+                    });
 
-                        imageMessage += `\n Product Link:\n${url}`;
+                    imageMessage += `\nProduct Link:\n${url}`;
 
-                        // WhatsApp e pathano
-                        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(imageMessage)}`;
-                        window.open(whatsappUrl, '_blank');
-                    }
+                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(imageMessage)}`;
+                    window.open(whatsappUrl, '_blank');
 
                 } catch (error) {
                     console.error('Share error:', error);
@@ -403,124 +1200,18 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
         // featureAndSpecification
         if (option === 'featureAndSpecification') {
-            // WhatsApp e pathano
+            const featureMessage = buildFeatureAndSpecificationMessage();
 
-            let allDetails = '';
-
-            // Features সেকশন
-            allDetails += `\nFeatures:\n`;
-
-            // Brand
-            if (product?.v_brand_name) {
-                allDetails += `Brand : ${product?.v_brand_name}\n`;
-            }
-            // Model
-            if (product?.v_model_name) {
-                allDetails += `Model: ${product?.v_model_name}\n`;
-            }
-            // Package
-            if (product?.v_edition_name) {
-                allDetails += `Package: ${product?.v_edition_name}\n`;
-            }
-            // Condition
-            if (product?.v_condition_name) {
-                allDetails += `Condition : ${product?.v_condition_name}\n`;
-            }
-            // Model Yr
-            if (product?.v_mod_year) {
-                allDetails += `Model Yr : ${product?.v_mod_year}\n`;
-            }
-            // Reg Yr
-            if (product?.v_registration) {
-                allDetails += `Reg Yr : ${product?.v_registration}\n`;
-            }
-            // Grade
-            if (product?.v_grade_name) {
-                allDetails += `Grade : ${product?.v_grade_name}\n`;
-            }
-            // Exterior Grd
-            if (product?.v_ext_grade_name) {
-                allDetails += `Exterior Grd : ${product?.v_ext_grade_name}\n`;
-            }
-            // Interior Grd
-            if (product?.v_int_grade_name) {
-                allDetails += `Interior Grd : ${product?.v_int_grade_name}\n`;
-            }
-            // Mileage
-            if (product?.v_mileage) {
-                allDetails += `Mileage: ${product?.v_mileage}\n`;
-            }
-            // Color
-            if (product?.v_color_name) {
-                allDetails += `Color: ${product?.v_color_name}\n`;
-            }
-            // Fuel
-            if (product?.v_fuel_name) {
-                allDetails += `Fuel : ${product?.v_fuel_name}\n`;
-            }
-            // Option
-            if (product?.v_transmission_name) {
-                allDetails += `Option : ${product?.v_transmission_name}\n`;
-            }
-            // CC
-            if (product?.v_capacity) {
-                allDetails += `CC : ${product?.v_capacity}\n`;
-            }
-            // Body
-            if (product?.v_skeleton_name) {
-                allDetails += `Body : ${product?.v_skeleton_name}\n`;
-            }
-            // Seat
-            if (product?.v_seat_name) {
-                allDetails += `Seat : ${product?.v_seat_name}\n`;
-            }
-            // Chassis No
-            if (product?.v_chassis) {
-                allDetails += `Chassis No : ${product?.v_chassis}\n`;
-            }
-            // Engine No
-            if (product?.v_engine) {
-                allDetails += `Engine No: ${product?.v_engine}\n`;
-            }
-            // Tax Token
-            if (product?.v_tax_token_exp_date) {
-                allDetails += `Tax Token : ${product?.v_tax_token_exp_date}\n`;
-            }
-            // Fitness
-            if (product?.v_fitness_exp_date) {
-                allDetails += `Fitness : ${product?.v_fitness_exp_date}\n`;
+            if (!shouldOpenPriceSelectModal) {
+                await shareProductImagesWithFallback(featureMessage);
+                return;
             }
 
-            // Specific Features সেকশন
-            if (product?.feature_specification && product.feature_specification.length > 0) {
-                allDetails += `\nSpecific Features:\n`;
-
-                const featureText = product.feature_specification
-                    .map((feature) => {
-                        if (
-                            feature?.specification?.length > 0 &&
-                            feature.specification.some((item) => item.is_selected)
-                        ) {
-                            const selectedItems = feature.specification
-                                .filter((item) => item.is_selected)
-                                .map((item) => item.fs_title)
-                                .join(", ");
-
-                            return `${feature.md_title}: ${selectedItems}`;
-                        }
-                        return null;
-                    })
-                    .filter(Boolean)
-                    .join("\n");
-
-                allDetails += featureText;
-            }
-
-
-            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${allDetails}\n`)}`;
-            window.open(whatsappUrl, '_blank');
+            setPriceModalType('featureAndSpecification');
+            setPriceModalOpen(true);
             return;
         }
+
 
 
         // console.log("PRODUCT::+++++++++========", product);
@@ -530,126 +1221,15 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
         switch (option) {
             case 'details':
-                // Formatted vehicle details message
-                let detailsMessage = `*${productName}*\n\n`;
+                message = buildVehicleDetailsMessage();
+                break;
 
-                // Brand
-                if (product?.v_brand_name) {
-                    detailsMessage += `Brand: ${product.v_brand_name}\n`;
-                }
-                // Model
-                if (product?.v_model_name) {
-                    detailsMessage += `Model: ${product.v_model_name}\n`;
-                }
-                // Package/Edition
-                if (product?.v_edition_name) {
-                    detailsMessage += `Package: ${product.v_edition_name}\n`;
-                }
-                // Condition
-                if (product?.v_condition_name) {
-                    detailsMessage += `Condition: ${product.v_condition_name}\n`;
-                }
-                // Model Year
-                if (product?.v_mod_year) {
-                    detailsMessage += `Model Yr: ${product.v_mod_year}\n`;
-                }
-                // Registration Year
-                if (product?.v_registration) {
-                    detailsMessage += `Reg Yr: ${product.v_registration}\n`;
-                }
-                // Grade
-                if (product?.v_grade_name) {
-                    detailsMessage += `Grade: ${product.v_grade_name}\n`;
-                }
-                // Exterior Grade
-                if (product?.v_ext_grade_name) {
-                    detailsMessage += `Exterior Grd: ${product.v_ext_grade_name}\n`;
-                }
-                // Interior Grade
-                if (product?.v_int_grade_name) {
-                    detailsMessage += `Interior Grd: ${product.v_int_grade_name}\n`;
-                }
-                // Mileage
-                if (product?.v_mileage) {
-                    detailsMessage += `Mileage: ${product.v_mileage} km\n`;
-                }
-                // Color
-                if (product?.v_color_name) {
-                    detailsMessage += `Color: ${product.v_color_name}\n`;
-                }
-                // Fuel
-                if (product?.v_fuel_name) {
-                    detailsMessage += `Fuel: ${product.v_fuel_name}\n`;
-                }
-                // Transmission
-                if (product?.v_transmission_name) {
-                    detailsMessage += `Option: ${product.v_transmission_name}\n`;
-                }
-                // Engine Capacity (CC)
-                if (product?.v_capacity) {
-                    detailsMessage += `CC: ${product.v_capacity}\n`;
-                }
-                // Body Type
-                if (product?.v_skeleton_name) {
-                    detailsMessage += `Body: ${product.v_skeleton_name}\n`;
-                }
-                // Seat
-                if (product?.v_seat_name) {
-                    detailsMessage += `Seat: ${product.v_seat_name}\n`;
-                }
-                // Chassis Number
-                if (product?.v_chassis && product.v_chassis !== 'null') {
-                    detailsMessage += `Chassis No: ${product.v_chassis}\n`;
-                }
-                // Engine Number
-                if (product?.v_engine && product.v_engine !== 'null') {
-                    detailsMessage += `Engine No: ${product.v_engine}\n`;
-                }
-                // Tax Token
-                if (product?.v_tax_token_exp_date) {
-                    detailsMessage += `Tax Token: ${product.v_tax_token_exp_date}\n`;
-                }
-                // Fitness
-                if (product?.v_fitness_exp_date) {
-                    detailsMessage += `Fitness: ${product.v_fitness_exp_date}\n`;
-                }
+            case 'detailsWithPrice':
+                message = buildVehicleDetailsMessage({ includePrice: true });
+                break;
 
-                // Feature Specifications
-                if (product?.feature_specification && product.feature_specification.length > 0) {
-                    detailsMessage += `\n Features:\n`;
-
-                    const featureText = product.feature_specification
-                        .map((feature) => {
-                            if (
-                                feature?.specification?.length > 0 &&
-                                feature.specification.some((item) => item.is_selected)
-                            ) {
-                                const selectedItems = feature.specification
-                                    .filter((item) => item.is_selected)
-                                    .map((item) => item.fs_title)
-                                    .join(", ");
-
-                                return `${feature.md_title}: ${selectedItems}`;
-                            }
-                            return null;
-                        })
-                        .filter(Boolean)
-                        .join("\n");
-
-                    if (featureText) {
-                        detailsMessage += featureText + '\n';
-                    }
-                }
-
-                // Price
-                // if (price && price !== 'N/A') {
-                //     detailsMessage += `\n Price: ${price} BDT\n`;
-                // }
-
-                // Product Link
-                detailsMessage += `\n View Details & Download Images:\n${url}`;
-
-                message = detailsMessage;
+            case 'detailsWithoutPrice':
+                message = buildVehicleDetailsMessage();
                 break;
 
             case 'oneImageShortDetails':
@@ -792,6 +1372,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
             case 'priceLinkDetailsImage':
                 // Same as 'details' case - formatted vehicle details message
                 let priceLinkDetailsImageMessage = `*${productName}*\n\n`;
+                const priceLinkShareImageUrl = getProductShareImageUrls()[0];
 
                 // Brand
                 if (product?.v_brand_name) {
@@ -902,12 +1483,50 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 }
 
                 // Price
-                if (price && price !== 'N/A') {
-                    priceLinkDetailsImageMessage += `\n Price: ${price} BDT\n`;
+                if (price) {
+                    priceLinkDetailsImageMessage += `\n Price: ${price}\n`;
                 }
 
                 // Product Link
-                priceLinkDetailsImageMessage += `\n View Details & Download Images:\n${url}`;
+                priceLinkDetailsImageMessage += `\n View & Download All Images and Copy Product Features form below Link:\n${url}`;
+
+                if (priceLinkShareImageUrl) {
+                    const canUseWebShare =
+                        typeof navigator !== "undefined" &&
+                        typeof navigator.share === "function" &&
+                        typeof navigator.canShare === "function";
+
+                    if (canUseWebShare) {
+                        try {
+                            const response = await fetch(priceLinkShareImageUrl);
+                            if (!response.ok) {
+                                throw new Error("Failed to fetch share image");
+                            }
+
+                            const blob = await response.blob();
+                            const fileName = ensureFileNameHasExtension(
+                                extractProductDocName(priceLinkShareImageUrl, priceLinkShareImageUrl, 0),
+                                blob.type
+                            );
+                            const imageFile = new File([blob], fileName, {
+                                type: blob.type || "image/jpeg",
+                            });
+                            const shareData = {
+                                title: productName,
+                                text: priceLinkDetailsImageMessage,
+                                files: [imageFile],
+                            };
+
+                            if (navigator.canShare(shareData)) {
+                                await navigator.share(shareData);
+                                return;
+                            }
+                        } catch (shareError) {
+                            console.error("Price link image load error:", shareError);
+                            console.log("Price link details image share failed:", shareError?.message || shareError);
+                        }
+                    }
+                }
 
                 message = priceLinkDetailsImageMessage;
                 break;
@@ -938,8 +1557,95 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 message = myProfileMessage;
                 break;
 
+            case 'sendBusinessProfile': {
+                // console.log("send business profile user---------------------------", user);
+
+                const profile = user?.profile || {};
+                const businessAddresses = Array.isArray(profile?.up_biz_address) ? profile.up_biz_address : [];
+                const businessEmails = Array.isArray(profile?.up_biz_email) ? profile.up_biz_email : [];
+                const businessPhones = Array.isArray(profile?.up_biz_phone) ? profile.up_biz_phone : [];
+                const businessFacebooks = Array.isArray(profile?.up_biz_facebook) ? profile.up_biz_facebook : [];
+
+                let businessProfileMessage = ` Business Profile:\n\n`;
+
+                if (user?.name) {
+                    businessProfileMessage += ` Name: ${user.name}\n`;
+                }
+
+
+                if (user?.email) {
+                    businessProfileMessage += ` Email: ${user.email}\n`;
+                }
+
+                if (user?.phone) {
+                    businessProfileMessage += ` Phone: +880${user.phone}\n`;
+                }
+
+                if (profile?.up_designation) {
+                    businessProfileMessage += ` Designation: ${profile.up_designation}\n`;
+                }
+
+
+                if (profile?.up_company) {
+                    businessProfileMessage += ` Company: ${profile.up_company}\n`;
+                }
+
+
+                if (profile?.up_website) {
+                    businessProfileMessage += ` Website: ${profile.up_website}\n`;
+                }
+
+
+
+                if (businessEmails.length > 0) {
+                    businessEmails.forEach((email, index) => {
+                        const businessEmail = cleanShareValue(email);
+                        if (businessEmail) {
+                            businessProfileMessage += ` Business Email ${index + 1}: ${businessEmail}\n`;
+                        }
+                    });
+                } else if (user?.email) {
+                    businessProfileMessage += ` Email: ${user.email}\n`;
+                }
+
+                if (businessPhones.length > 0) {
+                    businessPhones.forEach((phone, index) => {
+                        const businessPhone = formatPhoneForShare(phone?.phone ?? phone);
+                        const businessPhoneName = cleanShareValue(phone?.name);
+                        if (businessPhone) {
+                            businessProfileMessage += ` Business Phone ${index + 1}: ${businessPhoneName ? `${businessPhoneName} - ` : ""}${businessPhone}\n`;
+                        }
+                    });
+                } else if (user?.phone) {
+                    businessProfileMessage += ` Phone: +880${user.phone}\n`;
+                }
+
+                businessAddresses.forEach((address, index) => {
+                    const businessAddress = cleanShareValue(address?.addr ?? address);
+                    const businessAddressName = cleanShareValue(address?.com);
+                    if (businessAddress) {
+                        businessProfileMessage += ` Business Address ${index + 1}: ${businessAddressName ? `${businessAddressName} - ` : ""}${businessAddress}\n`;
+                    }
+                });
+
+                businessFacebooks.forEach((facebook, index) => {
+                    const businessFacebook = cleanShareValue(facebook);
+                    if (businessFacebook) {
+                        businessProfileMessage += ` Facebook ${index + 1}: ${businessFacebook}\n`;
+                    }
+                });
+
+                message = businessProfileMessage;
+                break;
+            }
+
+            case 'sendBusinessCard':
+                message = buildBusinessCardMessage();
+                break;
+
+
             case 'shareLocation':
-                let locationMessage = ` Check out My Personal Location:\n\n`;
+                let locationMessage = ` My Personal / Product Location:\n\n`;
 
 
                 if (product?.v_location?.uo_name && product.v_location?.uo_name !== 'null') {
@@ -968,7 +1674,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 break;
 
             case 'priceLinkDetails':
-                message = `${productName}\n\nDam: ${price} BDT\n\n${details}\n\nProduct dekhuun: ${url}`;
+                message = buildPriceLinkDetailsMessage();
                 break;
 
             case 'stockList':
@@ -985,12 +1691,30 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         window.open(whatsappUrl, '_blank');
     };
 
+    const openPriceShareModal = (type, fallbackOption = type) => {
+        if (shouldOpenPriceSelectModal) {
+            setPriceModalType(type);
+            setPriceModalOpen(true);
+            return;
+        }
+
+        handleBusinessShare(fallbackOption);
+    };
+
     return (
         // <Dialog open={open} onOpenChange={setOpen}>
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+                <DialogHeader className='relative'>
                     <DialogTitle className='text-center font-thin'>Share Product</DialogTitle>
+                    <button
+                        type='button'
+                        className='absolute right-10 top-0 rounded-full border border-sky-500 p-1 text-sky-600 transition hover:bg-sky-50'
+                        onClick={() => openInfoDialog('overview')}
+                        aria-label='Show share option guide'
+                    >
+                        <Info className='h-4 w-4' />
+                    </button>
                 </DialogHeader>
 
                 <hr />
@@ -1005,11 +1729,15 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
                             onClick={() => handleBusinessShare('featureAndSpecification')}
                         >
-                            <span className='text-gray-700'>Share All Feature & Feature Specification</span>
-                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                {selectedBusinessOption === 'featureAndSpecification' && (
-                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                )}
+                            {/* <span className='text-gray-700'>Share All Feature & Feature Specification</span> */}
+                            <span className='text-gray-700'>Features & Link: Image Download & Copy Specification</span>
+                            <div className='flex items-center gap-3'>
+                                {renderInfoButton('featureAndSpecification')}
+                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                    {selectedBusinessOption === 'featureAndSpecification' && (
+                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -1017,22 +1745,32 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                         {/* Option 1: All Image */}
                         <div
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                            onClick={() => handleBusinessShare('allImages')}
+                            onClick={() => openPriceShareModal('allImages')}
                         >
                             <span className='text-gray-700'>All Image Link (Mobile Version Only)</span>
-                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                {selectedBusinessOption === 'allImages' && (
-                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                )}
+                            <div className='flex items-center gap-3'>
+                                {renderInfoButton('allImages')}
+                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                    {selectedBusinessOption === 'allImages' && (
+                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* isMyShop */}
 
                         {/* Option 2: Details */}
-                        <div
+                        {/* <div
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                            onClick={() => handleBusinessShare('details')}
+                            onClick={() => {
+                                if (isStock) {
+                                    handleBusinessShare('details');
+                                    return;
+                                }
+                                setPriceModalType('details');
+                                setPriceModalOpen(true);
+                            }}
                         >
                             <span className='text-gray-700'>Details & Download Images Link</span>
                             <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
@@ -1040,7 +1778,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                     <div className='w-3 h-3 rounded-full bg-green-600'></div>
                                 )}
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Option 2: Details with Price and Details without Price */}
                         {
@@ -1048,49 +1786,33 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                 <>
                                     <div
                                         className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                        onClick={() => {
-                                            setPriceModalType('withPrice');
-                                            setPriceModalOpen(true);
-                                        }}
+                                        onClick={() => openPriceShareModal('withPrice', 'detailsWithPrice')}
                                     >
                                         <span className='text-gray-700'>Details with Price</span>
-                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                            {selectedBusinessOption === 'detailsWithPrice' && (
-                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                            )}
+                                        <div className='flex items-center gap-3'>
+                                            {renderInfoButton('detailsWithPrice')}
+                                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                {selectedBusinessOption === 'detailsWithPrice' && (
+                                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div
                                         className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                        onClick={() => {
-                                            setPriceModalType('withoutPrice');
-                                            setPriceModalOpen(true);
-                                        }}
+                                        onClick={() => openPriceShareModal('withoutPrice', 'detailsWithoutPrice')}
                                     >
                                         <span className='text-gray-700'>Details without Price</span>
-                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                            {selectedBusinessOption === 'detailsWithoutPrice' && (
-                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                            )}
+                                        <div className='flex items-center gap-3'>
+                                            {renderInfoButton('detailsWithoutPrice')}
+                                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                {selectedBusinessOption === 'detailsWithoutPrice' && (
+                                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-
-
-
-
-                                    <div
-                                        className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                        onClick={() => handleBusinessShare('shareLocation')}
-                                    >
-                                        <span className='text-gray-700'>Location Share</span>
-                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                            {selectedBusinessOption === 'shareLocation' && (
-                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                            )}
-                                        </div>
-                                    </div>
-
 
 
 
@@ -1123,44 +1845,256 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                         {/* Option 1: One Image, Short Details, Link */}
                         <div
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                            onClick={() => handleBusinessShare('oneImageShortDetails')}
+                            onClick={() => openPriceShareModal('oneImageShortDetails')}
                         >
                             <span className='text-gray-700'>One Image, Short Details, Download Link</span>
-                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                {selectedBusinessOption === 'oneImageShortDetails' && (
-                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                )}
+                            <div className='flex items-center gap-3'>
+                                {renderInfoButton('oneImageShortDetails')}
+                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                    {selectedBusinessOption === 'oneImageShortDetails' && (
+                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* Option 2: Price, Link, Details, Image */}
                         <div
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                            onClick={() => handleBusinessShare('priceLinkDetailsImage')}
+                            onClick={() => openPriceShareModal('priceLinkDetailsImage')}
                         >
                             <span className='text-gray-700'>Price, Link, Details, Image</span>
-                            <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                {selectedBusinessOption === 'priceLinkDetailsImage' && (
-                                    <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                )}
+                            <div className='flex items-center gap-3'>
+                                {renderInfoButton('priceLinkDetailsImage')}
+                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                    {selectedBusinessOption === 'priceLinkDetailsImage' && (
+                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+
+
+
+
+                        {/* Option 2: Price, Link, Details */}
+                        <div
+                            className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                            onClick={() => openPriceShareModal('priceLinkDetails')}
+                        >
+                            <span className='text-gray-700'>Price, Link, Details</span>
+                            <div className='flex items-center gap-3'>
+                                {renderInfoButton('priceLinkDetails')}
+                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                    {selectedBusinessOption === 'priceLinkDetails' && (
+                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
 
                         {
                             (isMyShop || isCompanyShop) && (
                                 <>
 
-                                    <div
-                                        className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                        onClick={() => handleBusinessShare('sendMyProfile')}
-                                    >
-                                        <span className='text-gray-700'>Send My Profile</span>
-                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                            {selectedBusinessOption === 'sendMyProfile' && (
-                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                            )}
-                                        </div>
-                                    </div>
+
+
+                                    {
+                                        (hasPermissionShareOutletLocation || isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => {
+                                                    setSelectedBusinessOption('shareLocation');
+                                                    setLocationModalOpen(true);
+                                                }}
+                                            >
+                                                <span className='text-gray-700'>Share Outlet Location</span>
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('shareLocation')}
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'shareLocation' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+
+
+
+
+
+
+
+
+                                    {
+                                        (isMyShop) && (
+                                            <>
+                                                <div
+                                                    className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                    onClick={() => handleBusinessShare('sendMyProfile')}
+                                                >
+                                                    <span className='text-gray-700'>Send My Profile</span>
+                                                    <div className='flex items-center gap-3'>
+                                                        {renderInfoButton('sendMyProfile')}
+                                                        <button
+                                                            type='button'
+                                                            className='shrink-0 rounded-full border border-green-600 bg-white px-3 py-1 text-xs font-medium text-green-700 transition hover:bg-green-50'
+                                                            onClick={handleProfileEditClick}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                            {selectedBusinessOption === 'sendMyProfile' && (
+                                                                <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                            </>
+                                        )
+                                    }
+
+
+
+                                    {
+                                        (isCompanyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => handleBusinessShare('sendBusinessCard')}
+                                            >
+                                                <span className='text-gray-700'>Send Business Card</span>
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('sendBusinessCard')}
+                                                    {
+                                                        <button
+                                                            type='button'
+                                                            className='shrink-0 rounded-full border border-green-600 bg-white px-3 py-1 text-xs font-medium text-green-700 transition hover:bg-green-50'
+                                                            onClick={handleBusinessCardEditClick}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    }
+
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'sendBusinessCard' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+                                    {
+                                        (hasPermissionShowSendBusinessProfileButton || isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => handleBusinessShare('sendBusinessProfile')}
+                                            >
+                                                <span className='text-gray-700'>Send Business Profile</span>
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('sendBusinessProfile')}
+                                                    {
+                                                        (isMyShop) && (
+                                                            <button
+                                                                type='button'
+                                                                className='shrink-0 rounded-full border border-green-600 bg-white px-3 py-1 text-xs font-medium text-green-700 transition hover:bg-green-50'
+                                                                onClick={handleBusinessProfileClick}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                        )
+                                                    }
+
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'sendBusinessProfile' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+
+                                    
+
+
+                                    {
+                                        (hasPermissionShareBankInformation || isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => {
+                                                    setSelectedBusinessOption('sendBankAccount');
+                                                    setBankAccountModalOpen(true);
+                                                }}
+                                            >
+                                                <span className='text-gray-700'>Send Bank Information</span>
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('sendBankAccount')}
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'sendBankAccount' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+
+                                    {
+                                        (isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => {
+                                                    setSelectedBusinessOption('profileShare');
+                                                    setProfileShareModalOpen(true);
+                                                }}
+                                            >
+                                                <span className='text-gray-700'>Send Essential Documents</span>
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('profileShare')}
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'profileShare' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+
+                                    {
+                                        (hasPermissionShowSendProductDocumentsShareButton || isMyShop) && (
+                                            <div
+                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
+                                                onClick={() => handleBusinessShare('productShareDocuments')}
+                                            >
+                                                <span className='text-gray-700'>Send Product Documents/Auction Sheet/Burchore</span>
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('productShareDocuments')}
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'productShareDocuments' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+
 
                                     {
                                         (hasPermissionStockList || isMyShop) && (
@@ -1169,34 +2103,17 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                                 onClick={() => handleBusinessShare('stockList')}
                                             >
                                                 <span className='text-gray-700'>Stock List</span>
-                                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                                    {selectedBusinessOption === 'stockList' && (
-                                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                                    )}
+                                                <div className='flex items-center gap-3'>
+                                                    {renderInfoButton('stockList')}
+                                                    <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
+                                                        {selectedBusinessOption === 'stockList' && (
+                                                            <div className='w-3 h-3 rounded-full bg-green-600'></div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )
                                     }
-
-                                  
-
-                                    {
-                                        (hasPermissionShareBankInformation || isMyShop) && (
-                                            <div
-                                                className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
-                                                onClick={() => setBankAccountModalOpen(true)}
-                                            >
-                                                <span className='text-gray-700'>Send Bank Account</span>
-                                                <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>
-                                                    {selectedBusinessOption === 'sendBankAccount' && (
-                                                        <div className='w-3 h-3 rounded-full bg-green-600'></div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-
-
 
                                 </>
 
@@ -1329,6 +2246,10 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 user={user}
             />
 
+            {/* {
+                console.log("user data", user)
+            } */}
+
 
 
             {/* Bank Account Select Modal */}
@@ -1337,8 +2258,64 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 setOpen={setBankAccountModalOpen}
                 bankAccounts={user?.profile?.up_biz_bank_info || []}
             />
+
+            <OutletLocationSelectModal
+                open={locationModalOpen}
+                setOpen={setLocationModalOpen}
+                product={product}
+                user={user}
+                selectedCompanyShop={selectedCompanyShop}
+            />
+
+            <ProfileShareModal
+                open={profileShareModalOpen}
+                setOpen={setProfileShareModalOpen}
+                user={user}
+            />
+
+            <BusinessCardEditModal
+                open={businessCardModalOpen}
+                setOpen={setBusinessCardModalOpen}
+                selectedCompanyShop={selectedCompanyShop}
+            />
+
+            <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+                <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {activeInfoKey === 'overview' ? 'Share Option Guide' : activeShareInfo?.title || 'Option Info'}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {
+                        activeInfoKey === 'overview' ? (
+                            <div className='space-y-5 text-sm leading-6 text-gray-700'>
+                                {
+                                    SHARE_INFO_SECTIONS.map((section) => (
+                                        <div key={section.title}>
+                                            <h4 className='font-semibold text-green-700'>{section.title}</h4>
+                                            <div className='mt-3 space-y-3'>
+                                                {
+                                                    section.items.map((itemKey) => (
+                                                        <div key={itemKey} className='rounded-lg border border-gray-200 p-3'>
+                                                            <div className='font-medium text-gray-900'>{SHARE_OPTION_INFO[itemKey]?.title}</div>
+                                                            <p className='mt-1 text-gray-600'>{SHARE_OPTION_INFO[itemKey]?.description}</p>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        ) : (
+                            <p className='text-sm leading-6 text-gray-700'>{activeShareInfo?.description}</p>
+                        )
+                    }
+                </DialogContent>
+            </Dialog>
         </Dialog>
     )
 }
 
-export default ProductShareModal;
+export default ProductShareModal

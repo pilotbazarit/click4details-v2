@@ -72,10 +72,6 @@ const GeneralProductCard = ({ product }) => {
       console.error("Failed to parse user data:", error);
     }
 
-    // console.log("user Info", parsedUser?.id);
-
-    // console.log("cartItems in product card product", product);
-
 
   const handleAddToCart = (item) => {
     // Implement add to cart functionality here

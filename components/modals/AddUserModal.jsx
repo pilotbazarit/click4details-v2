@@ -78,6 +78,7 @@ const AddUserModal = ({ open, setOpen, selectedShop, selectedUser }) => {
     const getRoles = async (value = "") => {
         try {
             const response = await RoleService.Queries.getRoles({
+                _type: 'general',
                 _page: 1,
                 _perPage: 1000,
             });
@@ -102,7 +103,8 @@ const AddUserModal = ({ open, setOpen, selectedShop, selectedUser }) => {
             setLoading(true);
             const response = await UserService.Queries.getUserPermissionName({
                 _use_id: selectedUserId,
-                _role_id: roleIdParam
+                _role_id: roleIdParam,
+                _type: 'general'
             });
 
 
@@ -273,16 +275,26 @@ const AddUserModal = ({ open, setOpen, selectedShop, selectedUser }) => {
                                     <div className="relative w-full">
                                         <input
                                             id="user_search"
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
                                             placeholder="Enter phone number"
                                             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
                                             autoComplete="off"
                                             onChange={e => {
-                                                const value = e.target.value;
-                                                if (value.length === 11) {
-                                                    getUsers(value);
+                                                const value = e.target.value.replace(/\D/g, "");
+
+                                                if (value.startsWith("0")) {
+                                                    if (value.length === 11) {
+                                                        getUsers(value.slice(1));
+                                                    } else {
+                                                        setUsers([]);
+                                                    }
                                                 } else {
-                                                    setUsers([]);
+                                                    if (value.length === 10) {
+                                                        getUsers(value);
+                                                    } else {
+                                                        setUsers([]);
+                                                    }
                                                 }
                                             }}
                                         />

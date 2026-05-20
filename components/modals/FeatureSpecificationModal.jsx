@@ -19,6 +19,33 @@ const schema = yup.object().shape({
     fs_status: yup.string().required("Status is required")
 });
 
+const getApiErrorMessage = (error) => {
+    const payload = error?.response?.data || error?.data || error;
+
+    if (payload?.errors) {
+        const firstError = Object.values(payload.errors)
+            .flat()
+            .filter(Boolean)[0];
+        if (firstError) return firstError;
+    }
+
+    return (
+        payload?.message ||
+        payload?.error ||
+        error?.message ||
+        "Something went wrong"
+    );
+};
+
+const isApiSuccessResponse = (response) => {
+    if (response?.success === false) return false;
+
+    const status = String(response?.status || response?.data?.status || "").toLowerCase();
+    if (["error", "failed", "fail", "false"].includes(status)) return false;
+
+    return true;
+};
+
 const FeatureSpecificationModal = ({ open, setOpen, features, getFeatureSpecification, initialData }) => {
     const {
         register,
@@ -48,29 +75,33 @@ const FeatureSpecificationModal = ({ open, setOpen, features, getFeatureSpecific
 
     const onSubmit = async (data) => {
         try {
+            let response;
+
             if (initialData) {
                 // Update existing model
-                await FeatureSpecificationService.Commands.updateFeatureSpecification(
+                response = await FeatureSpecificationService.Commands.updateFeatureSpecification(
                     initialData.fs_id,
                     {
                         ...data,
                         _method: 'PUT'
                     }
                 );
+                if (!isApiSuccessResponse(response)) {
+                    throw response;
+                }
                 toast.success("Model updated successfully!");
             } else {
                 // Create new model
-                const response = await FeatureSpecificationService.Commands.storeFeatureSpecification(data);
+                response = await FeatureSpecificationService.Commands.storeFeatureSpecification(data);
+                if (!isApiSuccessResponse(response)) {
+                    throw response;
+                }
                 toast.success("Feature Specification added successfully!");
             }
-            getFeatureSpecification();
+            await getFeatureSpecification();
             setOpen(false);
         } catch (error) {
-            if (error.errors) {
-                Object.values(error.errors).forEach((e) => toast.error(e[0]));
-            } else {
-                toast.error(error.message || "Something went wrong");
-            }
+            toast.error(getApiErrorMessage(error));
         }
     };
 

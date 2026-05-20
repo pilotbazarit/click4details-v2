@@ -6,9 +6,10 @@ import { createApiRequest } from "@/helpers/axios";
 import { ChevronDown, ChevronRight, Clock, Edit, MessageSquare, Plus, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { hasPermission } from "@/lib/utils";
 
 const FollowupPackageTemplates = () => {
-  const { user } = useAppContext();
+  const { permissionList, user } = useAppContext();
   const parsedUser = JSON.parse(user);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,24 @@ const FollowupPackageTemplates = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleteType, setDeleteType] = useState(""); // 'package' or 'stage'
+
+  const canShowAddFollowupPackageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FollowupPackage", "ShowFollowupPackageAddButton")
+
+
+  const canShowEditFollowupPackageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FollowupPackage", "ShowFollowupPackageEditButton")
+
+
+  const canShowDeleteFollowupPackageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FollowupPackage", "ShowFollowupPackageDeleteButton")
+
+  const canShowAddFollowupPackageStageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FollowupPackage", "ShowFollowupPackageStageAddButton")
 
   // Create API instance at component level
   const api = createApiRequest(API_URL);
@@ -148,10 +167,12 @@ const FollowupPackageTemplates = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold mb-4">Followup Package Templates</h1>
-        <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2" onClick={handleAddPackage}>
-          <Plus className="w-4 h-4" />
-          Add New Template
-        </button>
+        {canShowAddFollowupPackageButton && (
+          <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2" onClick={handleAddPackage}>
+            <Plus className="w-4 h-4" />
+            Add New Template
+          </button>
+        )}
       </div>
 
       {/* Packages List */}
@@ -179,21 +200,37 @@ const FollowupPackageTemplates = () => {
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <span className="text-sm text-gray-500">{pkg.stages?.length || 0} stages</span>
-                    <button
-                      onClick={() => handleAddStage(pkg.id)}
-                      className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Add Stage
-                    </button>
+
+                    {
+                      canShowAddFollowupPackageStageButton && (
+                        <button
+                          onClick={() => handleAddStage(pkg.id)}
+                          className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Stage
+                        </button>
+                      )
+                    }
+
                     {(parsedUser?.id === pkg.created_by || parsedUser?.user_mode === "supreme") && (
                       <div className="flex items-center gap-1">
-                        <button onClick={() => handleEditPackage(pkg)} className="bg-yellow-500 text-white px-3 py-2 rounded text-sm hover:bg-yellow-600">
-                          <Edit className="w-3 h-3" />
-                        </button>
-                        <button onClick={() => handleDelete(pkg, "package")} className="bg-red-500 text-white px-3 py-2 rounded text-sm hover:bg-red-600">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        {
+                          canShowEditFollowupPackageButton && (
+                            <button onClick={() => handleEditPackage(pkg)} className="bg-yellow-500 text-white px-3 py-2 rounded text-sm hover:bg-yellow-600">
+                              <Edit className="w-3 h-3" />
+                            </button>
+                          )
+                        }
+
+                        {
+                          canShowDeleteFollowupPackageButton && (
+                            <button onClick={() => handleDelete(pkg, "package")} className="bg-red-500 text-white px-3 py-2 rounded text-sm hover:bg-red-600">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )
+                        }
+
                       </div>
                     )}
                   </div>
@@ -236,7 +273,7 @@ const FollowupPackageTemplates = () => {
                             </div>
                             <div className="mt-2 space-y-2">
                               <p className="text-sm text-gray-700 line-clamp-2">{stage.message_template}</p>
-                              
+
                               {/* Additional Stage Information */}
                               <div className="flex flex-wrap gap-2 text-xs">
                                 <span className="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 rounded">

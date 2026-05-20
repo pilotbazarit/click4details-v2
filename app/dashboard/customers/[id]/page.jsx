@@ -16,6 +16,7 @@ import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import SearchHistoryService from "@/services/SearchHistoryService";
 import ShopService from "@/services/ShopService";
+import UserService from "@/services/UserService";
 import dayjs from "dayjs";
 import { ArrowLeft, ExternalLink, Eye, History, MessageSquare } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -23,6 +24,8 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import FollowupModal from "../../../../components/modals/FollowupModal";
+
+const PROFILE_LEVEL_OPTIONS = ["Low", "High", "Confusing"];
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, comment, setComment }) => {
   if (!isOpen) return null;
@@ -68,6 +71,228 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName }) => {
             Delete
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const ActivityUpdateModal = ({
+  isOpen,
+  onClose,
+  activities,
+  selectedActivityId,
+  setSelectedActivityId,
+  activityDraft,
+  setActivityDraft,
+  userOptions,
+  seriousnessOptions,
+  onSave,
+}) => {
+  if (!isOpen) return null;
+
+  const updateField = (field, value) => {
+    setActivityDraft((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-xl bg-white shadow-2xl border border-slate-200">
+        <div className="px-5 py-3 border-b border-slate-200 bg-gradient-to-r from-sky-50 to-indigo-50 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Update Activity</h2>
+          <button type="button" onClick={onClose} className="text-slate-600 hover:text-slate-900">
+            Close
+          </button>
+        </div>
+
+        <form className="p-5 overflow-y-auto max-h-[80vh] space-y-4" onSubmit={onSave}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer Name</span>
+              <input
+                type="text"
+                value={activityDraft.clientName}
+                onChange={(e) => updateField("clientName", e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer Mobile</span>
+              <input
+                type="text"
+                value={activityDraft.phoneNumber}
+                onChange={(e) => updateField("phoneNumber", e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Collect By</span>
+              <Select
+                options={userOptions}
+                value={userOptions.find((option) => String(option.value) === String(activityDraft.collectById)) || null}
+                onChange={(selected) => updateField("collectById", selected?.value || "")}
+                placeholder="Select user"
+                isClearable
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Facebook Link</span>
+              <input
+                type="text"
+                value={activityDraft.facebookLink}
+                onChange={(e) => updateField("facebookLink", e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Messenger Link</span>
+              <input
+                type="text"
+                value={activityDraft.messengerLink}
+                onChange={(e) => updateField("messengerLink", e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Level</span>
+              <select
+                value={activityDraft.profileLevel}
+                onChange={(e) => updateField("profileLevel", e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">Select profile level</option>
+                {PROFILE_LEVEL_OPTIONS.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Seriousness</span>
+              <Select
+                options={seriousnessOptions}
+                value={seriousnessOptions.find((option) => String(option.value) === String(activityDraft.seriousnessLevel)) || null}
+                onChange={(selected) => updateField("seriousnessLevel", selected?.value || "")}
+                placeholder="Select seriousness"
+                isClearable
+              />
+            </label>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-800">Visit Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visit 1</p>
+                <input
+                  type="date"
+                  value={activityDraft.firstVisitDate}
+                  onChange={(e) => updateField("firstVisitDate", e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+                <Select
+                  options={userOptions}
+                  value={userOptions.find((option) => String(option.value) === String(activityDraft.firstVisitById)) || null}
+                  onChange={(selected) => updateField("firstVisitById", selected?.value || "")}
+                  placeholder="Visit 1 by"
+                  isClearable
+                />
+              </div>
+              <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visit 2</p>
+                <input
+                  type="date"
+                  value={activityDraft.secondVisitDate}
+                  onChange={(e) => updateField("secondVisitDate", e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+                <Select
+                  options={userOptions}
+                  value={userOptions.find((option) => String(option.value) === String(activityDraft.secondVisitById)) || null}
+                  onChange={(selected) => updateField("secondVisitById", selected?.value || "")}
+                  placeholder="Visit 2 by"
+                  isClearable
+                />
+              </div>
+              <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visit 3</p>
+                <input
+                  type="date"
+                  value={activityDraft.thirdVisitDate}
+                  onChange={(e) => updateField("thirdVisitDate", e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+                <Select
+                  options={userOptions}
+                  value={userOptions.find((option) => String(option.value) === String(activityDraft.thirdVisitById)) || null}
+                  onChange={(selected) => updateField("thirdVisitById", selected?.value || "")}
+                  placeholder="Visit 3 by"
+                  isClearable
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sold Date</span>
+              <input
+                type="date"
+                value={activityDraft.soldDate}
+                onChange={(e) => updateField("soldDate", e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sold By</span>
+              <Select
+                options={userOptions}
+                value={userOptions.find((option) => String(option.value) === String(activityDraft.soldById)) || null}
+                onChange={(selected) => updateField("soldById", selected?.value || "")}
+                placeholder="Select sold by"
+                isClearable
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <input type="checkbox" checked={activityDraft.botMessage} onChange={(e) => updateField("botMessage", e.target.checked)} />
+              Bot Message
+            </label>
+            <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <input type="checkbox" checked={activityDraft.interested} onChange={(e) => updateField("interested", e.target.checked)} />
+              Interested
+            </label>
+            <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <input type="checkbox" checked={activityDraft.saleDone} onChange={(e) => updateField("saleDone", e.target.checked)} />
+              Sale Done
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</span>
+            <textarea
+              rows={4}
+              value={activityDraft.note}
+              onChange={(e) => updateField("note", e.target.value)}
+              placeholder="Optional notes about this activity..."
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-y"
+            />
+          </label>
+
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded-md">
+              Cancel
+            </button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Save Activity
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -727,16 +952,44 @@ const SearchHistoryEditModal = ({ isOpen, onClose, onSave, historyItem, customer
   );
 };
 
-const CustomerInfoSection = ({ customer, formatDate, searchHistories, clientAttitudeData, onEdit }) => {
+const CustomerInfoSection = ({ customer, latestActivity, formatDate, searchHistories, clientAttitudeData, onEdit, onActivityUpdate }) => {
   const { user } = useAppContext();
   const parsedUser = typeof user === "string" ? JSON.parse(user) : user;
-  const canModify = parsedUser?.id === customer.created_by?.id || parsedUser?.user_mode === "Admin";
+  const createdById = customer?.created_by?.id ?? customer?.created_by;
+  const canModify =
+    Number(parsedUser?.id) === Number(createdById) ||
+    parsedUser?.user_mode === "Admin" ||
+    parsedUser?.user_mode === "supreme";
 
   const formatLabel = (key) => {
+    if (key === "updated_by") return "Collect By";
     return key
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+  };
+
+  const getCustomerInfoValue = (field) => {
+    const customerValue = customer?.[field];
+    if (customerValue !== null && customerValue !== undefined && String(customerValue).trim() !== "") {
+      return customerValue;
+    }
+
+    if (!latestActivity) {
+      return customerValue;
+    }
+
+    const activityFallbackByField = {
+      name: latestActivity?.client_name,
+      mobile: latestActivity?.phone_number,
+      facebook_id_link: latestActivity?.facebook_id_link,
+      facebook_messenger_link: latestActivity?.chat_link,
+      client_level: latestActivity?.profile_level,
+      client_seriousness: latestActivity?.seriousness_level,
+      updated_by: latestActivity?.data_collect_by_name,
+    };
+
+    return activityFallbackByField[field] ?? customerValue;
   };
 
   const InfoField = ({ label, value, fieldName }) => {
@@ -756,7 +1009,7 @@ const CustomerInfoSection = ({ customer, formatDate, searchHistories, clientAtti
         "client_seriousness",
         "car_exchange_category_per_year",
         "purchase_reason",
-        "created_by",
+        "updated_by",
         "client_company_transaction",
       ];
 
@@ -823,7 +1076,7 @@ const CustomerInfoSection = ({ customer, formatDate, searchHistories, clientAtti
     "client_seriousness",
     "car_exchange_category_per_year",
     "client_last_purchase_date",
-    "created_by",
+    "updated_by",
   ];
 
   return (
@@ -834,7 +1087,7 @@ const CustomerInfoSection = ({ customer, formatDate, searchHistories, clientAtti
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {fields.map((field) => (
-            <InfoField key={field} label={formatLabel(field)} value={customer?.[field]} fieldName={field} />
+            <InfoField key={field} label={formatLabel(field)} value={getCustomerInfoValue(field)} fieldName={field} />
           ))}
           <InfoField label="Created At" value={customer?.created_at ? formatDate(customer.created_at) : null} />
           <InfoField label="Last Updated" value={customer?.updated_at ? formatDate(customer.updated_at) : null} />
@@ -845,13 +1098,16 @@ const CustomerInfoSection = ({ customer, formatDate, searchHistories, clientAtti
             <InfoField label="Description" value={customer.description} />
           </div>
         )}
-        {canModify && (
-          <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end">
+        <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end gap-2">
+          <button onClick={onActivityUpdate} className="bg-emerald-500 text-white px-4 py-2 rounded-md hover:bg-emerald-600">
+            Activity Update
+          </button>
+          {canModify && (
             <button onClick={onEdit} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
               Edit Customer
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -888,6 +1144,7 @@ const CustomerDetailPage = () => {
   const [selectedFollowupForEdit, setSelectedFollowupForEdit] = useState(null);
   const [followupModalKey, setFollowupModalKey] = useState(0);
   const [clientAttitudeData, setClientAttitudeData] = useState([]);
+  const [activitySeriousnessOptions, setActivitySeriousnessOptions] = useState([]);
   const [allLocations, setAllLocations] = useState([]); // New state for all locations
   const [allShops, setAllShops] = useState([]); // New state for all shops
 
@@ -901,6 +1158,31 @@ const CustomerDetailPage = () => {
   const [historyToDelete, setHistoryToDelete] = useState(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [usersDirectory, setUsersDirectory] = useState([]);
+  const [selectedActivityId, setSelectedActivityId] = useState("");
+  const [activityDraft, setActivityDraft] = useState({
+    clientName: "",
+    phoneNumber: "",
+    collectById: "",
+    facebookLink: "",
+    messengerLink: "",
+    profileLevel: "",
+    seriousnessLevel: "",
+    firstVisitDate: "",
+    firstVisitById: "",
+    secondVisitDate: "",
+    secondVisitById: "",
+    thirdVisitDate: "",
+    thirdVisitById: "",
+    soldDate: "",
+    soldById: "",
+    botMessage: false,
+    interested: false,
+    saleDone: false,
+    note: "",
+  });
 
   const customerId = params.id;
   const api = createApiRequest(API_URL);
@@ -923,6 +1205,22 @@ const CustomerDetailPage = () => {
       } else {
         toast.error(error.message || "Something went wrong");
       }
+    }
+  };
+
+  const getActivitySeriousnessOptions = async () => {
+    try {
+      const response = await MasterDataService.Queries.getMasterDataByTypeCode("client_seriousness_1758128063");
+      const masterData = response?.data?.master_data || [];
+      const options = masterData
+        .map((item) => ({
+          value: String(item?.md_title ?? "").trim(),
+          label: String(item?.md_title ?? "").trim(),
+        }))
+        .filter((option) => option.value !== "");
+      setActivitySeriousnessOptions(options);
+    } catch {
+      setActivitySeriousnessOptions([]);
     }
   };
 
@@ -975,12 +1273,110 @@ const CustomerDetailPage = () => {
     }
   };
 
+  const getUserDisplayName = (userItem) =>
+    userItem?.name ?? userItem?.full_name ?? userItem?.username ?? userItem?.user_name ?? userItem?.nick_name ?? "";
+
+  const findUserIdByName = (name) => {
+    const raw = String(name ?? "").trim();
+    if (!raw) return "";
+    const matched = usersDirectory.find((item) => String(getUserDisplayName(item) ?? "").trim() === raw);
+    return matched?.id != null ? String(matched.id) : "";
+  };
+
+  const resolveActivityUserId = (idOrName, fallbackName) => {
+    if (idOrName !== null && idOrName !== undefined && idOrName !== "") {
+      const numeric = Number(idOrName);
+      if (!Number.isNaN(numeric)) return String(numeric);
+      const byName = findUserIdByName(idOrName);
+      if (byName) return byName;
+    }
+    return findUserIdByName(fallbackName);
+  };
+
+  const resolveCustomerCreatorId = () => {
+    const createdBy = customer?.created_by?.id ?? customer?.created_by;
+    if (createdBy !== null && createdBy !== undefined && createdBy !== "") {
+      const numeric = Number(createdBy);
+      if (!Number.isNaN(numeric)) return String(numeric);
+    }
+    const createdUserName = customer?.created_user?.name ?? customer?.created_by?.name;
+    return findUserIdByName(createdUserName);
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await UserService.Queries.getUserList();
+      const list = Array.isArray(response?.data) ? response.data : [];
+      setUsersDirectory(list);
+    } catch {
+      setUsersDirectory([]);
+    }
+  };
+
+  const fetchActivities = async () => {
+    try {
+      const response = await api.get(`api/sales-team-activities?customer_id=${customerId}`);
+      const list = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.data?.data)
+          ? response.data.data
+          : [];
+      setActivities(list);
+      return list;
+    } catch {
+      setActivities([]);
+      return [];
+    }
+  };
+
+  const getActivityDraftPrefillScore = (activity) => {
+    if (!activity) return 0;
+    const valuedFields = [
+      activity.client_name,
+      activity.phone_number,
+      activity.data_collect_by,
+      activity.data_collect_by_name,
+      activity.facebook_id_link,
+      activity.chat_link,
+      activity.profile_level,
+      activity.seriousness_level,
+      activity.first_visit_date,
+      activity.first_visit_by,
+      activity.first_visit_by_name,
+      activity.second_visit_date,
+      activity.second_visit_by,
+      activity.second_visit_by_name,
+      activity.third_visit_date,
+      activity.third_visit_by,
+      activity.third_visit_by_name,
+      activity.sold_date,
+      activity.sold_by,
+      activity.sold_by_name,
+    ];
+    const valueCount = valuedFields.filter((value) => String(value ?? "").trim() !== "").length;
+    const boolCount = [activity.bot_message, activity.not_interested, activity.sale_done].filter(Boolean).length;
+    return valueCount + boolCount;
+  };
+
+  const pickBestActivityForUpdateModal = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    return [...list].sort((a, b) => {
+      const scoreDiff = getActivityDraftPrefillScore(b) - getActivityDraftPrefillScore(a);
+      if (scoreDiff !== 0) return scoreDiff;
+      return Number(b?.id ?? 0) - Number(a?.id ?? 0);
+    })[0];
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      await Promise.all([fetchCustomerDetails(), getClientAttitude(), getLocations()]); // Fetch initial data
+      await Promise.all([fetchCustomerDetails(), getClientAttitude(), getActivitySeriousnessOptions(), getLocations()]); // Fetch initial data
     };
     fetchData();
   }, [customerId]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // Fetch shops when user is available
   useEffect(() => {
@@ -1044,6 +1440,19 @@ const CustomerDetailPage = () => {
         }
       } catch (err) {
         setMessages([]);
+      }
+
+      const latestActivities = await fetchActivities();
+      const preferredActivity = pickBestActivityForUpdateModal(latestActivities);
+      if (preferredActivity) {
+        setCustomer((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            client_level: prev.client_level || preferredActivity.profile_level || null,
+            client_seriousness: prev.client_seriousness || preferredActivity.seriousness_level || null,
+          };
+        });
       }
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || "Failed to fetch customer details";
@@ -1213,7 +1622,110 @@ const CustomerDetailPage = () => {
     setIsEditModalOpen(false);
   };
 
+  useEffect(() => {
+    if (!selectedActivityId) {
+      setActivityDraft({
+        clientName: "",
+        phoneNumber: "",
+        collectById: resolveCustomerCreatorId(),
+        facebookLink: "",
+        messengerLink: "",
+        profileLevel: "",
+        seriousnessLevel: "",
+        firstVisitDate: "",
+        firstVisitById: "",
+        secondVisitDate: "",
+        secondVisitById: "",
+        thirdVisitDate: "",
+        thirdVisitById: "",
+        soldDate: "",
+        soldById: "",
+        botMessage: false,
+        interested: false,
+        saleDone: false,
+        note: "",
+      });
+      return;
+    }
+
+    const selected = activities.find((item) => Number(item.id) === Number(selectedActivityId));
+    if (!selected) return;
+
+    setActivityDraft({
+      clientName: String(selected?.client_name ?? ""),
+      phoneNumber: String(selected?.phone_number ?? ""),
+      collectById: resolveActivityUserId(selected?.data_collect_by, selected?.data_collect_by_name) || resolveCustomerCreatorId(),
+      facebookLink: String(selected?.facebook_id_link ?? ""),
+      messengerLink: String(selected?.chat_link ?? ""),
+      profileLevel: String(selected?.profile_level ?? ""),
+      seriousnessLevel: String(selected?.seriousness_level ?? ""),
+      firstVisitDate: String(selected?.first_visit_date ?? ""),
+      firstVisitById: resolveActivityUserId(selected?.first_visit_by, selected?.first_visit_by_name),
+      secondVisitDate: String(selected?.second_visit_date ?? ""),
+      secondVisitById: resolveActivityUserId(selected?.second_visit_by, selected?.second_visit_by_name),
+      thirdVisitDate: String(selected?.third_visit_date ?? ""),
+      thirdVisitById: resolveActivityUserId(selected?.third_visit_by, selected?.third_visit_by_name),
+      soldDate: String(selected?.sold_date ?? ""),
+      soldById: resolveActivityUserId(selected?.sold_by, selected?.sold_by_name),
+      botMessage: Boolean(selected?.bot_message),
+      interested: Boolean(selected?.not_interested),
+      saleDone: Boolean(selected?.sale_done),
+      note: String(selected?.note ?? ""),
+    });
+  }, [activities, customer, selectedActivityId, usersDirectory]);
+
+  const openActivityModal = async () => {
+    const latestList = await fetchActivities();
+    const preferred = pickBestActivityForUpdateModal(latestList);
+    setSelectedActivityId(preferred?.id ?? "");
+    setIsActivityModalOpen(true);
+  };
+
+  const closeActivityModal = () => {
+    setIsActivityModalOpen(false);
+  };
+
+  const saveActivityUpdate = async (event) => {
+    event.preventDefault();
+    if (!selectedActivityId) {
+      toast.error("Please select an activity record first.");
+      return;
+    }
+
+    try {
+      await api.put(`api/sales-team-activities/${selectedActivityId}`, {
+        customer_id: Number(customerId),
+        client_name: activityDraft.clientName.trim(),
+        phone_number: activityDraft.phoneNumber.trim() || null,
+        data_collect_by: activityDraft.collectById ? Number(activityDraft.collectById) : null,
+        facebook_id_link: activityDraft.facebookLink.trim() || null,
+        chat_link: activityDraft.messengerLink.trim() || null,
+        profile_level: activityDraft.profileLevel.trim() || null,
+        seriousness_level: activityDraft.seriousnessLevel.trim() || null,
+        first_visit_date: activityDraft.firstVisitDate || null,
+        first_visit_by: activityDraft.firstVisitById ? Number(activityDraft.firstVisitById) : null,
+        second_visit_date: activityDraft.secondVisitDate || null,
+        second_visit_by: activityDraft.secondVisitById ? Number(activityDraft.secondVisitById) : null,
+        third_visit_date: activityDraft.thirdVisitDate || null,
+        third_visit_by: activityDraft.thirdVisitById ? Number(activityDraft.thirdVisitById) : null,
+        sold_date: activityDraft.soldDate || null,
+        sold_by: activityDraft.soldById ? Number(activityDraft.soldById) : null,
+        bot_message: Boolean(activityDraft.botMessage),
+        not_interested: Boolean(activityDraft.interested),
+        sale_done: Boolean(activityDraft.saleDone),
+        note: activityDraft.note.trim() || null,
+      });
+      toast.success("Activity updated successfully");
+      closeActivityModal();
+      await Promise.all([fetchActivities(), fetchCustomerDetails()]);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update activity");
+    }
+  };
+
   if (loading) return <LoadingSpinner message="Loading customer details..." />;
+
+  const latestActivityForInfo = pickBestActivityForUpdateModal(activities);
 
   if (error) {
     return (
@@ -1265,6 +1777,20 @@ const CustomerDetailPage = () => {
       />
       <DeleteConfirmationModal isOpen={isDeleteModalOpen} onClose={handleCloseDeleteModal} onConfirm={handleConfirmDelete} itemName="search history" />
       {isEditModalOpen && <EditCustomerModal isOpen={isEditModalOpen} onClose={closeEditModal} customer={customer} onSuccess={fetchCustomerDetails} />}
+      <ActivityUpdateModal
+        isOpen={isActivityModalOpen}
+        onClose={closeActivityModal}
+        activities={activities}
+        selectedActivityId={selectedActivityId}
+        setSelectedActivityId={setSelectedActivityId}
+        activityDraft={activityDraft}
+        setActivityDraft={setActivityDraft}
+        userOptions={usersDirectory
+          .map((item) => ({ value: String(item?.id ?? ""), label: String(getUserDisplayName(item) || item?.email || "") }))
+          .filter((option) => option.value && option.label)}
+        seriousnessOptions={activitySeriousnessOptions}
+        onSave={saveActivityUpdate}
+      />
       <div className="p-6 space-y-6 bg-gray-50">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -1321,10 +1847,12 @@ const CustomerDetailPage = () => {
         {/* Customer Information */}
         <CustomerInfoSection
           customer={customer}
+          latestActivity={latestActivityForInfo}
           formatDate={formatDate}
           searchHistories={searchHistories}
           clientAttitudeData={clientAttitudeData}
           onEdit={openEditModal}
+          onActivityUpdate={openActivityModal}
         />
 
         {/* Search History */}

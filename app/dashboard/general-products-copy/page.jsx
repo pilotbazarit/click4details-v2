@@ -255,11 +255,7 @@ const ProductList = () => {
             }
         }
     };
-
-
-    console.log("setProducts==================================", products);
-
-
+    
     return (
         <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
             <main className="mx-auto bg-white rounded-lg shadow-lg border border-gray-200 p-6 my-6 w-full">

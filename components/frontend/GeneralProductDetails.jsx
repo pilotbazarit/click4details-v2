@@ -365,7 +365,7 @@ const GeneralProductDetails = ({ productDetails }) => {
     };
 
 
-    console.log("productDetails===========", productDetails);
+    // console.log("productDetails===========", productDetails);
 
     return (
         <div className="px-4">
@@ -422,7 +422,7 @@ const GeneralProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Click4Details'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -436,12 +436,6 @@ const GeneralProductDetails = ({ productDetails }) => {
                     <div>
                         <ProductDetailsSlider images={sliderImage} />
                     </div>
-
-
-                    {
-                        console.log("selectedVariation", selectedVariation)
-                    }
-
 
 
                     <div className="mt-4">
@@ -563,10 +557,6 @@ const GeneralProductDetails = ({ productDetails }) => {
                     </div>
                     {/* // )} */}
                 </div>
-
-                {
-                    console.log("productDetails", productDetails)
-                }
 
                 <div className="md:col-span-2 md:col-start-4">
                     <div className="border rounded shadow-sm p-4">

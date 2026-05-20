@@ -3,7 +3,7 @@
 import CustomerService from "@/services/CustomerService";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import CustomerModal from "../modals/CustomerModal";
+import EditCustomerModal from "../modals/EditCustomerModal";
 
 const Customers = ({ initialCustomers = [], serverError = null }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,47 +42,13 @@ const Customers = ({ initialCustomers = [], serverError = null }) => {
   };
 
   const handleOpenModal = () => {
+    setCurrentCustomer(null);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCurrentCustomer(null); // Reset current customer when closing modal
-  };
-
-  const handleSubmitCustomer = async (customerData) => {
-    try {
-      // Show loading toast
-      const loadingToast = toast.loading(currentCustomer ? "Updating customer..." : "Saving customer...");
-
-      let response;
-      if (currentCustomer) {
-        // Update existing customer
-        response = await CustomerService.Commands.updateCustomer(currentCustomer.id, customerData);
-      } else {
-        // Create new customer
-        response = await CustomerService.Commands.storeCustomer(customerData);
-      }
-
-      // Dismiss loading toast
-      toast.dismiss(loadingToast);
-
-      // Show success message
-      toast.success(response.message || (currentCustomer ? "Customer updated successfully!" : "Customer saved successfully!"));
-
-      // Close modal and refresh the list
-      handleCloseModal();
-      refreshData();
-    } catch (error) {
-      // Don't show toast here if it's a validation error - let the modal handle it
-      // Only show toast for non-validation errors
-      if (!error.response?.data?.errors) {
-        const errorMessage = error.response?.data?.message || error.message || "Failed to save customer";
-        toast.error(errorMessage);
-      }
-      // Re-throw the error so the modal can handle validation errors
-      throw error;
-    }
   };
 
   const handleEditCustomer = (customer) => {
@@ -219,7 +185,16 @@ const Customers = ({ initialCustomers = [], serverError = null }) => {
         </div>
       )}
 
-      {isModalOpen && <CustomerModal isOpen={isModalOpen} onClose={handleCloseModal} onSubmitCustomer={handleSubmitCustomer} customer={currentCustomer} />}
+      {isModalOpen && (
+        <EditCustomerModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          customer={currentCustomer}
+          onSuccess={() => {
+            refreshData();
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       {showConfirmDialog && (

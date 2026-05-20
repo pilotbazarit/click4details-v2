@@ -1758,7 +1758,7 @@ const GeneralProductEdit = (productId) => {
 
                     {/* ----------Section One---------- */}
                     <div>
-                        <h1 className="text-2xl font-medium mb-4 border-b pb-2">Product Price</h1>
+                        <h1 className="text-2xl font-medium mb-4 border-b pb-2"></h1>
                         {/* ----------Product Price------------- */}
                         {priceFields.map((field, index) => (
                             <div key={field.id} className="border rounded-lg p-4 bg-white shadow-sm mb-4">
@@ -1976,6 +1976,7 @@ const GeneralProductEdit = (productId) => {
                 setFormData={setFormData}
                 featureData={featureData}
                 setSelectedFsId={setSelectedFsId}
+                user={user}
             />
         </div>
     );

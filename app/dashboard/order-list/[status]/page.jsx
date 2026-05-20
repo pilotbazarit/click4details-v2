@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Footer from "@/components/dashboard/Footer";
 import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
-import { Check, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Check, Eye, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import { useParams } from "next/navigation";
 
 
@@ -44,6 +44,8 @@ const OrderListByStatus = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedOrderForStatus, setSelectedOrderForStatus] = useState(null);
+  const [orderTypeFilter, setOrderTypeFilter] = useState("");
+  const [showOrderTypeDropdown, setShowOrderTypeDropdown] = useState(false);
 
   const [hoveredRow, setHoveredRow] = useState(null);
   const [editingRowId, setEditingRowId] = useState(null);
@@ -64,17 +66,68 @@ const OrderListByStatus = () => {
     return date.toLocaleDateString('en-US', options);
   };
 
+  const parseOrderNote = (note) => {
+    if (!note) return {};
+    if (typeof note === "object") return note;
+
+    try {
+      return JSON.parse(note);
+    } catch {
+      return {};
+    }
+  };
+
+  const renderCustomerInfo = (item) => {
+    if (item?.o_type === "regular_order") {
+      return (
+        <div>
+          <div className="font-medium text-gray-900">
+            {item?.user?.name || 'N/A'}
+          </div>
+          <div className="text-sm text-gray-600">
+            {item?.user?.email || 'N/A'}
+          </div>
+          <div className="text-sm text-gray-600">
+            {item?.user?.phone || 'N/A'}
+          </div>
+        </div>
+      );
+    }
+
+    const parsed = parseOrderNote(item?.o_note);
+
+    return (
+      <div>
+        <div className="font-medium text-gray-900">
+          {parsed?.o_c_name || 'N/A'}
+        </div>
+        <div className="text-sm text-gray-600">
+          {'N/A'}
+        </div>
+        <div className="text-sm text-gray-600">
+          {parsed?.o_phone || 'N/A'}
+        </div>
+      </div>
+    );
+  };
+
   const getOrders = async (value = "") => {
     try {
       setLoading(true);
-      const response = await OrderService.Queries.getOrderList({
+      const params = {
         _page: currentPage,
         _perPage: itemsPerPage,
         _status: status, // Add status filter from URL parameter
         _orderBy: "o_id",
         _order: "DESC"
         // _p_name: value,
-      });
+      };
+
+      if (orderTypeFilter) {
+        params._type = orderTypeFilter;
+      }
+
+      const response = await OrderService.Queries.getOrderList(params);
 
       if (response?.status == "success") {
         setTotalItems(response?.data?.total)
@@ -97,8 +150,18 @@ const OrderListByStatus = () => {
     getOrders(value);
   };
 
+  const handleOrderTypeFilter = () => {
+    setShowOrderTypeDropdown(false);
+    setCurrentPage(1);
+  };
+
+  const handleClearOrderTypeFilter = () => {
+    setOrderTypeFilter("");
+    setShowOrderTypeDropdown(false);
+    setCurrentPage(1);
+  };
+
   const handleShow = (item) => {
-    console.log("itemmmm ds", item);
     setSelectedModel(item);
     setOpen(true);
   }
@@ -183,6 +246,7 @@ const OrderListByStatus = () => {
       ) {
         setEditingRowId(null);
         setHoveredRow(null);
+        setShowOrderTypeDropdown(false);
       }
     };
 
@@ -194,12 +258,7 @@ const OrderListByStatus = () => {
 
   useEffect(() => {
     getOrders();
-  }, [currentPage, itemsPerPage, status]); // Added status to dependency array
-
-
-  console.log("orders---------------", orders);
-  console.log("Current status filter:", status);
-
+  }, [currentPage, itemsPerPage, status, orderTypeFilter]); // Added status to dependency array
 
   return (
     <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
@@ -224,6 +283,66 @@ const OrderListByStatus = () => {
                 <TableHead className="border-r border-gray-300">Customer</TableHead>
                 <TableHead className="border-r border-gray-300">Shipping Address</TableHead>
                 <TableHead className="border-r border-gray-300">Total Amount</TableHead>
+                <TableHead className="border-r border-gray-300 relative">
+                  <div ref={dropdownRef}>
+                    <div className="flex items-center justify-between relative">
+                      <span>Order Type</span>
+
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowOrderTypeDropdown((prev) => !prev)}
+                          className="ml-2 focus:outline-none"
+                          aria-label="Filter order type"
+                        >
+                          <Search className={`w-4 h-4 ${orderTypeFilter ? 'text-orange-500' : ''}`} />
+                        </button>
+
+                        {showOrderTypeDropdown && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-[2px] w-0 h-0 border-l-6 border-r-6 border-b-6 border-transparent border-b-gray-300" />
+                        )}
+                      </div>
+                    </div>
+                    {showOrderTypeDropdown && (
+                      <div className="relative">
+                        <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white z-20" />
+
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-white border border-gray-300 rounded-md shadow-lg z-50 w-52 flex flex-col items-end">
+                          <div className="flex items-center w-full mb-2">
+                            <select
+                              className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              value={orderTypeFilter}
+                              onChange={(e) => setOrderTypeFilter(e.target.value)}
+                            >
+                              <option value="">All Order Types</option>
+                              <option value="quick_order">Quick Order</option>
+                              <option value="regular_order">Regular Order</option>
+                            </select>
+                            {orderTypeFilter && (
+                              <button
+                                type="button"
+                                onClick={handleClearOrderTypeFilter}
+                                className="ml-2 text-gray-500 hover:text-red-500 focus:outline-none"
+                                aria-label="Clear order type filter"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleOrderTypeFilter}
+                            className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 focus:outline-none"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TableHead>
                 <TableHead className="border-r border-gray-300">Status</TableHead>
                 <TableHead className="border-r border-gray-300">Date</TableHead>
                 <TableHead className="border-r border-gray-300">Action</TableHead>
@@ -238,15 +357,7 @@ const OrderListByStatus = () => {
                     <TableCell className="border-r border-gray-200 font-medium">{item?.o_id}</TableCell>
                     <TableCell className="border-r border-gray-200">
                       <div className="flex flex-col gap-1">
-                        <div className="font-medium text-gray-900">
-                          {item?.user?.name || 'N/A'}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {item?.user?.email || 'N/A'}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {item?.user?.phone || 'N/A'}
-                        </div>
+                        {renderCustomerInfo(item)}
                       </div>
                     </TableCell>
                     <TableCell className="border-r border-gray-200">
@@ -275,6 +386,15 @@ const OrderListByStatus = () => {
 
 
                     <TableCell className="border-r border-gray-200 font-medium">{item?.o_total_amount}</TableCell>
+                    <TableCell className="border-r border-gray-200 font-medium">
+                      {
+                        item?.o_type === "regular_order" ? (
+                          "Regular Order"
+                        ) : (
+                          item?.o_type === "quick_order" ? "Quick Order" : "N/A"
+                        )
+                      }
+                      </TableCell>
                     <TableCell className="border-r border-gray-200">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{item?.o_status}</span>
@@ -314,7 +434,7 @@ const OrderListByStatus = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-[300px] md:h-[300px] lg:h-[400px] xl:h-[600px] text-center py-4 text-gray-500">
+                  <TableCell colSpan={9} className="h-[300px] md:h-[300px] lg:h-[400px] xl:h-[600px] text-center py-4 text-gray-500">
                     {loading ? (
                       <div className="flex items-center justify-center space-x-2">
                         <Loader2 className="animate-spin w-5 h-5 text-blue-500" />

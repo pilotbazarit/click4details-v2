@@ -11,7 +11,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Loading from "@/components/Loading";
 import LoginPromptModal from "@/components/LoginPromptModal";
 import toast from "react-hot-toast";
-import { Bell, ChevronDown, House, Info, LayoutDashboard, ListFilterPlus, LogOut, Pencil, PhoneCall, Plus, ShoppingCart, SquareChartGantt, Store, Trash2, User, UserPen } from "lucide-react";
+import { Bell, ChevronDown, GitCompare, House, Info, LayoutDashboard, ListFilterPlus, LogOut, Pencil, PhoneCall, Plus, ShoppingCart, SquareChartGantt, Store, Trash2, User, UserPen } from "lucide-react";
 import LoginService from "@/services/LoginService";
 import { useMyShopProductContext } from "@/context/MyShopProductContext";
 import ShopDropdown from "./ShopDropdown";
@@ -33,62 +33,53 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
+  const hasChildren = category.subcategories !== null && category.subcategories !== undefined;
+
+  const ensureSubcategoriesLoaded = async () => {
+    if (hasChildren && category.subcategories.length === 0 && !isLoadingSubcategories) {
+      setIsLoadingSubcategories(true);
+      await onLoadSubcategories(category.id);
+      setIsLoadingSubcategories(false);
+    }
+  };
 
   const handleClick = async () => {
-    if (category.subcategories !== null && category.subcategories !== undefined) {
-      // Mobile: Toggle expansion and load subcategories if needed (কখনো onSelect call করো না)
+    if (hasChildren) {
       if (isMobile) {
-        // যদি expand করতে যাচ্ছি এবং subcategories খালি থাকে, তাহলে load করো
-        if (!isExpanded && category.subcategories.length === 0 && !isLoadingSubcategories) {
-          setIsLoadingSubcategories(true);
-          await onLoadSubcategories(category.id);
-          setIsLoadingSubcategories(false);
-          setIsExpanded(true); // Load হওয়ার পর expand করো
-        } else {
-          setIsExpanded(!isExpanded);
+        if (!isExpanded) {
+          await ensureSubcategoriesLoaded();
         }
+        setIsExpanded((prev) => !prev);
         return;
       }
-      onSelect(category);
-    } else {
-      onSelect(category);
+
+      // Desktop/touch devices: click should also open submenu (hover fallback)
+      if (!isHovered) {
+        await ensureSubcategoriesLoaded();
+      }
+      setIsHovered((prev) => !prev);
+      return;
     }
+
+    onSelect(category);
   };
 
   const handleMouseEnter = async () => {
     if (!isMobile) {
       setIsHovered(true);
-
-      // যদি subcategories থাকে কিন্তু empty array হয় (মানে এখনো load হয়নি)
-      // তাহলে API call করে subcategories load করবো
-      if (category.subcategories && category.subcategories.length === 0 && !isLoadingSubcategories) {
-        setIsLoadingSubcategories(true);
-        await onLoadSubcategories(category.id);
-        setIsLoadingSubcategories(false);
-      }
+      await ensureSubcategoriesLoaded();
     }
   };
 
-  // Mobile: Render as accordion
   if (isMobile) {
     const handlePlusClick = async (e) => {
       e.stopPropagation();
-
-      // যদি expand করতে যাচ্ছি এবং subcategories খালি থাকে, তাহলে load করো
-      if (!isExpanded && category.subcategories.length === 0 && !isLoadingSubcategories) {
-        console.log('🌐 Loading subcategories for:', category.name, 'ID:', category.id);
-        setIsLoadingSubcategories(true);
-        await onLoadSubcategories(category.id);
-        setIsLoadingSubcategories(false);
-        setIsExpanded(true);
-      } else {
-        setIsExpanded(!isExpanded);
-      }
+      await handleClick();
     };
 
-    const handleItemClick = (e) => {
+    const handleItemClick = async (e) => {
       e.stopPropagation();
-      onSelect(category);
+      await handleClick();
     };
 
     return (
@@ -104,7 +95,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
           >
             {category.name}
           </span>
-          {category.subcategories && (
+          {hasChildren && (
             <button
               onClick={handlePlusClick}
               className="p-2 hover:bg-gray-200 rounded-full transition-colors duration-150 flex-shrink-0"
@@ -115,8 +106,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
           )}
         </div>
 
-        {/* Nested Subcategories - Accordion Style */}
-        {category.subcategories && isExpanded && (
+        {hasChildren && isExpanded && (
           <div className="bg-white">
             {isLoadingSubcategories ? (
               <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
@@ -140,7 +130,6 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
     );
   }
 
-  // Desktop: Render as hover dropdown
   return (
     <div
       className="relative"
@@ -152,13 +141,12 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
         onClick={handleClick}
       >
         <span className="text-gray-700 text-sm">{category.name}</span>
-        {category.subcategories && (
+        {hasChildren && (
           <ChevronDown className="w-4 h-4 -rotate-90 text-gray-400" />
         )}
       </div>
 
-      {/* Nested Subcategories - Recursive Call */}
-      {category.subcategories && isHovered && (
+      {hasChildren && isHovered && (
         <div className="absolute left-full top-0 bg-white shadow-xl rounded-lg border border-gray-200 min-w-[220px] z-50">
           <div className="py-2">
             {isLoadingSubcategories ? (
@@ -189,7 +177,7 @@ const NavbarContent = () => {
 
   // const { cartItems, setCartItems, addToCart } = useAppContext();
 
-  const { cartItems, setCartItems, addToCart, isSeller, router, user, setUser, shops, selectedShop, setSelectedShop } = useAppContext();
+  const { cartItems, setCartItems, addToCart, isSeller, router, user, setUser, shops, selectedShop, setSelectedShop, compareItems } = useAppContext();
 
   // console.log("cartItems Navbar:::", cartItems.length);
 
@@ -1028,6 +1016,21 @@ const NavbarContent = () => {
 
 
           <Link
+            href="/compare"
+            className="flex items-center gap-2 text-lg font-medium hover:text-cyan-600 transition relative"
+            title="Compare products"
+          >
+            <div className="relative">
+              <GitCompare className="h-6 w-6 text-gray-700" />
+              {compareItems.length > 0 && (
+                <span className="absolute -top-3 -right-3 bg-cyan-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {compareItems.length}
+                </span>
+              )}
+            </div>
+          </Link>
+
+          <Link
             href="/cart"
             className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative"
           >
@@ -1078,7 +1081,7 @@ const NavbarContent = () => {
           </button> */}
 
 
-          {notificationCount > 0 && (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') && false ? (
+          {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
@@ -1162,6 +1165,15 @@ const NavbarContent = () => {
             )
           }
 
+
+          <Link href="/compare" className="relative focus:outline-none" title="Compare products">
+            <GitCompare className="h-5 w-5 text-gray-700" />
+            {compareItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-cyan-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                {compareItems.length}
+              </span>
+            )}
+          </Link>
 
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="focus:outline-none">
             <Image className="w-6 h-6" src={assets.menu_icon} alt="menu icon" />

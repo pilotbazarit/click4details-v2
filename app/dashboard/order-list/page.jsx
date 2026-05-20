@@ -93,8 +93,6 @@ const OrderList = () => {
   };
 
   const handleShow = (item) => {
-
-    console.log("itemmmm", item);
     setSelectedModel(item);
     setOpen(true);
   }
@@ -193,10 +191,6 @@ const OrderList = () => {
   useEffect(() => {
     getOrders();
   }, [currentPage, itemsPerPage]);
-
-
-  console.log("orders---------------", orders);
-
 
   return (
     <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">

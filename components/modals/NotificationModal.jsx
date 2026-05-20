@@ -1,12 +1,16 @@
 import ConversationService from "@/services/ConversationService";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import NotificationService from "@/services/NotificationService";
 
 const PER_PAGE = 5;
 
 const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
+  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [user, setUser] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [canScroll, setCanScroll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -43,6 +47,9 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   };
 
   const normalizeNotificationItem = useCallback((item) => {
+    const rawType = item?.type ? String(item.type) : "";
+    const shortType = rawType.split("\\").pop() || rawType;
+
     return {
       id: item.id,
       title: item.title,
@@ -51,7 +58,19 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       unreadCount: item.read_at || 0,
       conversationId: item?.data?.conversation_id || 0,
       product: { v_user_id: item?.data?.product_id } || null,
+      userInfo: item?.data || null,
+      vehicleId: item?.data?.vehicle_id || null,
+      type: shortType
     };
+  }, []);
+
+  const updateScrollability = useCallback(() => {
+    const el = scrollContainerRef.current;
+    const nextCanScroll = Boolean(el && el.scrollHeight > el.clientHeight + 1);
+    setCanScroll((prevCanScroll) => (
+      prevCanScroll === nextCanScroll ? prevCanScroll : nextCanScroll
+    ));
+    return nextCanScroll;
   }, []);
 
   const fetchNotificationsPage = useCallback(async ({ nextPage, replace }) => {
@@ -71,9 +90,9 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         _orderBy: "updated_at",
         _order: "desc",
       };
+
       const response = await ConversationService.Queries.getNotificationList(params);
 
-      // console.log("::::response::::", response);
 
       if (response.status === "success") {
         const itemData = Array.isArray(response.data?.data) ? response.data.data : [];
@@ -111,6 +130,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       setUser(null);
       pageRef.current = 1;
       setHasMore(true);
+      setCanScroll(false);
       hasMoreRef.current = true;
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -129,9 +149,55 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     userIdRef.current = user.id;
     pageRef.current = 1;
     setHasMore(true);
+    setCanScroll(false);
     hasMoreRef.current = true;
     fetchNotificationsPage({ nextPage: 1, replace: true });
   }, [fetchNotificationsPage, isOpen, user?.id]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleResize = () => {
+      updateScrollability();
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [isOpen, updateScrollability]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    if (notifications.length === 0) {
+      setCanScroll(false);
+      return undefined;
+    }
+
+    if (isLoading || isLoadingMore) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const isScrollable = updateScrollability();
+
+      if (!isScrollable && hasMoreRef.current && !loadingRef.current) {
+        fetchNotificationsPage({ nextPage: pageRef.current + 1, replace: false });
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [
+    fetchNotificationsPage,
+    isLoading,
+    isLoadingMore,
+    isOpen,
+    notifications.length,
+    updateScrollability,
+  ]);
 
   if (!isOpen) return null;
 
@@ -147,13 +213,33 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     fetchNotificationsPage({ nextPage: pageRef.current + 1, replace: false });
   };
 
+  const handleNotificationClick = async(item) => {
+
+    // console.log("item", item);
+    if (item?.type === "ConversationNotification") {
+      onOpenChat && onOpenChat(item);
+      return;
+    }
+
+    if (item?.type === "Vehicle") {
+      onClose && onClose();
+      await NotificationService.Commands.vehicleNotificationRead(item?.id);
+      router.push(`/dashboard/requested-product/${item?.vehicleId}/`);
+    }else if (item?.type === "want_to_be_partner") {
+
+      onClose && onClose();
+      await NotificationService.Commands.vehicleNotificationRead(item?.id);
+      router.push(`/dashboard/user-details/${item?.userInfo?.user_id}`);
+    }
+  };
+
 
   return (
     <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
       <div className="relative bg-[#f6f4f8] w-full max-w-md h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between gap-3 px-5 py-4 bg-[#f6f4f8] border-b border-gray-200/60">
 
-          <h3 className="text-lg font-semibold text-gray-900">Notification List</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Notification List </h3>
 
           <button
             type="button"
@@ -168,7 +254,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="p-4 space-y-4 overflow-y-auto flex-1"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
         >
           {notifications.length === 0 ? (
             <p className="text-sm text-gray-500">
@@ -180,11 +266,15 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
               const isUnread = unreadCount === 0;
               const initial = (item.title || "U").trim().charAt(0).toUpperCase();
 
+              // {
+              //   console.log("item notification modal 211", item);
+              // }
+
               return (
                 <button
                   key={item.id || index}
                   type="button"
-                  onClick={() => onOpenChat && onOpenChat(item)}
+                  onClick={() => handleNotificationClick(item)}
                   className="w-full text-left flex items-center gap-4"
                 >
                   <div className="h-12 w-12 rounded-full bg-yellow-400 flex items-center justify-center text-white font-semibold shadow">
@@ -215,7 +305,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
             })
           )}
 
-          {!isLoading && !isLoadingMore && notifications.length > 0 && hasMore && (
+          {!isLoading && !isLoadingMore && notifications.length > 0 && hasMore && canScroll && (
             <div className="pt-2 text-center text-xs text-gray-500">Scroll to load more...</div>
           )}
           {isLoadingMore && (

@@ -7,7 +7,7 @@ import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
 import ShopModal from "@/components/modals/ShopModal";
 import StoreService from "@/services/ShopService";
-import { DollarSign, Funnel, Loader2, Pencil, ShieldMinus, Trash2 } from "lucide-react";
+import { Copy, DollarSign, Funnel, Loader2, Pencil, ShieldMinus, Trash2 } from "lucide-react";
 import Select from 'react-select';
 import constData from "@/lib/constant";
 import api from "@/lib/api";
@@ -107,7 +107,7 @@ const ProductList = () => {
   // console.log("priorityQuery", priorityQuery);
 
 
- 
+
 
 
   const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery, newPriorityQuery = priorityQuery) => {
@@ -197,6 +197,10 @@ const ProductList = () => {
     setOpen(true);
   }
 
+  const handleClone = async (id) => {
+    router.push(`/dashboard/products/vehicle/clone/${id}`);
+  }
+
   useEffect(() => {
     getProducts(undefined, undefined, undefined, undefined);
   }, [currentPage, itemsPerPage, query, sortColumn, sortOrder]);
@@ -252,7 +256,7 @@ const ProductList = () => {
           v_status: "active",
           _method: 'PUT'
         });
-        
+
         // console.log("response:::", response);
 
         if (response) {
@@ -669,6 +673,16 @@ const ProductList = () => {
                       </span>
                     </TableCell>
                     <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium py-4">
+
+                      <button
+                        // Add delete handler here
+                        onClick={() => handleClone(item?.v_id)}
+                        className="text-green-600 hover:text-green-800"
+                        aria-label={`Delete shop ${item.s_title}`}
+                        title="Clone Product"
+                      >
+                        <Copy size={18} />
+                      </button>
 
                       <button
                         onClick={() => handlePriceHistory(item)}

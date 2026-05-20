@@ -7,6 +7,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import LoginService from "@/services/LoginService";
 import PhoneInput from "react-phone-input-2";
+import Swal from "sweetalert2";
 import "react-phone-input-2/lib/style.css";
 
 // Yup Validation Schema
@@ -126,13 +127,19 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
 
       console.log("registrationResponse", registrationResponse);
 
-      if(registrationResponse?.data?.phone_verified){
+      if (registrationResponse?.data?.phone_verified) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Phone Already Exists!",
+          text: "This phone number is already verified. Please Login",
+          confirmButtonText: "OK",
+        });
         onClose();
         if (onOpenLogin) onOpenLogin();
         return;
       }
 
-      console.log("========registrationResponse--------===========", registrationResponse);
+      // console.log("========registrationResponse--------===========", registrationResponse);
 
       // setIsOtpSending(true);
       // const response = await LoginService.Commands.sendOtp({
@@ -175,15 +182,14 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
       });
 
       console.log("responseOtp", responseOtp);
-      if(responseOtp?.status == "success"){
-        toast.success("Registration successfully");
-
-        setOtp("");
-        setPendingForm(null);
-        setStep("register");
-        onClose();
-        reset();
-      }else{
+      if (responseOtp?.status == "success") {
+          toast.success("Registration successfully");
+          setOtp("");
+          setPendingForm(null);
+          setStep("register");
+          onClose();
+          reset();
+      } else {
         toast.error(responseOtp.message);
       }
 

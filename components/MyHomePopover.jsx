@@ -5,14 +5,16 @@ import LoginService from '@/services/LoginService';
 import { useAppContext } from '@/context/AppContext';
 import { usePathname } from "next/navigation";
 import Link from 'next/link';
+import { hasPermission } from '@/lib/utils';
 // import { Cross2Icon } from "@radix-ui/react-icons";
 
 const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCount }) => {
-    const { router, user, setUser } = useAppContext();
+    const { router, user, setUser, permissionList } = useAppContext();
 
     const pathname = usePathname();
 
     const isActiveMyShop = pathname === '/my-shop/' || pathname === '/pb-home';
+    const isMyOrderList = pathname === '/my-order-list/' || pathname === '/my-order-list';
     const isActiveMemberShop = pathname === '/member-shop/' || pathname === '/member-shop';
     const isActiveCompanyShop = pathname === '/company-shop/' || pathname === '/company-shop';
     const isActiveUserShop = pathname === '/user-shop/' || pathname === '/user-shop';
@@ -25,6 +27,21 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
     } catch (error) {
         console.error("Failed to parse user data:", error);
     }
+
+    const canShowMemberShop =
+        parsedUser?.user_mode === 'supreme' ||
+        ((parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') &&
+            hasPermission(permissionList, 0, "Shop", "MemberShopMenuShow"));
+
+    const canShowUserShop =
+        parsedUser?.user_mode === 'supreme' ||
+        ((parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') &&
+            hasPermission(permissionList, 0, "Shop", "UserShopMenuShow"));
+
+    const canShowMyOrderList =
+        parsedUser?.user_mode === 'supreme' ||
+        ((parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') &&
+            hasPermission(permissionList, 0, "Order", "MyOrderListMenuShow"));
 
     // const setLogout = async () => {
     //     try {
@@ -120,15 +137,20 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                                     </Link>
                                 </li> */}
 
-                                <li className={`${isActiveMyShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                    <Link
-                                        href="/my-order-list"
-                                        className="flex items-center gap-2 hover:text-gray-900 transition"
-                                    >
-                                        <List className="h-4 w-4" />
-                                       Order List
-                                    </Link>
-                                </li>
+                                {
+                                    canShowMyOrderList && (
+                                        <li className={`${isMyOrderList ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                            <Link
+                                                href="/my-order-list"
+                                                className="flex items-center gap-2 hover:text-gray-900 transition"
+                                            >
+                                                <List className="h-4 w-4" />
+                                                Order List
+                                            </Link>
+                                        </li>
+                                    )
+                                }
+
 
                                 <li className={`${isActiveMyShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
                                     <Link
@@ -153,27 +175,31 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                                 {
                                     (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') && (
                                         <>
-                                            <li className={`${isActiveMemberShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                                <Link
-                                                    href="/member-shop"
-                                                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                                                >
-                                                    <ShoppingCart className="h-4 w-4" />
-                                                    Member Shop
-                                                </Link>
-                                            </li>
+                                            {canShowMemberShop && (
+                                                <li className={`${isActiveMemberShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                                    <Link
+                                                        href="/member-shop"
+                                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                                    >
+                                                        <ShoppingCart className="h-4 w-4" />
+                                                        Member Shop
+                                                    </Link>
+                                                </li>
+                                            )}
 
 
 
-                                            <li className={`${isActiveUserShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                                <Link
-                                                    href="/user-shop"
-                                                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                                                >
-                                                    <ShoppingCart className="h-4 w-4" />
-                                                    User Shop
-                                                </Link>
-                                            </li>
+                                            {canShowUserShop && (
+                                                <li className={`${isActiveUserShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                                    <Link
+                                                        href="/user-shop"
+                                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                                    >
+                                                        <ShoppingCart className="h-4 w-4" />
+                                                        User Shop
+                                                    </Link>
+                                                </li>
+                                            )}
                                         </>
                                     )
                                 }

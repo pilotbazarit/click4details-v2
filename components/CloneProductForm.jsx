@@ -2381,6 +2381,7 @@ const CloneProductForm = ({ productId }) => {
                     setFormData={setFormData}
                     featureData={featureData}
                     setSelectedFsId={setSelectedFsId}
+                    user={user}
                 />
             </div>
         </>

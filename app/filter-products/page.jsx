@@ -1,13 +1,18 @@
 "use client";
 
 import CustomDatePicker from "@/components/CustomDatePicker";
-import DateRangePicker from "@/components/DateRangePicker";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import RangeSlider from "@/components/RangeSlider";
 import CardViewFilteredProducts from "@/components/advance-filter/CardViewFilteredProducts";
+import CategorySubcategorySection from "@/components/advance-filter/CategorySubcategorySection";
+import FilterActionButtons from "@/components/advance-filter/FilterActionButtons";
 import PageHeaderSection from "@/components/advance-filter/PageHeaderSection";
+import SearchHistorySection from "@/components/advance-filter/SearchHistorySection";
+import CustomerFoundDetailsSection from "@/components/advance-filter/CustomerFoundDetailsSection";
+import VehicleFiltersSection from "@/components/advance-filter/VehicleFiltersSection";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
+import EditCustomerModal from "@/components/modals/EditCustomerModal";
 import FollowupModal from "@/components/modals/FollowupModal";
 import PasswordModal from "@/components/modals/PasswordModal";
 import { Button } from "@/components/ui/button";
@@ -16,24 +21,21 @@ import { useAppContext } from "@/context/AppContext";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import constData from "@/lib/constant";
-import CategoryService from "@/services/CategoryService";
 import CustomerService from "@/services/CustomerService";
-import LocationService from "@/services/LocationService";
-import MasterDataService from "@/services/MasterDataService";
-import PackageService from "@/services/PackageService";
+import FilterProductService from "@/services/FilterProductService";
 import SearchHistoryService from "@/services/SearchHistoryService";
-import ShopService from "@/services/ShopService";
 import dayjs from "dayjs";
-import { Plus, Search, Star, User, Users, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import "rc-slider/assets/index.css";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
 
 const FilterProducts = () => {
   const { getAllProduct, total, loading } = useAdvanceFilterProductContext();
   const { user } = useAppContext();
+  const hasInitializedRef = useRef(false);
   
   // Memoize normalizedUser to prevent unnecessary recalculations
   // User is now loaded synchronously from localStorage in AppContext, so it's available on first render
@@ -65,6 +67,10 @@ const FilterProducts = () => {
     return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme" || normalizedUser?.user_mode === "admin";
   }, [normalizedUser?.user_mode]);
 
+  const canAccessToChasisNo = useMemo(() => {
+    return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme" || normalizedUser?.user_mode === "admin";
+  }, [normalizedUser?.user_mode]);
+
   // Memoize canSeeCustomerInfo to prevent unnecessary recalculations
   const canSeeCustomerInfo = useMemo(() => {
     return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme";
@@ -83,6 +89,8 @@ const FilterProducts = () => {
   // }, [isClient, userRoleName]);
 
   const [categoryData, setCategories] = useState([]);
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+  const [subcategoryData, setSubcategories] = useState([]);
   const [brandData, setBrands] = useState([]);
   const [modelData, setModels] = useState([]);
   const [colorData, setColors] = useState([]);
@@ -103,6 +111,8 @@ const FilterProducts = () => {
 
   const [customerName, setCustomerName] = useState("");
   const [customerMobile, setCustomerMobile] = useState("");
+  const [customerSearchMobile, setCustomerSearchMobile] = useState("");
+  const [customerSearchName, setCustomerSearchName] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -146,6 +156,43 @@ const FilterProducts = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isFollowupModalOpen, setIsFollowupModalOpen] = useState(false);
   const [selectedFollowupForEdit, setSelectedFollowupForEdit] = useState(null);
+  const [foundCustomer, setFoundCustomer] = useState(null);
+  const [customerNotFound, setCustomerNotFound] = useState(false);
+  const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [salesTeamActivities, setSalesTeamActivities] = useState([]);
+  const [salesActivitiesLoading, setSalesActivitiesLoading] = useState(false);
+  const [customerDetailsNonce, setCustomerDetailsNonce] = useState(0);
+  const apiClient = useMemo(() => createApiRequest(API_URL), []);
+
+  useEffect(() => {
+    if (!foundCustomer?.id) {
+      setSalesTeamActivities([]);
+      setSalesActivitiesLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setSalesActivitiesLoading(true);
+
+    apiClient
+      .get("api/sales-team-activities", { params: { customer_id: foundCustomer.id } })
+      .then((res) => {
+        if (cancelled) return;
+        const list = res?.data;
+        setSalesTeamActivities(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSalesTeamActivities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSalesActivitiesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [foundCustomer?.id, customerDetailsNonce, apiClient]);
 
   const handleOpenFollowupModal = (customerId = null) => {
     setSelectedFollowupForEdit(null);
@@ -167,12 +214,6 @@ const FilterProducts = () => {
     setIsFollowupModalOpen(false);
     setSelectedCustomerId(null);
   };
-
-  useEffect(() => {
-    if (customerMobile && customerMobile.length === 11) {
-      fetchCustomerDetailsBasedOnMobile(customerMobile);
-    }
-  }, [customerMobile]);
 
   const handleFollowupSuccess = () => {
     setIsFollowupModalOpen(false);
@@ -227,69 +268,188 @@ const FilterProducts = () => {
     }
   };
 
-  const fetchCustomerDetailsBasedOnMobile = async (mobile) => {
+  const applyCustomerDetailsFromPayload = (customerData, mobileFallback = "") => {
+    setFoundCustomer(customerData);
+    setCustomerNotFound(false);
+    const { purchase_reason, bank_loan_amount, client_seriousness, description, facebook_messenger_link, interested_for_loan, ready_budget } =
+      customerData.customer_details?.[0] || {};
+
+    const readyBudget = ready_budget ? JSON.parse(ready_budget) : [0, 500000000];
+    setCustomerId(customerData.id || null);
+    setCustomerName(customerData.name || "");
+    setCustomerMobile(customerData.mobile || mobileFallback || "");
+    setCustomerSearchName(customerData.name || "");
+    setCustomerSearchMobile(customerData.mobile || mobileFallback || "");
+    setCustomerEmail(customerData.email || "");
+    setCustomerAddress(customerData.address || "");
+    setDateOfBirth(customerData.date_of_birth || "");
+    setAnniversaryDate(customerData.anniversary_date || "");
+    setSelectedCustomerId(customerData.id || null);
+    setFilterFields((prev) => ({
+      ...prev,
+      readyBudget,
+    }));
+
+    setPurchaseReason((purchase_reason && parseInt(purchase_reason)) || "");
+    setBankLoanAmount((bank_loan_amount && parseInt(bank_loan_amount)) || 0);
+    setClientSeriousness((client_seriousness && parseInt(client_seriousness)) || 0);
+    setInterestedLoan(interested_for_loan || "");
+
+    setFacebookIdLink(customerData.facebook_id_link || "");
+    setFacebookMessengerLink(facebook_messenger_link || "");
+    setClientCompanyTransaction((customerData.client_company_transaction && parseInt(customerData.client_company_transaction.md_id)) || "");
+
+    setClientIncome((customerData.client_income_per_month && parseInt(customerData.client_income_per_month.md_id)) || "");
+    setClientLevel((customerData.client_level && parseInt(customerData.client_level.md_id)) || "");
+
+    setCarExchangeCategory((customerData.car_exchange_category_per_year && parseInt(customerData.car_exchange_category_per_year.md_id)) || "");
+    setDescription(description || "");
+    setCarAvailable((customerData.car_available && parseInt(customerData.car_available.md_id)) || 0);
+    setClientAttitude(customerData.client_attitude ? String(customerData.client_attitude).split(",").map(Number) : []);
+    setClientProfession((customerData.client_profession && parseInt(customerData.client_profession.md_id)) || 0);
+    setFilterFields((prev) => ({ ...prev, clientLastPurchaseDate: customerData.client_last_purchase_date || null }));
+    setCustomerDetailsNonce((n) => n + 1);
+  };
+
+  /** Backend CustomResponse: success must include `data` with a customer `id`. */
+  const isCustomerLookupSuccess = (res) => {
+    if (!res || typeof res !== "object") return false;
+    if (res.status === "fail" || res.status === "error") return false;
+    if (res.status !== "success") return false;
+    const d = res.data;
+    return d != null && typeof d === "object" && d.id != null;
+  };
+
+  const fetchCustomerDetailsByCustomerId = async (customerId) => {
+    if (!customerId) return;
     setIsLoading(true);
     try {
-      const [customerResponse, response] = await Promise.all([
-        SearchHistoryService.Queries.getCustomerByMobile(mobile),
-        SearchHistoryService.Queries.getSearchHistory(mobile),
-      ]);
-
-      if (customerResponse.status === "success") {
-        const { purchase_reason, bank_loan_amount, client_seriousness, description, facebook_messenger_link, interested_for_loan, ready_budget } =
-          customerResponse.data.customer_details[0] || {};
-
-        const readyBudget = ready_budget ? JSON.parse(ready_budget) : [0, 500000000];
-        setCustomerId(customerResponse.data.id || null);
-        setCustomerName(customerResponse.data.name || "");
-        setCustomerEmail(customerResponse.data.email || "");
-        setCustomerAddress(customerResponse.data.address || "");
-        setDateOfBirth(customerResponse.data.date_of_birth || "");
-        setAnniversaryDate(customerResponse.data.anniversary_date || "");
-        setSelectedCustomerId(customerResponse.data.id || null);
-        setFilterFields((prev) => ({
-          ...prev,
-          readyBudget,
-        }));
-
-        setPurchaseReason((purchase_reason && parseInt(purchase_reason)) || "");
-        setBankLoanAmount((bank_loan_amount && parseInt(bank_loan_amount)) || 0);
-        setClientSeriousness((client_seriousness && parseInt(client_seriousness)) || 0);
-        setInterestedLoan(interested_for_loan || "");
-
-        setFacebookIdLink(customerResponse.data.facebook_id_link || "");
-        setFacebookMessengerLink(facebook_messenger_link || "");
-        setClientCompanyTransaction(
-          (customerResponse.data.client_company_transaction && parseInt(customerResponse.data.client_company_transaction.md_id)) || ""
-        );
-
-        setClientIncome((customerResponse.data.client_income_per_month && parseInt(customerResponse.data.client_income_per_month.md_id)) || "");
-        setClientLevel((customerResponse.data.client_level && parseInt(customerResponse.data.client_level.md_id)) || "");
-
-        setCarExchangeCategory(
-          (customerResponse.data.car_exchange_category_per_year && parseInt(customerResponse.data.car_exchange_category_per_year.md_id)) || ""
-        );
-        setDescription(description || "");
-        setCarAvailable((customerResponse.data.car_available && parseInt(customerResponse.data.car_available.md_id)) || 0);
-        setClientAttitude(customerResponse.data.client_attitude ? String(customerResponse.data.client_attitude).split(",").map(Number) : []);
-        setClientProfession((customerResponse.data.client_profession && parseInt(customerResponse.data.client_profession.md_id)) || 0);
-        setFilterFields((prev) => ({ ...prev, clientLastPurchaseDate: customerResponse.data.client_last_purchase_date || null }));
-      } else {
+      const apiRes = await CustomerService.Queries.getCustomerById(customerId);
+      if (apiRes?.status !== "success" || !apiRes?.data) {
+        setFoundCustomer(null);
+        setCustomerNotFound(true);
         setSelectedCustomerId(null);
         setSearchHistory([]);
+        toast.error(apiRes?.message || "Could not load customer.");
+        return;
       }
+      const customerData = apiRes.data;
+      const mobileForHistory = (customerData.mobile || "").trim();
+      const historyResponse = mobileForHistory
+        ? await SearchHistoryService.Queries.getSearchHistory(mobileForHistory)
+        : await SearchHistoryService.Queries.getSearchHistoryByCustomerId(customerId);
 
-      if (response.status === "success") {
-        setSearchHistory(response.data);
+      applyCustomerDetailsFromPayload(customerData, mobileForHistory);
+
+      if (historyResponse.status === "success") {
+        setSearchHistory(historyResponse.data);
       } else {
         setSearchHistory([]);
       }
     } catch (error) {
-      console.error("Failed to fetch search history:", error);
+      console.error("Failed to fetch customer details:", error);
+      setFoundCustomer(null);
+      setCustomerNotFound(true);
+      setSelectedCustomerId(null);
       setSearchHistory([]);
-      toast.error("Failed to fetch search history.");
+      toast.error(error?.response?.data?.message || error?.message || "Failed to load customer details.");
     } finally {
-      setIsLoading(false); // Hide loader
+      setIsLoading(false);
+    }
+  };
+
+  const fetchCustomerDetailsBasedOnMobile = async (mobile) => {
+    setIsLoading(true);
+    try {
+      const customerResponse = await SearchHistoryService.Queries.getCustomerByMobile(mobile);
+
+      if (isCustomerLookupSuccess(customerResponse)) {
+        applyCustomerDetailsFromPayload(customerResponse.data, mobile);
+      } else {
+        setFoundCustomer(null);
+        setCustomerNotFound(true);
+        setSelectedCustomerId(null);
+        setSearchHistory([]);
+        toast.error(customerResponse?.message || "No customer found with this mobile number or name.");
+      }
+
+      try {
+        const historyResponse = await SearchHistoryService.Queries.getSearchHistory(mobile);
+        if (historyResponse?.status === "success" && historyResponse.data != null) {
+          setSearchHistory(Array.isArray(historyResponse.data) ? historyResponse.data : []);
+        } else {
+          setSearchHistory([]);
+        }
+      } catch (histErr) {
+        console.error("Failed to fetch search history:", histErr);
+        setSearchHistory([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch customer by mobile:", error);
+      setFoundCustomer(null);
+      setCustomerNotFound(true);
+      setSelectedCustomerId(null);
+      setSearchHistory([]);
+      toast.error(error?.response?.data?.message || error?.message || "Could not search customer.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFindExistingCustomer = async () => {
+    const trimmedMobile = customerSearchMobile.trim();
+    const trimmedName = customerSearchName.trim();
+
+    if (!trimmedMobile && !trimmedName) {
+      toast.error("Please enter mobile number or customer name to find customer.");
+      return;
+    }
+
+    setFoundCustomer(null);
+    setCustomerNotFound(false);
+
+    if (trimmedMobile) {
+      await fetchCustomerDetailsBasedOnMobile(trimmedMobile);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const customerResponse = await SearchHistoryService.Queries.searchCustomer({
+        mobile: "",
+        name: trimmedName,
+      });
+
+      if (!isCustomerLookupSuccess(customerResponse)) {
+        setFoundCustomer(null);
+        setCustomerNotFound(true);
+        setSearchHistory([]);
+        toast.error(customerResponse?.message || "No customer found with this mobile number or name.");
+        return;
+      }
+
+      const matchedCustomer = customerResponse.data;
+      setCustomerSearchMobile(matchedCustomer.mobile || "");
+      setCustomerSearchName(matchedCustomer.name || "");
+      // If the customer has no mobile, look up by ID to avoid "mobile required" validation error.
+      if (matchedCustomer.mobile?.trim()) {
+        await fetchCustomerDetailsBasedOnMobile(matchedCustomer.mobile.trim());
+      } else if (matchedCustomer.id) {
+        await fetchCustomerDetailsByCustomerId(matchedCustomer.id);
+      } else {
+        setFoundCustomer(null);
+        setCustomerNotFound(true);
+        setSearchHistory([]);
+        toast.error("Customer found but could not load details (no mobile or ID).");
+      }
+    } catch (error) {
+      console.error("Failed to find customer:", error);
+      setFoundCustomer(null);
+      setCustomerNotFound(true);
+      setSearchHistory([]);
+      toast.error(error?.response?.data?.message || error?.message || "Failed to find customer.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -317,6 +477,7 @@ const FilterProducts = () => {
 
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [searchType, setSearchType] = useState("wide");
+  const [strictSortOrder, setStrictSortOrder] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isConsolidatedView, setIsConsolidatedView] = useState(false);
   const [selectedUserModes, setSelectedUserModes] = useState([""]); // New state for user modes
@@ -328,8 +489,6 @@ const FilterProducts = () => {
   const [budgetInputInFocus, setBudgetInputInFocus] = useState(null);
   const [readyBudgetInputInFocus, setReadyBudgetInputInFocus] = useState(null);
   // const [searchingItem, setSearchingItem] = useState([]);
-
-  const api = createApiRequest(API_URL);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
@@ -370,688 +529,139 @@ const FilterProducts = () => {
     condition: [],
     package: [],
     location: [],
+    subcategory: "",
   });
 
   // category data get from api
   const getCategories = async () => {
-    try {
-      const response = await CategoryService.Queries.getCategories({
-        _page: 1,
-        _perPage: 1000,
-        _parent_id: 0, // Only fetch main categories (parent_id = 0)
-      });
+    await FilterProductService.Actions.loadCategoryOptions({ setCategories, setIsCategoryLoading, toast });
+  };
 
-      if (response?.status === "success") {
-        const categoriesMasterData = response.data?.data || [];
-        const categoryData = [
-          {
-            value: "",
-            label: "-Select Category-",
-          },
-          ...categoriesMasterData.map((category) => ({
-            value: category.c_id,
-            label: category.c_name,
-          })),
-        ];
-        setCategories(categoryData);
-      } else {
-        setCategories([{ value: "", label: "-Select Category-" }]);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Failed to fetch categories");
-      }
-      setCategories([{ value: "", label: "-Select Category-" }]);
-    }
+  const getSubcategories = async (parentCategoryId) => {
+    await FilterProductService.Actions.loadSubcategoryOptions({ parentCategoryId, setSubcategories });
   };
 
   // brand data get from api
   const getBrands = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.BRAND_MD_CODE);
-
-      const brandMasterData = response.data?.master_data;
-      const brandData = [
-        {
-          value: "",
-          label: "-Select Brand-",
-        },
-        // First placeholder option
-        ...brandMasterData.map((brand) => ({
-          value: brand.md_id,
-          label: brand.md_title,
-        })),
-      ];
-
-      setBrands(brandData);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadBrandOptions({ setBrands, toast });
   };
 
   // shops data get from api
   const getShops = async () => {
-    try {
-      // Don't fetch shops if user is not loaded yet
-      if (!normalizedUser?.id) {
-        return;
-      }
-
-      setShopsLoading(true);
-
-      const params = {
-        _page: 1,
-        _perPage: 1000,
-        order: "desc",
-        orderBy: "s_id",
-        _user_id: normalizedUser.id, // Always filter by logged-in user's ID
-      };
-
-      const response = await ShopService.Queries.getShops(params);
-      const companyShopsResponse = await ShopService.Queries.getCompanyShops(normalizedUser.id);
-      
-      const shopsDataFromAPI = response?.data?.data || [];
-      const companyShopsDataFromAPI = companyShopsResponse?.data || [];
-      
-      const newCompanyShopsData = companyShopsDataFromAPI.map(shop => ({
-        value: shop.shop.s_id,
-        label: shop.shop.s_title,
-      }));
-
-      const userShopsData = shopsDataFromAPI.map(shop => ({
-        value: shop.s_id,
-        label: shop.s_title,
-      }));
-      let allShopsData = [];
-      // const allShopsData = [{ value: "all", label: "All Shops" }, ...userShopsData, ...newCompanyShopsData];
-      if(canSeeUserModes) {
-        allShopsData = [{ value: "all", label: "All Shops" }, { value: "pbhome", label: "PBL Home" }, ...userShopsData, ...newCompanyShopsData];
-      } else {
-        allShopsData = [{ value: "all", label: "All Shops" }, { value: "pbhome", label: "PBL Home" }, ...userShopsData, ...newCompanyShopsData];
-      }
-
-      setShopsData(allShopsData);
-
-      // Check if there are pending shop selections from prepopulated data
-      const pendingShops = sessionStorage.getItem("pendingShopSelection");
-      if (pendingShops) {
-        try {
-          const shopIds = JSON.parse(pendingShops);
-          const selectedShopObjects = shopIds.map(shopId => {
-            const shop = allShopsData.find(s => s.value === shopId || s.value === String(shopId));
-            return shop || { value: shopId, label: `Shop ${shopId}` };
-          });
-          setSelectedShops(selectedShopObjects);
-          sessionStorage.removeItem("pendingShopSelection");
-        } catch (error) {
-          console.error("Error loading pending shop selection:", error);
-          sessionStorage.removeItem("pendingShopSelection");
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching shops:", error);
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Failed to fetch shops");
-      }
-    } finally {
-      setShopsLoading(false);
-    }
+    await FilterProductService.Actions.loadShopsOptions({
+      normalizedUserId: normalizedUser?.id,
+      setShopsLoading,
+      setShopsData,
+      setSelectedShops,
+      toast,
+    });
   };
 
   // model data get from api
   const getModels = async (brandIds) => {
-    if (!brandIds || brandIds.length === 0) {
-      setModels([]);
-      return;
-    }
-
-    try {
-      const response = await MasterDataService.Queries.getModelsByBrand(brandIds);
-
-      const modelMasterData = response.data?.data || response.data || [];
-      const modelData = [
-        {
-          value: "",
-          label: "-Select Model-",
-        }, // Default placeholder option
-        ...modelMasterData.map((model) => ({
-          value: model.vm_id,
-          label: model.vm_name,
-        })),
-      ];
-      setModels(modelData);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadModelOptions({ brandIds, setModels, toast });
   };
 
   const getPackages = async (brandIds, modelIds) => {
-    if (!brandIds || brandIds.length === 0 || !modelIds || modelIds.length === 0) {
-      setPackageData([{ value: "", label: "-Select Package-" }]);
-      return;
-    }
-
-    try {
-      const response = await PackageService.Queries.getDependentPackages(brandIds, modelIds);
-
-      const packageMasterData = response.data?.data || response.data || [];
-      const packageData = [
-        {
-          value: "",
-          label: "-Select Package-",
-        },
-        ...packageMasterData.map((edition) => ({
-          value: edition.p_id,
-          label: edition.p_name,
-        })),
-      ];
-      setPackageData(packageData);
-      
-      // Check if there are pending package selections from prepopulated data
-      const pendingPackages = sessionStorage.getItem("pendingPackageSelection");
-      if (pendingPackages) {
-        try {
-          const packageIds = JSON.parse(pendingPackages);
-          // Filter to only include valid package IDs that exist in the fetched data
-          const validPackageIds = packageIds.filter(pkgId => 
-            packageData.some(pkg => pkg.value === pkgId || pkg.value === String(pkgId))
-          );
-          
-          if (validPackageIds.length > 0) {
-            setFilterFields(prev => ({ ...prev, package: validPackageIds }));
-          }
-          sessionStorage.removeItem("pendingPackageSelection");
-        } catch (error) {
-          console.error("Error loading pending package selection:", error);
-          sessionStorage.removeItem("pendingPackageSelection");
-        }
-      }
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "An unknown error occurred while fetching packages.");
-      }
-    }
+    await FilterProductService.Actions.loadPackageOptions({
+      brandIds,
+      modelIds,
+      setPackageData,
+      setFilterFields,
+      toast,
+    });
   };
 
   const getTransmissions = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.TRANSACTION_MD_CODE);
-
-      const transmissionMasterData = response.data?.master_data;
-      const transmissionData = [
-        {
-          value: "",
-          label: "-Select Transmission-",
-        },
-        // First placeholder option
-        ...transmissionMasterData.map((transmission) => ({
-          value: transmission.md_id,
-          label: transmission.md_title,
-        })),
-      ];
-
-      setTransmission(transmissionData);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadTransmissionOptions({ setTransmission, toast });
   };
 
   const getColors = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.COLOR_MD_CODE);
-
-      const colorMasterData = response.data?.master_data;
-      const colorData = [
-        {
-          value: "",
-          label: "-Select Color-",
-        },
-        // First placeholder option
-        ...colorMasterData.map((color) => ({
-          value: color.md_id,
-          label: color.md_title,
-        })),
-      ];
-
-      setColors(colorData);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadColorOptions({ setColors, toast });
   };
 
   const getFuels = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.FUEL_MD_CODE);
-
-      const fuelMasterData = response.data?.master_data;
-      const fuelData = [
-        {
-          value: "",
-          label: "-Select Fuel-",
-        },
-        // First placeholder option
-        ...fuelMasterData.map((fuel) => ({
-          value: fuel.md_id,
-          label: fuel.md_title,
-        })),
-      ];
-
-      setFuels(fuelData);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadFuelOptions({ setFuels, toast });
   };
 
   const getPurchaseReasons = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.PURCHASE_REASON_MD_CODE);
-      const purchaseReasonMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Purchase Reason-" },
-        ...purchaseReasonMasterData.map((reason) => ({
-          value: reason.md_id,
-          label: reason.md_title,
-        })),
-      ];
-      setPurchaseReasonData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadPurchaseReasonOptions({ setPurchaseReasonData, toast });
   };
 
   const getClientIncomes = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.CLIENT_INCOME_MD_CODE);
-      const clientIncomeMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Client Income-" },
-        ...clientIncomeMasterData.map((income) => ({
-          value: income.md_id,
-          label: income.md_title,
-        })),
-      ];
-      setClientIncomeData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadClientIncomeOptions({ setClientIncomeData, toast });
   };
 
   const getClientCompanyTransaction = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode("client_company_transaction_per_year_1758360851");
-      const clientCompanyTransactionMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Client Company Transaction-" },
-        ...clientCompanyTransactionMasterData.map((transaction) => ({
-          value: transaction.md_id,
-          label: transaction.md_title,
-        })),
-      ];
-      setClientCompanyTransactionData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadClientCompanyTransactionOptions({ setClientCompanyTransactionData, toast });
   };
 
   const getBankLoanAmounts = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.BANK_LOAN_AMOUNT_MD_CODE);
-      const bankLoanAmountMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Bank Loan Amount-" },
-        ...bankLoanAmountMasterData.map((loan) => ({
-          value: loan.md_id,
-          label: loan.md_title,
-        })),
-      ];
-      setBankLoanAmountData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadBankLoanAmountOptions({ setBankLoanAmountData, toast });
   };
 
   const getCarAvailable = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.CAR_AVAILABLE_MD_CODE);
-      const carAvailableMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Car Available-" },
-        ...carAvailableMasterData.map((car) => ({
-          value: car.md_id,
-          label: car.md_title,
-        })),
-      ];
-      setCarAvailableData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadCarAvailableOptions({ setCarAvailableData, toast });
   };
 
   const getClientAttitude = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.CLIENT_ATTITUDE_MD_CODE);
-      const clientAttitudeMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Client Attitude-" },
-        ...clientAttitudeMasterData.map((attitude) => ({
-          value: attitude.md_id,
-          label: attitude.md_title,
-        })),
-      ];
-      setClientAttitudeData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadClientAttitudeOptions({ setClientAttitudeData, toast });
   };
 
   const getClientProfession = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.CLIENT_PROFESSION_MD_CODE);
-      const clientProfessionMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Client Profession-" },
-        ...clientProfessionMasterData.map((profession) => ({
-          value: profession.md_id,
-          label: profession.md_title,
-        })),
-      ];
-      setClientProfessionData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadClientProfessionOptions({ setClientProfessionData, toast });
   };
 
   const getClientLevel = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode("client_level_1758127591");
-      const clientLevelMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Client Level-" },
-        ...clientLevelMasterData.map((level) => ({
-          value: level.md_id,
-          label: level.md_title,
-        })),
-      ];
-      setClientLevelData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadClientLevelOptions({ setClientLevelData, toast });
   };
 
   const getClientSeriousness = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode("client_seriousness_1758128063");
-      const clientSeriousnessMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Client Seriousness-" },
-        ...clientSeriousnessMasterData.map((level) => ({
-          value: level.md_id,
-          label: level.md_title,
-        })),
-      ];
-      setClientSeriousnessData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadClientSeriousnessOptions({ setClientSeriousnessData, toast });
   };
 
   const getCarExchangeCategory = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode("car_exchange_category_per_year_1758128234");
-      const carExchangeCategoryMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Car Exchange Category-" },
-        ...carExchangeCategoryMasterData.map((level) => ({
-          value: level.md_id,
-          label: level.md_title,
-        })),
-      ];
-      setCarExchangeCategoryData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadCarExchangeCategoryOptions({ setCarExchangeCategoryData, toast });
   };
 
   const getLocations = async () => {
-    try {
-      const response = await LocationService.Queries.getAllLocation();
-      const locations = response.data?.data || response.data || [];
-      const options = [
-        { value: "", label: "-Select Location-" },
-        ...locations.map((loc) => ({
-          value: loc.l_id,
-          label: loc.l_name,
-        })),
-      ];
-      setLocationData(options);
-    } catch (error) {
-      toast.error("Failed to fetch locations.");
-    }
+    await FilterProductService.Actions.loadLocationOptions({ setLocationData, toast });
   };
 
   // 2. Fetch skeleton data from API (similar to getColors)
   const getSkeletons = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.SKELETON_MD_CODE);
-      const skeletonMasterData = response.data?.master_data;
-      const skeletonOptions = [
-        { value: "", label: "-Select Skeleton-" },
-        ...skeletonMasterData.map((skeleton) => ({
-          value: skeleton.md_id,
-          label: skeleton.md_title,
-        })),
-      ];
-      setSkeletonData(skeletonOptions);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadSkeletonOptions({ setSkeletonData, toast });
   };
 
   const getConditionData = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.CONSTANTS_MD_CODE);
-      const conditionMasterData = response.data?.master_data;
-      const conditionOptions = [
-        { value: "", label: "-Select Condition-" },
-        ...conditionMasterData.map((condition) => ({
-          value: condition.md_id,
-          label: condition.md_title,
-        })),
-      ];
-      setConditionData(conditionOptions);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadConditionOptions({ setConditionData, toast });
   };
 
   const getGradeData = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.GRADE_MD_CODE);
-
-      const gradeMasterData = response.data?.master_data;
-
-      const gradeOptions = [
-        { value: "", label: "-Select Point-" },
-        ...gradeMasterData.map((grade) => ({
-          value: grade.md_id,
-          label: grade.md_title,
-        })),
-      ];
-      setGradeData(gradeOptions);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadGradeOptions({ setGradeData, toast });
   };
 
   const getExteriorGradeData = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.EXTERIOR_GRADE_MD_CODE);
-
-      const gradeMasterData = response.data?.master_data;
-      const gradeOptions = [
-        { value: "", label: "-Select Grade-" },
-        ...gradeMasterData.map((grade) => ({
-          value: grade.md_id,
-          label: grade.md_title,
-        })),
-      ];
-      setExteriorGradeData(gradeOptions);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadExteriorGradeOptions({ setExteriorGradeData, toast });
   };
 
   const getInteriorGradeData = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.INTERIOR_GRADE_MD_CODE);
-
-      const gradeMasterData = response.data?.master_data;
-      const gradeOptions = [
-        { value: "", label: "-Select Grade-" },
-        ...gradeMasterData.map((grade) => ({
-          value: grade.md_id,
-          label: grade.md_title,
-        })),
-      ];
-      setInteriorGradeData(gradeOptions);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadInteriorGradeOptions({ setInteriorGradeData, toast });
   };
 
   const getSeatData = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.SEAT_CODE);
-
-      const seatMasterData = response.data?.master_data;
-      const seatOptions = [
-        { value: "", label: "-Select Grade-" },
-        ...seatMasterData.map((seat) => ({
-          value: seat.md_id,
-          label: seat.md_title,
-        })),
-      ];
-      setSeatData(seatOptions);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadSeatOptions({ setSeatData, toast });
   };
 
   const geAvailabilityData = async () => {
-    try {
-      const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.USER_AVAILABILITY_MD_CODE);
-
-      const seatMasterData = response.data?.master_data;
-      const options = [
-        { value: "", label: "-Select Availability-" },
-        ...seatMasterData.map((item) => ({
-          value: item.md_id,
-          label: item.md_title,
-        })),
-      ];
-      setAvailabilityData(options);
-    } catch (error) {
-      if (error.errors) {
-        Object.values(error.errors).forEach((e) => toast.error(e[0]));
-      } else {
-        toast.error(error.message || "Something went wrong");
-      }
-    }
+    await FilterProductService.Actions.loadAvailabilityOptions({ setAvailabilityData, toast });
   };
 
   // Fetch initial data when component mounts
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const fetchInitialData = async (initialFilterData = null) => {
       await Promise.all([
         getCategories(),
@@ -1111,10 +721,15 @@ const FilterProducts = () => {
         
         setFilterFields(formattedParsedData);
         setSearchType(parsedData.search_type || "wide"); // Set searchType here
+        setStrictSortOrder(parsedData.strict_sort || parsedData.sort_order || "");
         setIsConsolidatedView(parsedData.consolidated); // Set consolidated view
         fetchInitialData(formattedParsedData);
         setOperationType(parsedData.operation_type || "new_search");
         setCustomerMobile(parsedData.customerMobile || "");
+        setCustomerSearchMobile(parsedData.customerMobile || "");
+        if (canSeeCustomerInfo && parsedData.customerMobile) {
+          fetchCustomerDetailsBasedOnMobile(parsedData.customerMobile);
+        }
         setSelectedUserModes([...parsedData.user_modes]); // Set user modes
         setOldHistoryId(parsedData.history_id || null);
         
@@ -1148,6 +763,14 @@ const FilterProducts = () => {
     }
   }, [filterFields.brand, filterFields.model]);
 
+  useEffect(() => {
+    if (filterFields?.category) {
+      getSubcategories(filterFields.category);
+    } else {
+      setSubcategories([{ value: "", label: "-Select Subcategory-" }]);
+    }
+  }, [filterFields?.category]);
+
   // Fetch shops when user is loaded
   useEffect(() => {
     if (normalizedUser?.id) {
@@ -1172,15 +795,22 @@ const FilterProducts = () => {
       v_insurance_exp_date_from: filterFields.v_insurance_exp_date_from ? dayjs(filterFields.v_insurance_exp_date_from).format("YYYY-MM-DD") : null,
       v_insurance_exp_date_to: filterFields.v_insurance_exp_date_to ? dayjs(filterFields.v_insurance_exp_date_to).format("YYYY-MM-DD") : null,
     };
+
+    if (searchType === "strict" && strictSortOrder) {
+      formattedFilterFields.strict_sort = strictSortOrder;
+    }
+
     const paramsForProduct = { ...formattedFilterFields };
     if (isDefaultBudget(paramsForProduct.budget)) delete paramsForProduct.budget;
     getAllProduct(paramsForProduct, true);
 
-    if (canSeeCustomerInfo && customerMobile) {
+    const resolvedCustomerId = selectedCustomerId || customerId || foundCustomer?.id;
+    const hasMobileForHistory = !!(customerMobile && String(customerMobile).trim());
+    if (canSeeCustomerInfo && (hasMobileForHistory || resolvedCustomerId)) {
       const customerInfo = {
         customer_name: customerName,
         customer_email: customerEmail,
-        customer_mobile: customerMobile,
+        customer_mobile: customerMobile || "",
         purchaseReason,
         interestedLoan,
         bankLoanAmount,
@@ -1201,6 +831,9 @@ const FilterProducts = () => {
         customer_address: customerAddress,
         readyBudget: filterFields.readyBudget,
       };
+      if (resolvedCustomerId) {
+        customerInfo.customer_id = resolvedCustomerId;
+      }
 
       const searchParamsForSave = { ...formattedFilterFields };
       delete searchParamsForSave.readyBudget;
@@ -1215,7 +848,7 @@ const FilterProducts = () => {
       };
 
       if (operationType === "update_search" && oldHistoryId) {
-        SearchHistoryService.Queries.updateSearchHistory(oldHistoryId, searchData);
+        await SearchHistoryService.Queries.updateSearchHistory(oldHistoryId, searchData);
         toast.success("Search history updated successfully!");
       } else {
         const history = await SearchHistoryService.Queries.saveSearchHistory(searchData);
@@ -1223,11 +856,16 @@ const FilterProducts = () => {
         setOldHistoryId(history?.data?.id || null);
         toast.success("New search history saved successfully!");
       }
+      setCustomerDetailsNonce((n) => n + 1);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!filterFields?.category) {
+      toast.error("Please select a category before searching.");
+      return;
+    }
     if (isConsolidatedView) {
       executeSearch(e);
     } else {
@@ -1259,6 +897,12 @@ const FilterProducts = () => {
     setDisplayVisitingCardImage(URL.createObjectURL(croppedFile));
   };
 
+  const selectedCategoryOption = categoryData.find((opt) => opt.value === filterFields?.category);
+  const showVehicleFilters =
+    selectedCategoryOption?.label?.toLowerCase() === "vehicle" ||
+    String(filterFields?.category || "").toLowerCase() === "vehicle";
+  const isCategorySelected = Boolean(filterFields?.category);
+
   return (
     <>
       {!isClient ? null : (
@@ -1268,7 +912,7 @@ const FilterProducts = () => {
           <form onSubmit={handleSubmit} className="md:px-6 ">
             {/* Page Header Section */}
             <PageHeaderSection />
-            {canSeeCustomerInfo && customerMobile && (
+            {canSeeCustomerInfo && foundCustomer && (
               <div className="flex justify-end md:px-10">
                 {/* Add New Followup Button */}
                 <button
@@ -1282,108 +926,36 @@ const FilterProducts = () => {
               </div>
             )}
 
-            {/* Search History Section */}
-            {searchHistory.length > 0 && (
-              <div className="w-full mt-6 mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setShowSearchHistory((prev) => !prev)}>
-                  <p className="text-lg font-semibold text-orange-700">Search History</p>
-                  <span className="text-orange-600">
-                    {showSearchHistory ? (
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-                      </svg>
-                    )}
-                  </span>
-                </div>
-
-                {showSearchHistory && (
-                  <ul className="mt-4 flex flex-wrap gap-2">
-                    {searchHistory.map((historyItem, index) => (
-                      <li
-                        key={index}
-                        className={`p-2 rounded-lg cursor-pointer transition-colors duration-200 ${
-                          historyItem.id === oldHistoryId ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"
-                        }`}
-                        onClick={() => {
-                          const historySearchParams = JSON.parse(historyItem.search_params);
-                          const historyCustomerInfo = JSON.parse(historyItem.customer_info);
-
-                          const searchParams = historySearchParams;
-                          const customerInfo = historyCustomerInfo;
-
-                          // Format search params, especially dates
-                          const formattedSearchParams = {
-                            ...searchParams,
-                            v_tax_token_exp_date_from: searchParams.v_tax_token_exp_date_from ? dayjs(searchParams.v_tax_token_exp_date_from).toDate() : null,
-                            v_tax_token_exp_date_to: searchParams.v_tax_token_exp_date_to ? dayjs(searchParams.v_tax_token_exp_date_to).toDate() : null,
-                            v_fitness_exp_date_from: searchParams.v_fitness_exp_date_from ? dayjs(searchParams.v_fitness_exp_date_from).toDate() : null,
-                            v_fitness_exp_date_to: searchParams.v_fitness_exp_date_to ? dayjs(searchParams.v_fitness_exp_date_to).toDate() : null,
-                            v_insurance_exp_date_from: searchParams.v_insurance_exp_date_from ? dayjs(searchParams.v_insurance_exp_date_from).toDate() : null,
-                            v_insurance_exp_date_to: searchParams.v_insurance_exp_date_to ? dayjs(searchParams.v_insurance_exp_date_to).toDate() : null,
-                            clientLastPurchaseDate: searchParams.clientLastPurchaseDate ? dayjs(searchParams.clientLastPurchaseDate).toDate() : null,
-                          };
-                          setFilterFields(formattedSearchParams);
-
-                          // Load customer info
-                          // Load additional customer info (from customer_info JSON)
-                          setPurchaseReason(customerInfo.purchaseReason || "");
-                          setInterestedLoan(customerInfo.interestedLoan || "");
-                          setBankLoanAmount(customerInfo.bankLoanAmount || "");
-                          setCarAvailable(customerInfo.carAvailable || "");
-                          setClientIncome(customerInfo.clientIncome || "");
-                          setClientCompanyTransaction(customerInfo.clientCompanyTransaction || "");
-                          setFacebookIdLink(customerInfo.facebook_id_link || "");
-                          setFacebookIdLink(customerInfo.facebook_messenger_link || "");
-                          setClientLevel(customerInfo.clientLevel || "");
-                          setClientSeriousness(customerInfo.clientSeriousness || "");
-                          setCarExchangeCategory(customerInfo.carExchangeCategory || "");
-                          setDescription(customerInfo.description || "");
-
-                          // Load other UI states
-                          setSearchType(searchParams.search_type || "wide");
-                          setIsConsolidatedView(historyItem.consolidated === 1);
-                          setSelectedUserModes(searchParams.user_modes || ["Partner"]);
-                          
-                          // Load selected shops
-                          if (searchParams.shops && Array.isArray(searchParams.shops)) {
-                            const selectedShopObjects = searchParams.shops.map(shopId => {
-                              // Find the shop in shopsData to get the label
-                              const shop = shopsData.find(s => s.value === shopId || s.value === String(shopId));
-                              return shop || { value: shopId, label: `Shop ${shopId}` };
-                            });
-                            setSelectedShops(selectedShopObjects);
-                          } else {
-                            setSelectedShops([]);
-                          }
-                          
-                          setDisplayVisitingCardImage(historyItem.visiting_card_image || null);
-                          setVisitingCardImage(null);
-
-                          // Set up for update operation
-                          setOperationType("update_search");
-                          setOldHistoryId(historyItem.id);
-
-                          // Immediately trigger search, as per prepopulatedData logic (omit default budget 0–500000000)
-                          const paramsForHistory = { ...formattedSearchParams };
-                          if (Array.isArray(paramsForHistory.budget) && paramsForHistory.budget.length === 2 && Number(paramsForHistory.budget[0]) === 0 && Number(paramsForHistory.budget[1]) === 500000000) delete paramsForHistory.budget;
-                          getAllProduct(paramsForHistory, true);
-
-                          toast.success("History loaded and search results updated.");
-                        }}
-                      >
-                        <p className={`text-sm ${historyItem.id === oldHistoryId ? "text-white" : "text-[rgb(17,111,165)]"}`}>
-                          {dayjs(historyItem.created_at).format("YYYY-MM-DD hh:mm a")}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+            <SearchHistorySection
+              searchHistory={searchHistory}
+              showSearchHistory={showSearchHistory}
+              setShowSearchHistory={setShowSearchHistory}
+              oldHistoryId={oldHistoryId}
+              setFilterFields={setFilterFields}
+              setPurchaseReason={setPurchaseReason}
+              setInterestedLoan={setInterestedLoan}
+              setBankLoanAmount={setBankLoanAmount}
+              setCarAvailable={setCarAvailable}
+              setClientIncome={setClientIncome}
+              setClientCompanyTransaction={setClientCompanyTransaction}
+              setFacebookIdLink={setFacebookIdLink}
+              setFacebookMessengerLink={setFacebookMessengerLink}
+              setClientLevel={setClientLevel}
+              setClientSeriousness={setClientSeriousness}
+              setCarExchangeCategory={setCarExchangeCategory}
+              setDescription={setDescription}
+              setSearchType={setSearchType}
+              setStrictSortOrder={setStrictSortOrder}
+              setIsConsolidatedView={setIsConsolidatedView}
+              setSelectedUserModes={setSelectedUserModes}
+              shopsData={shopsData}
+              setSelectedShops={setSelectedShops}
+              setDisplayVisitingCardImage={setDisplayVisitingCardImage}
+              setVisitingCardImage={setVisitingCardImage}
+              setOperationType={setOperationType}
+              setOldHistoryId={setOldHistoryId}
+              getAllProduct={getAllProduct}
+            />
 
             {/* Customer Info Section */}
             {canSeeCustomerInfo && (
@@ -1442,86 +1014,87 @@ const FilterProducts = () => {
 
                 {showCustomerInfo && (
                   <>
-                    {/* Customer Info  */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                      {/* Customer Mobile */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium" htmlFor="customer-mobile">
-                          Mobile Number <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
+                    {/* Search bar */}
+                    <div className="mt-4 p-4 rounded-lg border border-orange-200 bg-orange-50/40">
+                      <p className="text-base font-semibold text-orange-700 mb-3">Find Existing Customer</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-sm font-medium" htmlFor="find-customer-mobile">Mobile Number</label>
                           <input
-                            id="customer-mobile"
+                            id="find-customer-mobile"
                             type="tel"
                             placeholder="Enter mobile number"
-                            className="outline-none py-2 px-3 rounded border border-gray-500/40 w-full"
-                            value={customerMobile}
-                            onChange={async (e) => {
-                              setCustomerMobile(e.target.value);
-                              setOldHistoryId(null);
-                            }}
+                            className="outline-none py-2 px-3 rounded border border-gray-500/40"
+                            value={customerSearchMobile}
+                            onChange={(e) => setCustomerSearchMobile(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleFindExistingCustomer(); } }}
                           />
-                          {isLoading && (
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                              <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                ></path>
-                              </svg>
-                            </div>
-                          )}
                         </div>
-                      </div>
-
-                      {/* Customer Name */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium" htmlFor="customer-name">
-                          Customer Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="customer-name"
-                          type="text"
-                          placeholder="Enter customer name"
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Customer Email */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium" htmlFor="customer-email">
-                          Email
-                        </label>
-                        <input
-                          id="customer-email"
-                          type="email"
-                          placeholder="Enter email address"
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                          value={customerEmail}
-                          onChange={(e) => setCustomerEmail(e.target.value)}
-                        />
-                      </div>
-                      {/* Customer Address */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium" htmlFor="customer-address">
-                          Address
-                        </label>
-                        <input
-                          id="customer-address"
-                          type="text"
-                          placeholder="Enter customer address"
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                          value={customerAddress}
-                          onChange={(e) => setCustomerAddress(e.target.value)}
-                        />
+                        <div className="flex flex-col gap-1">
+                          <label className="text-sm font-medium" htmlFor="find-customer-name">Customer Name</label>
+                          <input
+                            id="find-customer-name"
+                            type="text"
+                            placeholder="Enter customer name"
+                            className="outline-none py-2 px-3 rounded border border-gray-500/40"
+                            value={customerSearchName}
+                            onChange={(e) => setCustomerSearchName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleFindExistingCustomer(); } }}
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-end gap-2 justify-start">
+                          <button
+                            type="button"
+                            className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center disabled:opacity-60"
+                            onClick={handleFindExistingCustomer}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? "Searching..." : "Search Customer"}
+                          </button>
+                          <button
+                            type="button"
+                            className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center gap-1.5"
+                            onClick={() => setIsAddCustomerModalOpen(true)}
+                          >
+                            <Plus className="h-4 w-4 shrink-0" />
+                            New Customer
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    {showAdditionalInfo && (
+                    {/* Customer not found */}
+                    {customerNotFound && !foundCustomer && (
+                      <div className="mt-4 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
+                        <p className="text-sm text-yellow-800 font-medium">No customer found. Would you like to create a new one?</p>
+                      </div>
+                    )}
+
+                    {/* Customer found — view mode (full customer + sales team activity) */}
+                    {foundCustomer && (
+                      <div className="mt-4 p-4">
+                        <div className="flex items-center justify-end mb-4">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded border border-orange-500 text-orange-600 bg-white hover:bg-orange-50"
+                            onClick={() => setIsEditCustomerModalOpen(true)}
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            Edit Customer
+                          </button>
+                        </div>
+                        <CustomerFoundDetailsSection
+                          customer={foundCustomer}
+                          activities={salesTeamActivities}
+                          activitiesLoading={salesActivitiesLoading}
+                        />
+                      </div>
+                    )}
+
+                    {foundCustomer && showAdditionalInfo && (
                       <>
                         {/* Budget and Ready Budget Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-4 gap-6 mt-4">
@@ -1865,15 +1438,6 @@ const FilterProducts = () => {
                         </div>
                       </>
                     )}
-                    <div className="flex justify-end mt-4">
-                      <button
-                        type="button"
-                        onClick={handleSaveCustomer}
-                        className="relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border rounded-md bg-orange-500 text-white border-orange-500 z-10"
-                      >
-                        Save Customer
-                      </button>
-                    </div>
                   </>
                 )}
               </div>
@@ -1923,760 +1487,87 @@ const FilterProducts = () => {
               {showFilterSection && (
                 <>
                   {/* Product Name and Code Filter Section */}
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mt-4 mb-4 p-4 border border-gray-200 rounded-lg shadow-sm bg-white">
-                    {/* User Mode Button Group */}
-                    {canSeeUserModes && (
-                      <div className="flex flex-col gap-2">
-                        <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
-                        <div className="inline-flex rounded-md shadow-sm">
-                          {["Partner", "Member", "User"].map((mode, index) => (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => {
-                                const newSelectedUserModes = selectedUserModes.includes(mode)
-                                  ? selectedUserModes.filter((item) => item !== mode)
-                                  : [...selectedUserModes, mode];
-                                setSelectedUserModes(newSelectedUserModes);
-                              }}
-                              className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
-                                index === 0 ? "rounded-l-md" : ""
-                              } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
-                                selectedUserModes.includes(mode)
-                                  ? "bg-orange-500 text-white border-orange-500 z-10"
-                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                              }`}
-                            >
-                              {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
-                              {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
-                              {mode === "User" && <User className="w-4 h-4 mr-2" />}
-                              {mode}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  <CategorySubcategorySection
+                    categoryData={categoryData}
+                    subcategoryData={subcategoryData}
+                    filterFields={filterFields}
+                    setFilterFields={setFilterFields}
+                    isCategoryLoading={isCategoryLoading}
+                  />
 
-                    {/* Shops Multiselect Dropdown */}
-                    <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
-                      <label className="text-base font-medium text-gray-700 mb-2">Filter by Shops</label>
-                      <Select
-                        isMulti
-                        options={shopsData}
-                        value={selectedShops}
-                        onChange={(selected) => {
-                          const selectedArray = selected || [];
-                          
-                          // Check if "All Shops" was just selected
-                          const hasAllShops = selectedArray.some(shop => shop.value === "all");
-                          const hadAllShops = selectedShops.some(shop => shop.value === "all");
-                          
-                          if (hasAllShops && !hadAllShops) {
-                            // "All Shops" was just selected, keep only "All Shops"
-                            setSelectedShops([{ value: "all", label: "All Shops" }]);
-                          } else if (!hasAllShops && hadAllShops) {
-                            // "All Shops" was removed, keep other selections
-                            setSelectedShops(selectedArray);
-                          } else if (hasAllShops && selectedArray.length > 1) {
-                            // User selected a specific shop while "All Shops" was selected, remove "All Shops"
-                            setSelectedShops(selectedArray.filter(shop => shop.value !== "all"));
-                          } else {
-                            // Normal selection
-                            setSelectedShops(selectedArray);
-                          }
-                        }}
-                        placeholder={shopsLoading ? "Loading shops..." : "Select shops..."}
-                        isLoading={shopsLoading}
-                        isDisabled={shopsLoading}
-                        loadingMessage={() => "Loading shops..."}
-                        className="text-sm"
-                        classNamePrefix="react-select"
-                      />
-                    </div>
+                  {showVehicleFilters && (
+                    <VehicleFiltersSection
+                      canSeeUserModes={canSeeUserModes}
+                      selectedUserModes={selectedUserModes}
+                      setSelectedUserModes={setSelectedUserModes}
+                      shopsData={shopsData}
+                      selectedShops={selectedShops}
+                      setSelectedShops={setSelectedShops}
+                      shopsLoading={shopsLoading}
+                      searchType={searchType}
+                      setSearchType={setSearchType}
+                      strictSortOrder={strictSortOrder}
+                      setStrictSortOrder={setStrictSortOrder}
+                      filterFields={filterFields}
+                      setFilterFields={setFilterFields}
+                      brandData={brandData}
+                      modelData={modelData}
+                      packageData={packageData}
+                      colorData={colorData}
+                      conditionData={conditionData}
+                      fuelData={fuelData}
+                      seatData={seatData}
+                      skeletonData={skeletonData}
+                      gradeData={gradeData}
+                      exteriorGradeData={exteriorGradeData}
+                      interiorGradeData={interiorGradeData}
+                      budgetInputInFocus={budgetInputInFocus}
+                      setBudgetInputInFocus={setBudgetInputInFocus}
+                      mileageInputInFocus={mileageInputInFocus}
+                      setMileageInputInFocus={setMileageInputInFocus}
+                      yearOptions={yearOptions}
+                      userRoleName={userRoleName}
+                      capacityInputInFocus={capacityInputInFocus}
+                      setCapacityInputInFocus={setCapacityInputInFocus}
+                      transmissionData={transmissionData}
+                      availabilityData={availabilityData}
+                      canAccessToChasisNo={canAccessToChasisNo}
+                      locationData={locationData}
+                    />
+                  )}
 
-                    {/* Search Type Button Group */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-base font-medium text-gray-700 mb-2">Search Type</label>
-                      <div className="inline-flex rounded-md shadow-sm">
-                        {[
-                          { value: "wide", label: "Wide Search" },
-                          // { value: "flexible", label: "Flexible Search" },
-                          { value: "strict", label: "Strict Search" },
-                        ].map((type, index) => (
-                          <button
-                            key={type.value}
-                            type="button"
-                            onClick={() => setSearchType(type.value)}
-                            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium transition-colors border border-gray-300 ${
-                              index === 0 ? "rounded-l-md" : ""
-                            } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
-                              searchType === type.value
-                                ? "bg-orange-500 text-white border-orange-500 z-10"
-                                : "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
-                            }`}
-                          >
-                            {type.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 mb-4">
-                    {/* Category select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="category">
-                        Category
-                      </label>
-                      <Select
-                        id="category"
-                        options={categoryData}
-                        value={categoryData.find((opt) => opt.value === filterFields?.category) || null}
-                        onChange={(option) => {
-                          setFilterFields((prev) => ({ ...prev, category: option.value }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                      />
-                    </div>
-
-                    {/* Product Name - 8 columns */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="product-name">
-                        Product Name
-                      </label>
-                      <input
-                        id="product-name"
-                        type="text"
-                        placeholder="Search by product name"
-                        className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition"
-                        // onChange={(e) => setTitle(e.target.value)}
-                        onChange={(e) => setFilterFields((prev) => ({ ...prev, title: e.target.value }))}
-                        value={filterFields?.title}
-                      />
-                    </div>
-
-                    {/* Product Code - 4 columns */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="product-code">
-                        Product Code
-                      </label>
-                      <input
-                        id="product-code"
-                        type="text"
-                        placeholder="Search by product code"
-                        className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition"
-                        // onChange={(e) => setCode(e.target.value)}
-                        onChange={(e) => setFilterFields((prev) => ({ ...prev, code: e.target.value }))}
-                        value={filterFields?.code}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Brand select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="brand">
-                        Brand
-                      </label>
-                      <Select
-                        id="brand"
-                        options={brandData}
-                        isMulti
-                        value={filterFields?.brand ? brandData.filter((opt) => filterFields.brand.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, brand: values, model: [], package: "" }));
-
-                          // const lastSelected = selectedOptions[selectedOptions.length - 1].label;
-                          // if (searchingItem.includes(lastSelected)) {
-                          //   setSearchingItem((pre) => {
-                          //     const filtered = pre.filter((item) => item !== lastSelected);
-                          //     return [...filtered];
-                          //   });
-                          // } else {
-                          //   setSearchingItem((pre) => [...pre, lastSelected]);
-                          // }
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                      />
-                    </div>
-
-                    {/* Model select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="model">
-                        Model
-                      </label>
-
-                      <Select
-                        inputId="model"
-                        options={modelData}
-                        isMulti
-                        value={filterFields?.model ? modelData.filter((opt) => filterFields.model.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, model: values, package: "" }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="Select a model"
-                        isDisabled={!filterFields?.brand || filterFields.brand.length === 0}
-                      />
-                    </div>
-
-                    {/* Package select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="package">
-                        Package
-                      </label>
-
-                      <Select
-                        inputId="package"
-                        options={packageData}
-                        isMulti
-                        value={filterFields?.package ? packageData.filter((opt) => filterFields.package.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, package: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="Select a package"
-                        isDisabled={!filterFields?.brand || filterFields.brand.length === 0 || !filterFields?.model || filterFields.model.length === 0}
-                      />
-                    </div>
-
-                    {/* Color Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="color">
-                        Color
-                      </label>
-                      <Select
-                        inputId="color"
-                        options={colorData}
-                        isMulti
-                        value={filterFields?.color ? colorData.filter((opt) => filterFields.color.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, color: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Color-"
-                      />
-                    </div>
-
-                    {/* Budget Range */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="budget-range">
-                        Budget (Price Range)
-                      </label>
-
-                      {/* <span className="text-xs text-gray-400 mt-1">
-                                            Eg: 13,00,000 to 20,00,000
-                                            </span> */}
-                      <div className="flex gap-2">
-                        <input
-                          id="budget-min"
-                          type="text"
-                          value={budgetInputInFocus === "min" ? filterFields.budget?.[0] : (filterFields.budget?.[0] || 0).toLocaleString()}
-                          onFocus={() => setBudgetInputInFocus("min")}
-                          onBlur={() => setBudgetInputInFocus(null)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, "");
-                            if (!isNaN(value)) {
-                              setFilterFields((prev) => ({ ...prev, budget: [Number(value), prev.budget?.[1] || 500000000] }));
-                            }
-                          }}
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-                        />
-                        <span className="self-center">to</span>
-                        <input
-                          id="budget-max"
-                          type="text"
-                          value={budgetInputInFocus === "max" ? filterFields.budget?.[1] : (filterFields.budget?.[1] || 500000000).toLocaleString()}
-                          onFocus={() => setBudgetInputInFocus("max")}
-                          onBlur={() => setBudgetInputInFocus(null)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, "");
-                            if (!isNaN(value)) {
-                              setFilterFields((prev) => ({ ...prev, budget: [prev.budget?.[0] || 0, Number(value)] }));
-                            }
-                          }}
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-                        />
-                      </div>
-                      <div className="mt-2 px-6">
-                        <RangeSlider
-                          budget={filterFields?.budget || [0, 500000000]}
-                          setBudget={(newBudget) => setFilterFields((prev) => ({ ...prev, budget: newBudget }))}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Condition Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="condition">
-                        Condition
-                      </label>
-                      <Select
-                        inputId="condition"
-                        options={conditionData}
-                        isMulti
-                        value={filterFields?.condition ? conditionData.filter((opt) => filterFields.condition.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, condition: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Condition-"
-                      />
-                    </div>
-
-                    {/* Fuel Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="fuel">
-                        Fuel
-                      </label>
-                      <Select
-                        inputId="fuel"
-                        options={fuelData}
-                        isMulti
-                        value={filterFields?.fuel ? fuelData.filter((opt) => filterFields.fuel.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, fuel: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Fuel-"
-                      />
-                    </div>
-
-                    {/* Seat Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="seat">
-                        Seat
-                      </label>
-                      <Select
-                        inputId="seat"
-                        options={seatData}
-                        isMulti
-                        value={filterFields?.seat ? seatData.filter((opt) => filterFields.seat.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, seat: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Seat-"
-                      />
-                    </div>
-
-                    {/* Body Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="skeleton">
-                        Body
-                      </label>
-                      <Select
-                        inputId="skeleton"
-                        options={skeletonData}
-                        isMulti
-                        value={filterFields?.skeleton ? skeletonData.filter((opt) => filterFields.skeleton.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, skeleton: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Body-"
-                      />
-                    </div>
-
-                    {/* Point Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-gray-600" htmlFor="grade">
-                        Point
-                      </label>
-                      <Select
-                        inputId="grade"
-                        options={gradeData}
-                        isMulti
-                        value={filterFields?.grade ? gradeData.filter((opt) => filterFields.grade.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, grade: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Point-"
-                      />
-                    </div>
-
-                    {/* Exterior Grade Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="ext_grade">
-                        Exterior Grade
-                      </label>
-                      <Select
-                        inputId="ext_grade"
-                        options={exteriorGradeData}
-                        isMulti
-                        value={filterFields?.ext_grade ? exteriorGradeData.filter((opt) => filterFields.ext_grade.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, ext_grade: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Grade-"
-                      />
-                    </div>
-
-                    {/* Interior Grade Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="int_grade">
-                        Interior Grade
-                      </label>
-                      <Select
-                        inputId="int_grade"
-                        options={interiorGradeData}
-                        isMulti
-                        value={filterFields?.int_grade ? interiorGradeData.filter((opt) => filterFields.int_grade.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, int_grade: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Grade-"
-                      />
-                    </div>
-
-                    {/* Mileage */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium text-blue-600" htmlFor="mileage-range">
-                        Mileage (Range)
-                      </label>
-
-                      <div className="flex gap-2">
-                        <input
-                          id="mileage-min"
-                          type="text"
-                          value={mileageInputInFocus === "min" ? filterFields.mileage?.[0] : (filterFields.mileage?.[0] || 0).toLocaleString()}
-                          onFocus={() => setMileageInputInFocus("min")}
-                          onBlur={() => setMileageInputInFocus(null)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, "");
-                            if (!isNaN(value)) {
-                              setFilterFields((prev) => ({ ...prev, mileage: [Number(value), prev.mileage?.[1] || 500000] }));
-                            }
-                          }}
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-                        />
-                        <span className="self-center">to</span>
-                        <input
-                          id="mileage-max"
-                          type="text"
-                          value={mileageInputInFocus === "max" ? filterFields.mileage?.[1] : (filterFields.mileage?.[1] || 500000).toLocaleString()}
-                          onFocus={() => setMileageInputInFocus("max")}
-                          onBlur={() => setMileageInputInFocus(null)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, "");
-                            if (!isNaN(value)) {
-                              setFilterFields((prev) => ({ ...prev, mileage: [prev.mileage?.[0] || 0, Number(value)] }));
-                            }
-                          }}
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-                        />
-                      </div>
-                      <div className="mt-2 px-6">
-                        <RangeSlider
-                          budget={filterFields?.mileage || [0, 500000]}
-                          setBudget={(newMileage) => setFilterFields((prev) => ({ ...prev, mileage: newMileage }))}
-                          step={50}
-                          maxValue={500000}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Model Year */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="model_year">
-                        Model Year
-                      </label>
-                      <Select
-                        inputId="model_year"
-                        options={yearOptions}
-                        isMulti
-                        value={filterFields?.model_year ? yearOptions.filter((opt) => filterFields.model_year.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, model_year: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Model Year-"
-                      />
-                    </div>
-
-                    {userRoleName === "Customer Care" && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium" htmlFor="registration_year">
-                          Registration Year
-                        </label>
-                        <Select
-                          inputId="registration_year"
-                          options={yearOptions}
-                          isMulti
-                          value={filterFields?.registration_year ? yearOptions.filter((opt) => filterFields.registration_year.includes(opt.value)) : []}
-                          onChange={(selectedOptions) => {
-                            const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                            setFilterFields((prev) => ({ ...prev, registration_year: values }));
-                          }}
-                          className="react-select-container"
-                          classNamePrefix="react-select"
-                          placeholder="-Select Registration Year-"
-                        />
-                      </div>
-                    )}
-
-                    {/* Capacity */}
-                    <div className="flex flex-col gap-1 pr-4">
-                      <label className="text-base font-medium" htmlFor="capacity-range">
-                        Capacity (CC)
-                      </label>
-
-                      <div className="flex gap-2">
-                        <input
-                          id="capacity-min"
-                          type="text"
-                          value={capacityInputInFocus === "min" ? filterFields.capacity?.[0] : (filterFields.capacity?.[0] || 0).toLocaleString()}
-                          onFocus={() => setCapacityInputInFocus("min")}
-                          onBlur={() => setCapacityInputInFocus(null)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, "");
-                            if (!isNaN(value)) {
-                              setFilterFields((prev) => ({ ...prev, capacity: [Number(value), prev.capacity?.[1] || 50000] }));
-                            }
-                          }}
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-                        />
-                        <span className="self-center">to</span>
-                        <input
-                          id="capacity-max"
-                          type="text"
-                          value={capacityInputInFocus === "max" ? filterFields.capacity?.[1] : (filterFields.capacity?.[1] || 50000).toLocaleString()}
-                          onFocus={() => setCapacityInputInFocus("max")}
-                          onBlur={() => setCapacityInputInFocus(null)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, "");
-                            if (!isNaN(value)) {
-                              setFilterFields((prev) => ({ ...prev, capacity: [prev.capacity?.[0] || 0, Number(value)] }));
-                            }
-                          }}
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-                        />
-                      </div>
-                      <div className="mt-2 px-6">
-                        <RangeSlider
-                          budget={filterFields?.capacity || [0, 50000]}
-                          setBudget={(newCapacity) => setFilterFields((prev) => ({ ...prev, capacity: newCapacity }))}
-                          step={100}
-                          maxValue={50000}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Transmission Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="transmission">
-                        Transmission
-                      </label>
-                      <Select
-                        inputId="transmission"
-                        options={transmissionData}
-                        isMulti
-                        value={filterFields?.transmission ? transmissionData.filter((opt) => filterFields.transmission.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, transmission: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Transmission-"
-                      />
-                    </div>
-
-                    {/* Availability Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="availability">
-                        Availability
-                      </label>
-                      <Select
-                        inputId="availability"
-                        options={availabilityData}
-                        isMulti
-                        value={filterFields?.availability ? availabilityData.filter((opt) => filterFields.availability.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, availability: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Availability-"
-                      />
-                    </div>
-
-                    {/* Chassis No Input */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="chassis">
-                        Chassis No
-                      </label>
-                      <input
-                        id="chassis"
-                        value={filterFields?.chassis || ""}
-                        onChange={(e) => setFilterFields((prev) => ({ ...prev, chassis: e.target.value }))}
-                        type="text"
-                        placeholder="Enter Chassis No"
-                        className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                      />
-                    </div>
-
-                    {/* Location Select */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-base font-medium" htmlFor="location">
-                        Location
-                      </label>
-                      <Select
-                        inputId="location"
-                        options={locationData}
-                        isMulti
-                        value={filterFields?.location ? locationData.filter((opt) => filterFields.location.includes(opt.value)) : []}
-                        onChange={(selectedOptions) => {
-                          const values = selectedOptions ? selectedOptions.map((option) => option.value) : [];
-                          setFilterFields((prev) => ({ ...prev, location: values }));
-                        }}
-                        className="react-select-container"
-                        classNamePrefix="react-select"
-                        placeholder="-Select Location-"
-                      />
-                    </div>
-
-                    {userRoleName === "Customer Care" && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium" htmlFor="engine">
-                          Engine No
-                        </label>
-                        <input
-                          id="engine"
-                          value={filterFields?.engine || ""}
-                          onChange={(e) => setFilterFields((prev) => ({ ...prev, engine: e.target.value }))}
-                          type="text"
-                          placeholder="Enter Engine No"
-                          className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                        />
-                      </div>
-                    )}
-
-                    {userRoleName === "Customer Care" && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium">Tax Token Expiry Date</label>
-                        <DateRangePicker
-                          startDate={filterFields.v_tax_token_exp_date_from}
-                          endDate={filterFields.v_tax_token_exp_date_to}
-                          onChange={(dates) => {
-                            const [start, end] = dates;
-                            setFilterFields((prev) => ({
-                              ...prev,
-                              v_tax_token_exp_date_from: start,
-                              v_tax_token_exp_date_to: end,
-                            }));
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {userRoleName === "Customer Care" && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium">Fitness Exp. Date</label>
-                        <DateRangePicker
-                          startDate={filterFields.v_fitness_exp_date_from}
-                          endDate={filterFields.v_fitness_exp_date_to}
-                          onChange={(dates) => {
-                            const [start, end] = dates;
-                            setFilterFields((prev) => ({
-                              ...prev,
-                              v_fitness_exp_date_from: start,
-                              v_fitness_exp_date_to: end,
-                            }));
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {userRoleName === "Customer Care" && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-base font-medium">Insurance Exp. Date</label>
-                        <DateRangePicker
-                          startDate={filterFields.v_insurance_exp_date_from}
-                          endDate={filterFields.v_insurance_exp_date_to}
-                          onChange={(dates) => {
-                            const [start, end] = dates;
-                            setFilterFields((prev) => ({
-                              ...prev,
-                              v_insurance_exp_date_from: start,
-                              v_insurance_exp_date_to: end,
-                            }));
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
                 </>
               )}
             </div>
 
-            <div className="flex justify-end gap-4 w-full mt-8 pt-6 border-t border-gray-200/80">
-              <button
-                type="button"
-                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-lg transition-colors duration-200 flex items-center gap-2"
-                onClick={() => {
-                  setFilterFields({
-                    budget: [0, 50000000],
-                    readyBudget: [0, 50000000],
-                    availability: [],
-                    transmission: [],
-                    registration_year: [],
-                    model_year: [],
-                    location: [],
-                  });
-                  getAllProduct({}, true);
-                  setOperationType("new_search");
-                  setCustomerMobile("");
-                  setSelectedUserModes([""]);
-                  setOldHistoryId();
-                  setIsConsolidatedView(false);
-                  setSearchType("wide");
-                  setSearchHistory([]);
-                  setCustomerName("");
-                  setCustomerEmail("");
-                  setCustomerAddress("");
-                }}
-              >
-                <X className="w-5 h-5" />
-                Clear
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2"
-              >
-                <Search className="w-5 h-5" />
-                Search
-              </button>
-            </div>
+            <FilterActionButtons
+              isCategorySelected={isCategorySelected}
+              onClear={() => {
+                setFilterFields({
+                  budget: [0, 50000000],
+                  readyBudget: [0, 50000000],
+                  category: "",
+                  subcategory: "",
+                  availability: [],
+                  transmission: [],
+                  registration_year: [],
+                  model_year: [],
+                  location: [],
+                });
+                getAllProduct({}, true);
+                setOperationType("new_search");
+                setCustomerMobile("");
+                setSelectedUserModes([""]);
+                setOldHistoryId();
+                setIsConsolidatedView(false);
+                setSearchType("wide");
+                setStrictSortOrder("");
+                setSearchHistory([]);
+                setCustomerName("");
+                setCustomerEmail("");
+                setCustomerAddress("");
+              }}
+            />
           </form>
 
           {/* Filter Result Section */}
@@ -2749,6 +1640,35 @@ const FilterProducts = () => {
             customerID={customerId}
           />
           <PasswordModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onVerify={handlePasswordVerify} />
+          {isEditCustomerModalOpen && foundCustomer && (
+            <EditCustomerModal
+              isOpen={isEditCustomerModalOpen}
+              onClose={() => setIsEditCustomerModalOpen(false)}
+              customer={foundCustomer}
+              onSuccess={() => {
+                setIsEditCustomerModalOpen(false);
+                if (foundCustomer?.id) {
+                  fetchCustomerDetailsByCustomerId(foundCustomer.id);
+                } else if (foundCustomer?.mobile) {
+                  fetchCustomerDetailsBasedOnMobile(foundCustomer.mobile);
+                }
+              }}
+            />
+          )}
+          {isAddCustomerModalOpen && (
+            <EditCustomerModal
+              isOpen={isAddCustomerModalOpen}
+              onClose={() => setIsAddCustomerModalOpen(false)}
+              customer={null}
+              onSuccess={async (saved) => {
+                if (saved?.id) {
+                  await fetchCustomerDetailsByCustomerId(saved.id);
+                } else if (saved?.mobile) {
+                  await fetchCustomerDetailsBasedOnMobile(saved.mobile);
+                }
+              }}
+            />
+          )}
           <ConfirmationModal
             isOpen={isConfirmModalOpen}
             onClose={() => setIsConfirmModalOpen(false)}

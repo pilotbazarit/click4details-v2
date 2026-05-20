@@ -117,9 +117,6 @@ const CategoryModal = ({ open, setOpen, categories, getCategories, initialData }
         setValue('c_parent_id', null, { shouldValidate: true });
     };
 
-
-    console.log("initialData", initialData);
-
     const onSubmit = async (data) => {
         console.log("Form Data Submitted: ", data);
         const payload = {

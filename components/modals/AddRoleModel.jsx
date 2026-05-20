@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -6,62 +6,107 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import toast from "react-hot-toast";
 import UserService from '@/services/UserService'
 
+
+const getPermissionList = (permissions) => {
+    if (Array.isArray(permissions)) {
+        return permissions;
+    }
+
+    if (typeof permissions !== 'string') {
+        return [];
+    }
+
+    const trimmedPermissions = permissions.trim();
+
+    if (!trimmedPermissions) {
+        return [];
+    }
+
+    try {
+        const parsedPermissions = JSON.parse(trimmedPermissions);
+        return Array.isArray(parsedPermissions) ? parsedPermissions : [parsedPermissions];
+    } catch (error) {
+        return trimmedPermissions.includes(',')
+            ? trimmedPermissions.split(',').map((permission) => permission.trim())
+            : [trimmedPermissions];
+    }
+};
+
+const normalizePermissionIds = (permissions) => {
+    const permissionIds = [];
+
+    getPermissionList(permissions).forEach((permission) => {
+        if (permission === undefined || permission === null || permission === '') {
+            return;
+        }
+
+        if (typeof permission !== 'object') {
+            permissionIds.push(permission);
+            return;
+        }
+
+        if (Array.isArray(permission.permissions)) {
+            permission.permissions.forEach((item) => {
+                if (item?.p_is_selected && item?.p_id) {
+                    permissionIds.push(item.p_id);
+                }
+            });
+            return;
+        }
+
+        const resolvedPermissionId = permission.p_id ?? permission.id ?? permission.value ?? null;
+
+        if (resolvedPermissionId) {
+            permissionIds.push(resolvedPermissionId);
+        }
+    });
+
+    return [...new Set(permissionIds.map((id) => String(id)))];
+};
+
+const applySelectedPermissions = (sections, selectedPermissionIds = null) => {
+    const selectedPermissionIdSet = Array.isArray(selectedPermissionIds)
+        ? new Set(selectedPermissionIds)
+        : null;
+
+    return (Array.isArray(sections) ? sections : []).map((section) => ({
+        ...section,
+        permissions: Array.isArray(section?.permissions)
+            ? section.permissions.map((permission) => ({
+                ...permission,
+                p_is_selected: selectedPermissionIdSet
+                    ? selectedPermissionIdSet.has(String(permission?.p_id))
+                    : !!permission?.p_is_selected,
+            }))
+            : [],
+    }));
+};
 
 
 const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
     const [roleNameError, setRoleNameError] = useState("");
 
     const [roleName, setRoleName] = useState("");
+    const [typeName, setTypeName] = useState("");
     const [permissionNames, setPermissionNames] = useState([]);
     const [isActive, setIsActive] = useState(true);
 
     useEffect(() => {
         if (selectedItem && selectedItem.r_id) {
             setRoleName(selectedItem.r_name || "");
+            setTypeName(selectedItem.r_type || "");
             setIsActive(selectedItem.r_status === "active");
         } else {
             setRoleName("");
+            setTypeName("");
             setIsActive(true);
         }
     }, [selectedItem]);
 
     // console.log("selectedItem", selectedItem);
-
-    // Helper to update permission selection
-    const updatePermissionSelection = () => {
-        if (selectedItem?.r_permissions) {
-            let permissionIds = JSON.parse(selectedItem?.r_permissions);
-            permissionIds = permissionIds
-                .map((id) => typeof id === 'string' ? Number(id) : id)
-                .filter((id) => typeof id === 'number' && !isNaN(id));
-            setPermissionNames((prev) => prev.map((sections) => ({
-                ...sections,
-                permissions: sections.permissions.map((permission) => ({
-                    ...permission,
-                    p_is_selected: permissionIds.includes(permission.p_id)
-                }))
-            })));
-        } else {
-            setPermissionNames((prev) => prev.map((sections) => ({
-                ...sections,
-                permissions: sections.permissions.map((permission) => ({
-                    ...permission,
-                    p_is_selected: false
-                }))
-            })));
-        }
-    };
-
-    useEffect(() => {
-        updatePermissionSelection();
-    }, [open, selectedItem, permissionNames.length]);
-
 
     const [submitLoading, setSubmitLoading] = useState(false);
 
@@ -77,7 +122,7 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
         try {
             let permissionArr = [];
             permissionNames.forEach((role) => {
-                role.permissions.forEach((perm) => {
+                role?.permissions?.forEach((perm) => {
                     if (perm.p_is_selected) {
                         permissionArr.push(perm.p_id);
                     }
@@ -87,6 +132,7 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
             // Prepare payload
             const payload = {
                 r_name: roleName,
+                r_type: typeName,
                 r_status: isActive ? 'active' : 'inactive',
                 r_permissions: permissionArr
             };
@@ -133,18 +179,17 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
 
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen);
-        selectedItem = null;
     };
 
-    const handlePermissionChange = (roleName, permissionName, e) => {
+    const handlePermissionChange = (roleName, permissionId, checked) => {
         setPermissionNames((prevPermissions) =>
             prevPermissions.map((role) =>
                 role.name === roleName
                     ? {
                         ...role,
                         permissions: role.permissions.map((perm) =>
-                            perm.p_name === permissionName
-                                ? { ...perm, p_is_selected: e.target.checked }
+                            perm.p_id === permissionId
+                                ? { ...perm, p_is_selected: checked }
                                 : perm
                         ),
                     }
@@ -153,13 +198,45 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
         );
     };
 
-    const getUserPermissionName = async () => {
+    const handleTypeChange = (e) => {
+        const nextType = e.target.value;
+        setTypeName(nextType);
+
+        if (!nextType) {
+            setPermissionNames([]);
+            return;
+        }
+    };
+
+    const getUserPermissionName = async (selectedType = typeName) => {
+        if (!selectedType) {
+            setPermissionNames([]);
+            return;
+        }
+
         try {
-            const response = await UserService.Queries.getUserPermissionName({
-                _role_id: 0
-            });
+            const hasStoredPermissions = selectedItem
+                ? Object.prototype.hasOwnProperty.call(selectedItem, 'r_permissions')
+                : false;
+            const shouldApplyStoredPermissions =
+                selectedItem?.r_id &&
+                selectedType === selectedItem?.r_type &&
+                hasStoredPermissions;
+            const params = {
+                _role_id: selectedItem?.r_id || 0,
+                _type: selectedType
+            };
+
+            const response = await UserService.Queries.getUserPermissionName(params);
             if (response.status == "success") {
-                setPermissionNames(response.data);
+                setPermissionNames(
+                    applySelectedPermissions(
+                        response.data,
+                        shouldApplyStoredPermissions
+                            ? normalizePermissionIds(selectedItem?.r_permissions)
+                            : null
+                    )
+                );
             }
         } catch (error) {
             // console.log("error", error);
@@ -167,8 +244,15 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
     };
 
     useEffect(() => {
-        getUserPermissionName();
-    }, []);
+        if (!open) return;
+
+        if (!typeName) {
+            setPermissionNames([]);
+            return;
+        }
+
+        getUserPermissionName(typeName);
+    }, [open, typeName, selectedItem?.r_id, selectedItem?.r_type, selectedItem?.r_permissions]);
 
 
     return (
@@ -201,6 +285,23 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
                     )}
 
                     <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Type
+                        </label>
+                        <select
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            value={typeName || ""}
+                            onChange={handleTypeChange}
+                        >
+                            <option value="">Select Type</option>
+                            <option value="system">System</option>
+                            <option value="general">General</option>
+                            <option value="custom">Custom</option>
+                            <option value="reserved">Reserved</option>
+                        </select>
+                    </div>
+
+                    <div className="mb-4">
                         <div className='mb-4'>
                             <span className="font-bold text-xl">Role Permissions</span>
                         </div>
@@ -227,16 +328,16 @@ const AddRoleModal = ({ open, setOpen, selectedItem, setRoles }) => {
 
                         <div className="space-y-4">
                             {permissionNames.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between border-b pb-2">
-                                    <span className="w-1/3">{item?.name}</span>
-                                    <div className="flex gap-6">
+                                <div key={index} className="flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <span className="sm:w-1/3 break-words">{item?.name}</span>
+                                    <div className="flex flex-wrap gap-x-6 gap-y-2 sm:w-2/3">
                                         {item?.permissions.map((action, index) => (
                                             <label key={index} className="flex items-center gap-1 text-sm">
                                                 <input
                                                     type="checkbox"
                                                     className="accent-purple-600"
-                                                    checked={action.p_is_selected || false}
-                                                    onChange={(e) => handlePermissionChange(item?.name, action?.p_name, e)}
+                                                    checked={!!action.p_is_selected}
+                                                    onChange={(e) => handlePermissionChange(item?.name, action?.p_id, e.target.checked)}
                                                 />
                                                 {action?.p_name}
                                             </label>

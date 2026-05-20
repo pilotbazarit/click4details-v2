@@ -26,6 +26,9 @@ const Commands = {
         }
     }),
 
+
+    deleteUserRolePermission: (id) => commandApi.delete(`/api/user-role-permission/${id}`),
+
     updatePermission: (id, data) => commandApi.post(`/api/permission/${id}`, data, {
         headers: {
             "Content-Type": "multipart/form-data",
@@ -41,6 +44,8 @@ const Queries = {
 
 
     getPermissions: (params) => commandApi.get(`/api/permission`, { params }),
+
+    getUserPermissions: (params) => commandApi.get(`/api/user-role-permission`, { params }),
     
     getSingleUserRolePermission: (id) => commandApi.get(`/api/user-role-permission/${id}`),
     // getPackageById: (params) => commandApi.get(`/api/package`, { params }),

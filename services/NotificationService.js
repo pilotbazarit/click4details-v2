@@ -32,6 +32,13 @@ const Commands = {
     api.post("/api/search-history-notifications/mark-all-read", {}, {
       headers: { Accept: "application/json" },
     }),
+
+
+  //vehicle notification read and unread // Aminul
+  vehicleNotificationRead: (id) =>
+    api.post(`/api/notifications/mark-as-read/${id}`, {}, {
+      headers: { Accept: "application/json" },
+    }),
 };
 
 export default { Queries, Commands };

@@ -75,7 +75,7 @@ const MasterDataTypeModal = ({ open, setOpen, getMasterDataTypes, initialData })
                 //insert
                 const response = await MasterDataService.Commands.storeMasterDataType({
                     mdt_title: data.mdt_title,
-                    mdt_description: data.mdt_description,
+                    // mdt_description: data.mdt_description,
                 });
 
                 if (response?.status === 'success') {
@@ -100,11 +100,11 @@ const MasterDataTypeModal = ({ open, setOpen, getMasterDataTypes, initialData })
     useEffect(() => {
         if (initialData) {
             setValue('mdt_title', initialData.mdt_title);
-            setValue('mdt_description', initialData.mdt_description);
+            // setValue('mdt_description', initialData.mdt_description);
         } else {
             reset({
                 mdt_title: '',
-                mdt_description: ''
+                // mdt_description: ''
             });
         }
     }, [initialData, reset, setValue]);
@@ -141,7 +141,7 @@ const MasterDataTypeModal = ({ open, setOpen, getMasterDataTypes, initialData })
                             {errors.mdt_title && <p className="text-red-600 text-sm">{errors.mdt_title.message}</p>}
                         </div>
 
-
+{/* 
                         <div>
                             <Label htmlFor="mdt_description">Description</Label>
                             <Textarea
@@ -150,7 +150,7 @@ const MasterDataTypeModal = ({ open, setOpen, getMasterDataTypes, initialData })
                                 placeholder="description"
                                 value={description}
                             />
-                        </div>
+                        </div> */}
                     </div>
 
 

@@ -13,7 +13,7 @@ import { set } from 'lodash';
 
 
 
-const ProductFeatureSpecificationModal = ({ open, setFeatureModalShow, formData, setFormData, featureData, setSelectedFsId }) => {
+const ProductFeatureSpecificationModal = ({ open, setFeatureModalShow, formData, setFormData, featureData, setSelectedFsId, user = null }) => {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -179,24 +179,34 @@ const ProductFeatureSpecificationModal = ({ open, setFeatureModalShow, formData,
                                                 ))
                                             }
                                         </div>
-                                        <div>
-                                            <button className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                                <Plus />
-                                            </button>
-                                        </div>
+                                        {
+                                            user && (user.user_mode === 'admin' || user.user_mode === 'supreme') && (
+
+                                                <div>
+                                                    <button className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                                        <Plus />
+                                                    </button>
+                                                </div>
+                                            )
+
+                                        }
                                     </div>
                                 </div>
                             ))
                         }
                     </div>
 
+                    {
+                        user && (user.user_mode === 'admin' || user.user_mode === 'supreme') && (
 
-                    <div className="flex items-center justify-end gap-2 mt-4">
-                        <span className="font-medium">Add Feature Head </span>
-                        <button className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                            <Plus />
-                        </button>
-                    </div>
+                            <div className="flex items-center justify-end gap-2 mt-4">
+                                <span className="font-medium">Add Feature Head </span>
+                                <button className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                    <Plus />
+                                </button>
+                            </div>
+                        )
+                    }
                 </div>
 
                 <DialogFooter>

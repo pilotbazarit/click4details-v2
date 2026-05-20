@@ -5,9 +5,24 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { usePathname, useRouter } from "next/navigation";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
     const [selectedAccounts, setSelectedAccounts] = useState([]);
+    const router = useRouter();
+    const pathname = usePathname();
+    const isCompanyShop = pathname.includes("company-shop");
+    const { selectedCompanyShop, permissionList } = useAppContext();
+    const hasShareBankInformationPermission =
+        !isCompanyShop ||
+        hasPermission(
+            permissionList,
+            Number(selectedCompanyShop?.shop?.s_id),
+            "Vehicle",
+            "ShareBankInformation"
+        );
 
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen);
@@ -47,6 +62,10 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
 
     const handleConfirm = () => {
         if (selectedAccounts.length === 0) return;
+        if (!hasShareBankInformationPermission) {
+            alert("You don't have permission");
+            return;
+        }
 
         // Build WhatsApp message with all selected bank account details
         let message = `*Bank Account Details*\n\n`;
@@ -72,6 +91,12 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
         setSelectedAccounts([]);
     };
 
+    const handleAddNewBankClick = () => {
+        setOpen(false);
+        setSelectedAccounts([]);
+        router.push('/profile#bank-account-information-section');
+    };
+
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -82,11 +107,10 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
                 <div className='mt-6 space-y-3'>
                     {bankAccounts && bankAccounts.length > 0 && (
                         <div
-                            className={`border rounded-lg p-4 cursor-pointer transition bg-gray-50 ${
-                                isAllSelected
+                            className={`border rounded-lg p-4 cursor-pointer transition bg-gray-50 ${isAllSelected
                                     ? 'border-blue-500 bg-blue-100'
                                     : 'border-gray-400 hover:border-blue-300'
-                            }`}
+                                }`}
                             onClick={handleSelectAll}
                         >
                             <div className='flex items-center justify-between'>
@@ -99,11 +123,10 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
                                     </p>
                                 </div>
                                 <div className='ml-4'>
-                                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                                        isAllSelected
+                                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${isAllSelected
                                             ? 'border-blue-500 bg-blue-500'
                                             : 'border-gray-400'
-                                    }`}>
+                                        }`}>
                                         {isAllSelected && (
                                             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
@@ -121,11 +144,10 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
                             return (
                                 <div
                                     key={index}
-                                    className={`border rounded-lg p-4 cursor-pointer transition ${
-                                        isSelected
+                                    className={`border rounded-lg p-4 cursor-pointer transition ${isSelected
                                             ? 'border-blue-500 bg-blue-50'
                                             : 'border-gray-300 hover:border-blue-300'
-                                    }`}
+                                        }`}
                                     onClick={() => handleAccountSelect(account)}
                                 >
                                     <div className='flex items-start justify-between'>
@@ -141,11 +163,10 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
                                             </div>
                                         </div>
                                         <div className='ml-4'>
-                                            <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                                                isSelected
+                                            <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${isSelected
                                                     ? 'border-blue-500 bg-blue-500'
                                                     : 'border-gray-400'
-                                            }`}>
+                                                }`}>
                                                 {isSelected && (
                                                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
@@ -164,18 +185,32 @@ const BankAccountSelectModal = ({ open, setOpen, bankAccounts = [] }) => {
                     )}
                 </div>
 
+                {
+                    !isCompanyShop && (
+                        <div className='mt-6'>
+                            <button
+                                type='button'
+                                onClick={handleAddNewBankClick}
+                                className='w-full py-3 rounded-lg font-medium transition border border-blue-500 text-blue-600 hover:bg-blue-50'
+                            >
+                                Add New Bank
+                            </button>
+                        </div>
+                    )
+                }
+
+
                 {bankAccounts && bankAccounts.length > 0 && (
                     <div className='mt-6'>
                         <button
                             onClick={handleConfirm}
                             disabled={selectedAccounts.length === 0}
-                            className={`w-full py-3 rounded-lg font-medium transition ${
-                                selectedAccounts.length > 0
+                            className={`w-full py-3 rounded-lg font-medium transition ${selectedAccounts.length > 0
                                     ? 'bg-blue-500 text-white hover:bg-blue-600'
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
+                                }`}
                         >
-                            Confirm Selection {selectedAccounts.length > 0 && `(${selectedAccounts.length})`}
+                            Confirm Selection & Send {selectedAccounts.length > 0 && `(${selectedAccounts.length})`}
                         </button>
                     </div>
                 )}

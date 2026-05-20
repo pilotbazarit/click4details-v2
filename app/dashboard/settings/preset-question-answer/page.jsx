@@ -29,10 +29,12 @@ import Swal from "sweetalert2";
 import MasterDataService from "@/services/MasterDataService";
 import PresetQuestionModal from "@/components/modals/PresetQuestionModal";
 import PresetQuestionService from "@/services/PresetQuestionService";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const PresetQuestionAnswer = () => {
     const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [query, setQuery] = useState("");
     const [packages, setPackages] = useState([]);
     const [brands, setBrands] = useState([]);
     const [models, setModels] = useState([]);
@@ -41,8 +43,22 @@ const PresetQuestionAnswer = () => {
     const [presetQuestions, setPresetQuestions] = useState([]);
     const [selectedModel, setSelectedModel] = useState(null);
     const [presetCategories, setPresetCategories] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState();
+    const [itemsPerPage, setItemsPerPage] = useState(25);
+    const { permissionList, user } = useAppContext();
 
+    const canShowAddPresetQuestionAnswerButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "PresetQuestionAnswer", "ShowPresetQuestionAnswerAddButton");
 
+    const canShowEditPresetQuestionAnswerButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "PresetQuestionAnswer", "ShowPresetQuestionAnswerEditButton");
+
+    const canShowDeletePresetQuestionAnswerButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "PresetQuestionAnswer", "ShowPresetQuestionAnswerDeleteButton");
 
 
 
@@ -72,8 +88,8 @@ const PresetQuestionAnswer = () => {
 
 
 
-    const handleSearchChange = (e) => {
-        setSearchTerm(e.target.value);
+    const fetchSearchResults = () => {
+        getPresetQuestionAnswer(query);
     };
 
     // const filteredItem = packages.filter((item) =>
@@ -121,34 +137,39 @@ const PresetQuestionAnswer = () => {
         }
     };
 
-
-    const getPackages = async () => {
-
-    }
-
-
-    const getPresetQuestionAnswer = async () => {
+    const getPresetQuestionAnswer = async (value = query) => {
         try {
             setLoading(true);
             const response = await PresetQuestionService.Queries.getPresetQuestionAnswerList({
-                _page: 1,
-                _perPage: 1000,
+                _page: currentPage,
+                _perPage: itemsPerPage,
+                _title: value,
             });
 
-            setPresetQuestions(response?.data?.data);
-            setLoading(false);
+            if (response?.status === "success") {
+                setTotalItems(response?.data?.total);
+                setPresetQuestions(response?.data?.data || []);
+                setLoading(false);
+            } else {
+                setPresetQuestions([]);
+                setLoading(false);
+                toast.error(response?.data?.message || "Failed to fetch preset question answers");
+            }
         } catch (error) {
             setLoading(false);
+            setPresetQuestions([]);
             toast.error(error.response?.data?.message || "Failed to fetch data types");
         }
     }
 
 
     useEffect(() => {
-        getPresetQuestionAnswer();
         getPresetCategories();
-        getPackages();
     }, []);
+
+    useEffect(() => {
+        getPresetQuestionAnswer();
+    }, [currentPage, itemsPerPage]);
 
 
     return (
@@ -157,28 +178,40 @@ const PresetQuestionAnswer = () => {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                     <h2 className="text-xl text-gray-800">All Preset Question & Answer</h2>
-                    <Button
-                        onClick={() => {
-                            setOpen(true);
-                            setSelectedModel(null);
-                        }}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Preset Question & Answer
-                    </Button>
+                    {
+                        canShowAddPresetQuestionAnswerButton && (
+                            <Button
+                                onClick={() => {
+                                    setOpen(true);
+                                    setSelectedModel(null);
+                                }}
+                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                                <svg
+                                    className="w-5 h-5"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Preset Question & Answer
+                            </Button>
+                        )
+                    }
                 </div>
 
                 {/* Search Filter */}
-                <TableFilter searchTerm={searchTerm} setSearchTerm={handleSearchChange} />
+                <TableFilter
+                    query={query}
+                    setQuery={setQuery}
+                    setCurrentPage={setCurrentPage}
+                    fetchSearchResults={fetchSearchResults}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    placeholder="Search by title..."
+                />
 
                 {/* Table Container */}
                 <div className="overflow-x-auto rounded-md border border-gray-300 mt-4">
@@ -229,34 +262,47 @@ const PresetQuestionAnswer = () => {
                                         </TableCell>
 
                                         <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium">
-                                            <button
-                                                onClick={() => handleEdit(item)}
-                                                className="text-blue-600 hover:text-blue-800"
-                                                aria-label={`Edit shop ${item.pqa_title}`}
-                                            >
-                                                <Pencil size={18} />
-                                            </button>
-                                            <button
-                                                // Add delete handler here
-                                                onClick={() => handleDelete(item?.pqa_id)}
-                                                className="text-red-600 hover:text-red-800"
-                                                aria-label={`Delete shop ${item.pqa_title}`}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+
+                                            {
+                                                canShowEditPresetQuestionAnswerButton && (
+                                                    <button
+                                                        onClick={() => handleEdit(item)}
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                        aria-label={`Edit shop ${item.pqa_title}`}
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                )
+                                            }
+
+
+                                            {
+                                                canShowDeletePresetQuestionAnswerButton && (
+                                                    <button
+                                                        // Add delete handler here
+                                                        onClick={() => handleDelete(item?.pqa_id)}
+                                                        className="text-red-600 hover:text-red-800"
+                                                        aria-label={`Delete shop ${item.pqa_title}`}
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )
+                                            }
+
+
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                                    <TableCell colSpan={7} className="text-center py-4 text-gray-500">
                                         {loading ? (
                                             <div className="flex items-center justify-center space-x-2">
                                                 <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
                                                 <span>Loading...</span>
                                             </div>
                                         ) : (
-                                            <div> No Package found.</div>
+                                            <div>No Preset Question & Answer found.</div>
                                         )}
                                     </TableCell>
                                 </TableRow>
@@ -265,7 +311,12 @@ const PresetQuestionAnswer = () => {
                     </Table>
 
                     {/* Pagination */}
-                    <Pagination />
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={totalItems}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={(page) => setCurrentPage(page)}
+                    />
                 </div>
             </main>
             <Footer />

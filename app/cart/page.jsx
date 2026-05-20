@@ -18,6 +18,9 @@ const Cart = () => {
     console.error("Failed to parse user data:", error);
   }
 
+
+  console.log("cartItems", cartItems);
+
   const handleRemoveFromCart = (item) => {
     let cartItem = {
       c_user_id: parsedUser?.id || null,
@@ -70,18 +73,29 @@ const Cart = () => {
                   if (!item || item.quantity <= 0) return null;
 
                   const itemId = item.ci_product_id;
+                  const imageSrc =
+                    typeof item?.ci_url === "string"
+                      ? item.ci_url.trim()
+                      : item?.ci_url;
+
                   return (
                     <tr key={index}>
                       <td className="flex items-center gap-4 py-4 md:px-4 px-1">
                         <div>
-                          <div className="rounded-lg overflow-hidden bg-gray-500/10 p-2">                          
-                            <Image
-                              src={item?.ci_url}
-                              alt={item?.ci_name}
-                              className="w-16 h-auto object-cover mix-blend-multiply"
-                              width={1280}
-                              height={720}
-                            />
+                          <div className="rounded-lg overflow-hidden bg-gray-500/10 p-2">
+                            {imageSrc ? (
+                              <Image
+                                src={imageSrc}
+                                alt={item?.ci_name}
+                                className="w-16 h-auto object-cover mix-blend-multiply"
+                                width={1280}
+                                height={720}
+                              />
+                            ) : (
+                              <div className="flex h-16 w-16 items-center justify-center text-center text-xs font-medium text-gray-500">
+                                No image
+                              </div>
+                            )}
                           </div>
                           <button
                             className="md:hidden text-xs text-orange-600 mt-1"
@@ -101,10 +115,12 @@ const Cart = () => {
                           </button>
                         </div>
                       </td>
+
+                    
                       <td className="py-4 md:px-4 px-1 text-gray-600">
                         <h1 className="text-sm text-gray-800">{item?.ci_name}</h1>
                       </td>
-                      <td className="py-4 md:px-4 px-1 text-gray-600">{currency}{item?.ci_price}</td>
+                      <td className="py-4 md:px-4 px-1 text-gray-600">{item?.ci_currency + " "}{item?.ci_price}</td>
                       {/* <td className="py-4 md:px-4 px-1">
                         <div className="flex items-center md:gap-2 gap-1">
                           <button onClick={() => updateCartQuantity(itemId, item.quantity - 1)}>

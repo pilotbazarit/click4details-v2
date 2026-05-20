@@ -49,8 +49,12 @@ export function createApiRequest(baseUrl, config = {}) {
         localStorage.removeItem("user");
 
         if (error.response?.data?.message === 'Unauthenticated.') {
-          window.location.href = "/";
-          return; // Prevent further execution
+          // Check if already on home page to avoid infinite redirect loop
+          if (window.location.pathname !== '/') {
+            window.location.href = "/";
+          }
+          // Return a rejected promise without calling errorHandler to avoid console errors
+          return Promise.reject({ silent: true, ...error });
         }
       }
 

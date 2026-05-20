@@ -12,6 +12,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import toast from "react-hot-toast";
 import PermissionService from '@/services/PermissionService';
+import { PERMISSION_MODEL_OPTIONS } from "@/lib/permissionModelOptions";
 
 const schema = yup.object().shape({
     p_type: yup.string().required("Type is required"),
@@ -33,7 +34,7 @@ const AddPermissionModal = ({ open, setOpen, selectedItem, setPermissions }) => 
     const onSubmit = async (data) => {
         try {
             if (selectedItem && selectedItem.p_id) {
-                console.log("data", data);
+             
                 // Update existing package
                 const response = await PermissionService.Commands.updatePermission(selectedItem.p_id, {
                     ...data,
@@ -52,7 +53,6 @@ const AddPermissionModal = ({ open, setOpen, selectedItem, setPermissions }) => 
                 }
             } else {
                 // Create new package
-                console.log("data", data);
                 const response = await PermissionService.Commands.storePermission(data);
 
                 if (response.status === "success") {
@@ -85,11 +85,9 @@ const AddPermissionModal = ({ open, setOpen, selectedItem, setPermissions }) => 
             setValue("p_type", selectedItem.p_type);
             setValue("p_model", selectedItem.p_model);
             setValue("p_status", selectedItem.p_status);
+            setValue("p_description", selectedItem.p_description || "");
         }
     }, [selectedItem]);
-
-
-    const modelData = ['User', 'MasterDataType', 'MasterData', 'Package', 'Vehicle', 'FeatureSpecification', 'Permission', 'Role', 'Shop', 'UserRolePermission', 'UserProfile']
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -130,7 +128,7 @@ const AddPermissionModal = ({ open, setOpen, selectedItem, setPermissions }) => 
                                 {...register("p_model")}
                             >
                                 <option value="">Select Model</option>
-                                {modelData.map((item, index) => (
+                                {PERMISSION_MODEL_OPTIONS.map((item, index) => (
                                     <option key={index} value={item} >{item}</option>
                                 ))}
                             </select>
@@ -152,6 +150,7 @@ const AddPermissionModal = ({ open, setOpen, selectedItem, setPermissions }) => 
                                 <option value="reserved" >Reserved</option>
                                 <option value="system" >System</option>
                                 <option value="user" >User</option>
+                                <option value="general" >General</option>
                             </select>
                             {errors.p_type && <p className="text-red-600 text-sm">{errors.p_type.message}</p>}
                         </div>
@@ -170,6 +169,20 @@ const AddPermissionModal = ({ open, setOpen, selectedItem, setPermissions }) => 
                                  <option value="inactive" >Inactive</option>
                             </select>
                             {errors.p_status && <p className="text-red-600 text-sm">{errors.p_status.message}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full">
+                            <label className="text-base font-medium" htmlFor="p_description">
+                                Description
+                            </label>
+                            <textarea
+                                id="p_description"
+                                className="outline-none py-2 px-3 rounded border border-gray-400 w-full min-h-24"
+                                placeholder="Enter description"
+                                disabled={isSubmitting}
+                                {...register("p_description")}
+                            />
+                            {errors.p_description && <p className="text-red-600 text-sm">{errors.p_description.message}</p>}
                         </div>
 
                         

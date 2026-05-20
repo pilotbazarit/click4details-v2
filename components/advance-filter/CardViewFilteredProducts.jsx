@@ -1,11 +1,13 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { useAdvanceFilterProductContext } from "@/context/AdvanceFilterProductContextProvider";
 import ProductCard from "../ProductCard";
+import { useAppContext } from "@/context/AppContext";
 
 
 const CardViewFilteredProducts = ({filterFields}) => {
 
     const { products, loading, hasMore, getAllProduct } = useAdvanceFilterProductContext();
+    const { user } = useAppContext();
     const observerRef = useRef();
     
     const lastProductRef = useCallback (
@@ -47,19 +49,18 @@ const CardViewFilteredProducts = ({filterFields}) => {
                 mt-6 
                 pb-14 
                 w-full 
-                xl:px-16 2xl:px-18 3xl:px-20 4xl:px-24
-                max-w-screen-3xl mx-auto"
+                mx-auto"
             >
                 {
                     products && products.length > 0 && products.map((product, index) => {
                         if (index === products.length - 1) {
                             return (
                                 <div ref={lastProductRef} key={index}>
-                                    <ProductCard product={product} />
+                                    <ProductCard product={product} user={user} />
                                 </div>
                             );
                         }
-                        return <ProductCard key={index} product={product} />;
+                        return <ProductCard key={index} product={product} user={user} />;
                     })
                 }
     

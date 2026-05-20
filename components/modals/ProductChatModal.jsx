@@ -14,6 +14,7 @@ import PresetQuestionService from '@/services/PresetQuestionService';
 import ConversationService from '@/services/ConversationService';
 import { set } from 'lodash';
 import Link from 'next/link';
+import { components as selectComponents } from 'react-select';
 
 const presetQuestionsOld = [
     { value: 'Is this available?', label: 'Is this available?' },
@@ -52,6 +53,53 @@ const formatIndianNumber = (value) => {
     return new Intl.NumberFormat('en-IN').format(Number(digits));
 };
 
+const numberWordsUnderTwenty = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const numberWordsTens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+const numberToWordsBelowThousand = (num) => {
+    if (num < 20) return numberWordsUnderTwenty[num];
+    if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const unit = num % 10;
+        return unit ? `${numberWordsTens[ten]} ${numberWordsUnderTwenty[unit]}` : numberWordsTens[ten];
+    }
+
+    const hundred = Math.floor(num / 100);
+    const remainder = num % 100;
+    return remainder
+        ? `${numberWordsUnderTwenty[hundred]} Hundred ${numberToWordsBelowThousand(remainder)}`
+        : `${numberWordsUnderTwenty[hundred]} Hundred`;
+};
+
+const numberToIndianWords = (value) => {
+    const numeric = Number(String(value).replace(/\D+/g, ''));
+    if (!numeric) return '';
+    if (numeric < 1000) return numberToWordsBelowThousand(numeric);
+
+    const parts = [];
+    const units = [
+        { value: 10000000, label: 'Crore' },
+        { value: 100000, label: 'Lakh' },
+        { value: 1000, label: 'Thousand' },
+    ];
+
+    let remaining = numeric;
+
+    units.forEach((unit) => {
+        if (remaining >= unit.value) {
+            const count = Math.floor(remaining / unit.value);
+            parts.push(`${numberToIndianWords(count)} ${unit.label}`);
+            remaining %= unit.value;
+        }
+    });
+
+    if (remaining > 0) {
+        parts.push(numberToWordsBelowThousand(remaining));
+    }
+
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+};
+
 const buildPriceOptions = (baseValue) => {
     if (baseValue === null || baseValue === undefined) {
         return [];
@@ -64,8 +112,49 @@ const buildPriceOptions = (baseValue) => {
 
     return Array.from({ length: 5 }, (_, i) => {
         const value = `${normalized}${'0'.repeat(i)}`;
-        return { value, label: formatIndianNumber(value) };
+        return {
+            value,
+            label: formatIndianNumber(value),
+            words: numberToIndianWords(value),
+        };
     });
+};
+
+const PriceOption = (props) => {
+    const { data, isSelected } = props;
+
+    return (
+        <selectComponents.Option {...props}>
+            <div className="flex w-full items-start justify-between gap-4">
+                <div className="min-w-0">
+                    <p className="text-[16px] font-semibold leading-[1.1] text-gray-900">{data.label}</p>
+                    <p className="mt-2 text-[14px] leading-[1.25] text-gray-700">{data.words}</p>
+                </div>
+                {/* <span className={`mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] ${isSelected ? 'border-blue-600' : 'border-gray-500'}`}>
+                    {isSelected ? <span className="h-3.5 w-3.5 rounded-full bg-blue-600" /> : null}
+                </span> */}
+            </div>
+        </selectComponents.Option>
+    );
+};
+
+const priceSelectStyles = {
+    menu: (base) => ({
+        ...base,
+        zIndex: 30,
+    }),
+    menuList: (base) => ({
+        ...base,
+        paddingTop: 0,
+        paddingBottom: 0,
+    }),
+    option: (base, state) => ({
+        ...base,
+        padding: '14px 16px',
+        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: state.isFocused ? '#f8fafc' : '#ffffff',
+        color: '#111827',
+    }),
 };
 
 // const categories = [
@@ -590,6 +679,8 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
                             placeholder="Enter Price"
                             isClearable
                             menuPlacement="top"
+                            components={{ Option: PriceOption }}
+                            // styles={priceSelectStyles}
                         />
                     </div>
 

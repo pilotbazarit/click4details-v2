@@ -22,8 +22,6 @@ import toast from 'react-hot-toast';
 const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem }) => {
     const items = selectedItem?.items || [];
 
-    // console.log("selectedItem====", selectedItem);
-
     const handleDelete = async (id) => {
 
         const result = await Swal.fire({

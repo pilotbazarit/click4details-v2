@@ -4,12 +4,12 @@ import { AppContextProvider } from "@/context/AppContext";
 import { Outfit } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
-import MouseTrail from "@/components/MouseTrail";
+// import MouseTrail from "@/components/MouseTrail";
 
 const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500"] });
 
 export const metadata = {
-  title: "Click4Details",
+  title: "Click4Details - Your Ultimate Online Shopping Destination",
   description: "Click4Details - Your one-stop shop for everything",
   icons: {
     icon: [
@@ -23,13 +23,9 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body className={`${outfit.className} antialiased text-gray-700 debug-screens`}>
-        <MouseTrail />
+        {/* <MouseTrail /> */}
         <Toaster position="top-right" />
         <AppContextProvider>
           <TopProgressBar />

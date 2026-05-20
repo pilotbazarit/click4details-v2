@@ -73,8 +73,6 @@ const OrderList = () => {
         // _search: value
       });
 
-      console.log("Response from getCards:===========", response);
-
       if (response?.status == "success") {
         setTotalItems(response?.data?.total)
         setCartItems(response?.data?.data)
@@ -97,8 +95,6 @@ const OrderList = () => {
   };
 
   const handleShow = (item) => {
-
-    console.log("itemmmm", item);
     setSelectedModel(item);
     setOpen(true);
   }
@@ -187,9 +183,6 @@ const OrderList = () => {
   useEffect(() => {
     getOrders();
   }, [currentPage, itemsPerPage]);
-
-
-  console.log("orders---------------", cartItems);
 
 
   return (

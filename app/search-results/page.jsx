@@ -39,6 +39,8 @@ const SearchResultsContent = () => {
     });
   }, [userIdParam, sourceParam, shopIdParam]);
 
+
+
   // Listen for custom event when search is triggered from Navbar (when already on search-results page)
   useEffect(() => {
     const handleSearchQueryChanged = (event) => {
@@ -139,7 +141,10 @@ const SearchResultsContent = () => {
   }, [hasMore, loading]);
 
 
-  // console.log("=======user from AppContext-========:", parsedUser);
+  
+
+
+  // console.log("=======user from sourceParam-========: search result 147", searchParamsState);
 
   return (
     <>
@@ -150,6 +155,12 @@ const SearchResultsContent = () => {
           <p className="text-lg text-gray-600">Discover products matching your search criteria.</p>
           <div className="w-24 h-1 bg-orange-600 rounded-full mt-4"></div>
         </div>
+
+         {/* {
+           console.log("sourceParam: 160", sourceParam)
+         } */}
+
+
         <div className="
               grid 
           grid-cols-1          
@@ -168,7 +179,7 @@ const SearchResultsContent = () => {
           max-w-screen-5xl"
         >
           {products.map((product, index) => (
-            <ProductCard key={index} product={product} parsedUser={parsedUser} />
+            <ProductCard key={index} product={product} parsedUser={parsedUser} sourceParam={sourceParam} />
           ))}
         </div>
 

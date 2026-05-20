@@ -68,7 +68,7 @@ export const MyShopProductContextProvider = ({ children }) => {
   };
 
 
-  console.log("Productsss:", products);
+  // console.log("Productsss:", products);
 
   const getAllGeneralProduct = async (reset = false) => {
     try {

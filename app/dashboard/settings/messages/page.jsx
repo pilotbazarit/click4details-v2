@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, Copy } from 'lucide-react';
 import MessageService from '@/services/MessageService';
 import { toast } from 'react-hot-toast';
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const MessagesPage = () => {
     const [messages, setMessages] = useState([]);
@@ -19,6 +21,21 @@ const MessagesPage = () => {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [messageToDeleteId, setMessageToDeleteId] = useState(null);
 
+    const { user, permissionList } = useAppContext();
+
+    const canShowAddMessageButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "Messages", "ShowMessageAddButton")
+
+    const canShowEditMessageButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "Messages", "ShowMessageEditButton")
+
+
+    const canShowDeleteMessageButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "Messages", "ShowMessageDeleteButton")
+
     useEffect(() => {
         fetchMessages();
     }, []);
@@ -31,7 +48,7 @@ const MessagesPage = () => {
             console.log('Messages response:', response);
             console.log('Response type:', typeof response);
             console.log('Response keys:', Object.keys(response));
-            
+
             if (response && response.success) {
                 setMessages(response.data);
                 console.log('Messages set:', response.data);
@@ -51,7 +68,7 @@ const MessagesPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             if (editingMessage) {
                 const response = await MessageService.Commands.updateMessage(editingMessage.id, formData);
@@ -139,13 +156,18 @@ const MessagesPage = () => {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-                <button
-                    onClick={openModal}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Message
-                </button>
+                {
+                    canShowAddMessageButton && (
+                        <button
+                            onClick={openModal}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add New Message
+                        </button>
+                    )
+                }
+
             </div>
 
             {/* Messages Table */}
@@ -205,30 +227,39 @@ const MessagesPage = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                                message.status === 'active' 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}>
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${message.status === 'active'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-red-100 text-red-800'
+                                                }`}>
                                                 {message.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => handleEdit(message)}
-                                                    className="text-blue-600 hover:text-blue-900"
-                                                    title="Edit"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(message.id)}
-                                                    className="text-red-600 hover:text-red-900"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {
+                                                    canShowEditMessageButton && (
+                                                        <button
+                                                            onClick={() => handleEdit(message)}
+                                                            className="text-blue-600 hover:text-blue-900"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    )
+                                                }
+
+                                                {
+                                                    canShowDeleteMessageButton && (
+                                                        <button
+                                                            onClick={() => handleDelete(message.id)}
+                                                            className="text-red-600 hover:text-red-900"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )
+                                                }
+
                                             </div>
                                         </td>
                                     </tr>
@@ -266,7 +297,7 @@ const MessagesPage = () => {
                                     <input
                                         type="text"
                                         value={formData.title}
-                                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
                                     />
@@ -278,7 +309,7 @@ const MessagesPage = () => {
                                     </label>
                                     <textarea
                                         value={formData.message}
-                                        onChange={(e) => setFormData({...formData, message: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                                         rows="4"
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
@@ -292,7 +323,7 @@ const MessagesPage = () => {
                                     <input
                                         type="text"
                                         value={formData.stage}
-                                        onChange={(e) => setFormData({...formData, stage: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, stage: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="e.g., 15-day followup, 8-day followup"
                                         required
@@ -305,7 +336,7 @@ const MessagesPage = () => {
                                     </label>
                                     <select
                                         value={formData.status}
-                                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
                                     >

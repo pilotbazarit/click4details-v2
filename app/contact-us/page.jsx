@@ -46,7 +46,7 @@ const ContactUs = () => {
                                 </div>
                                 <div>
                                     <strong>✉️ Email:</strong>
-                                    <p>click4details.importer@gmail.com</p>
+                                    <p>pilotbazar.com@gmail.com</p>
                                 </div>
                             </div>
                         </div>

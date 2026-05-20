@@ -1,17 +1,32 @@
 'use client'
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ProductDetailsSlider from "@/components/frontend/ProductDetailsSlider";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Download, Edit, Eye, GitCompare, PhoneOutgoing, Share2, ShoppingCart } from "lucide-react";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ProductDetailsDescription from "@/components/frontend/ProductDetailsDescription";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatPrice } from "@/helpers/functions";
+import { FaWhatsapp } from "react-icons/fa";
+import ProductShareModal from "@/components/modals/ProductShareModal";
+import ShopSelectModal from "@/components/modals/ShopSelectModal";
+import { useAppContext } from "@/context/AppContext";
+import { getSessionId, hasPermission } from "@/lib/utils";
+import ModalSlider from "./ModalSlider";
 
 dayjs.extend(relativeTime);
+
+const formatProductDetailsDate = (date) => {
+    if (!date) return "N/A";
+
+    const parsedDate = dayjs(date);
+    if (!parsedDate.isValid()) return "N/A";
+
+    return parsedDate.format("YYYY-MM-DD");
+};
 
 const ProductDetails = ({ productDetails }) => {
     const [sliderImage, setSliderImage] = useState([])
@@ -19,7 +34,75 @@ const ProductDetails = ({ productDetails }) => {
     const [showModal, setShowModal] = useState(false);
     const [folderName, setFolderName] = useState("");
     const pathname = usePathname();
+    const router = useRouter();
+    const { addToCart, toggleCompare, isInCompare, permissionList } = useAppContext();
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shopModalOpen, setShopModalOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showDocumentModal, setShowDocumentModal] = useState(false);
+
+
+    const additionalDocumentImages = useMemo(() => (
+        Array.isArray(productDetails?.data?.v_docs)
+            ? productDetails.data.v_docs
+            : Array.isArray(productDetails?.v_docs)
+                ? productDetails.v_docs
+                : []
+    )
+        .map((doc) => doc?.url || doc?.secure_url)
+        .filter(Boolean), [productDetails]);
+
+    
+
+    const additionalSecretDocumentImages = useMemo(() => (
+        Array.isArray(productDetails?.data?.v_secret_docs)
+            ? productDetails.data.v_secret_docs
+            : Array.isArray(productDetails?.v_secret_docs)
+                ? productDetails.v_secret_docs
+                : []
+    )
+        .map((doc) => doc?.url || doc?.secure_url)
+        .filter(Boolean), [productDetails]);
+
+
+    // console.log("productDetails?.data-----------------------", productDetails);
+
+    // ---------- Custom Helper ----------
+    let isMyShop = pathname.includes("my-shop");
+    let isCompanyShop = pathname.includes("company-shop");
+    const userMode = String(user?.user_mode || "").toLowerCase();
+
+
+
+    const canShowAdditionalDocument =
+        additionalDocumentImages.length > 0 &&
+        (
+            userMode === "supreme" ||
+            (
+                (userMode === "pbl" || userMode === "admin") &&
+                hasPermission(permissionList, 0, "Vehicle", "AdditionalDocumentShow")
+            )
+        );
+
+
+    const canShowAdditionalSecretDocument =
+        additionalSecretDocumentImages.length > 0 &&
+        !isMyShop &&
+        !isCompanyShop &&
+        (
+            userMode === "supreme" ||
+            (
+                (userMode === "pbl" || userMode === "admin") &&
+                hasPermission(permissionList, 0, "Vehicle", "AdditionalSecretDocumentShow")
+            )
+        );
+
+
+
+    const canShowChassisNumber =
+        isMyShop ||
+        isCompanyShop ||
+        (user && ["supreme", "admin", "pbl"].includes(user.user_type));
 
     const handleCopy = (e) => {
         e.preventDefault();
@@ -45,6 +128,9 @@ const ProductDetails = ({ productDetails }) => {
             .slice(0, -1) // শেষের ID বাদ দেবে
             .join("/");
 
+    const isPublicProductDetails = basePath === "/product";
+    const isMyOrCompanyDetails = basePath === "/product/my-shop" || basePath === "/product/company-shop";
+
     // console.log("basePath===========", basePath);
 
     useEffect(() => {
@@ -55,15 +141,27 @@ const ProductDetails = ({ productDetails }) => {
                     sliderImages.push(img.url);
                 });
             }
+            if (canShowAdditionalDocument) {
+                sliderImages.push(...additionalDocumentImages);
+            }
             setSliderImage(sliderImages);
         }
-    }, [productDetails]);
+    }, [productDetails, canShowAdditionalDocument, additionalDocumentImages]);
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
-        if (userInfo) {
-            setUser(JSON.parse(userInfo));
+        if (!userData) {
+            setUser(null);
+            return;
+        }
+
+        try {
+            const userInfo = JSON.parse(userData);
+            const normalizedUser = typeof userInfo === "string" ? JSON.parse(userInfo) : userInfo;
+            setUser(normalizedUser);
+        } catch (error) {
+            console.error("Failed to parse user info:", error);
+            setUser(null);
         }
     }, []);
 
@@ -118,11 +216,140 @@ const ProductDetails = ({ productDetails }) => {
         }
     };
 
-    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
+    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
+
+    const getYouTubeVideoId = (url = "") => {
+        const rawUrl = String(url || "").trim();
+        if (!rawUrl) return "";
+
+        const shortsMatch = rawUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+        if (shortsMatch?.[1]) return shortsMatch[1];
+
+        const embedMatch = rawUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+        if (embedMatch?.[1]) return embedMatch[1];
+
+        const shortLinkMatch = rawUrl.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+        if (shortLinkMatch?.[1]) return shortLinkMatch[1];
+
+        try {
+            const parsedUrl = new URL(rawUrl);
+            if (parsedUrl.hostname.includes("youtube.com")) {
+                const videoId = parsedUrl.searchParams.get("v");
+                if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) return videoId;
+            }
+        } catch (error) {
+            return "";
+        }
+
+        return "";
+    };
 
     if (!productDetails) {
         return <div>Loading...</div>; // Or some other loading state
     }
+
+    let userVideoLink = "";
+    let pblVideoLink = "";
+    let genericVideoLink = "";
+    let gdocPblLink = "";
+    let gdocUserLink = "";
+    const rawVideoData = productDetails?.v_video;
+
+    if (rawVideoData && typeof rawVideoData === "object") {
+        userVideoLink = rawVideoData?.user ? String(rawVideoData.user).trim() : "";
+        pblVideoLink = rawVideoData?.pbl ? String(rawVideoData.pbl).trim() : "";
+        gdocPblLink = rawVideoData?.gdocpbl
+            ? String(rawVideoData.gdocpbl).trim()
+            : (rawVideoData?.gdoc ? String(rawVideoData.gdoc).trim() : "");
+        gdocUserLink = rawVideoData?.gdocuser ? String(rawVideoData.gdocuser).trim() : "";
+    } else if (typeof rawVideoData === "string") {
+        const trimmedVideo = rawVideoData.trim();
+        if (trimmedVideo.startsWith("{") && trimmedVideo.endsWith("}")) {
+            try {
+                const parsedVideo = JSON.parse(trimmedVideo);
+                if (parsedVideo && typeof parsedVideo === "object") {
+                    userVideoLink = parsedVideo?.user ? String(parsedVideo.user).trim() : "";
+                    pblVideoLink = parsedVideo?.pbl ? String(parsedVideo.pbl).trim() : "";
+                    gdocPblLink = parsedVideo?.gdocpbl
+                        ? String(parsedVideo.gdocpbl).trim()
+                        : (parsedVideo?.gdoc ? String(parsedVideo.gdoc).trim() : "");
+                    gdocUserLink = parsedVideo?.gdocuser ? String(parsedVideo.gdocuser).trim() : "";
+                }
+            } catch (error) {
+                genericVideoLink = trimmedVideo;
+            }
+        } else if (trimmedVideo) {
+            genericVideoLink = trimmedVideo;
+        }
+    }
+
+    if (!userVideoLink && productDetails?.v_video_user) {
+        userVideoLink = String(productDetails.v_video_user).trim();
+    }
+    if (!pblVideoLink && productDetails?.v_video_pbl) {
+        pblVideoLink = String(productDetails.v_video_pbl).trim();
+    }
+    if (!gdocPblLink && productDetails?.v_video_gdocpbl) {
+        gdocPblLink = String(productDetails.v_video_gdocpbl).trim();
+    }
+    if (!gdocPblLink && productDetails?.v_video_gdoc) {
+        gdocPblLink = String(productDetails.v_video_gdoc).trim();
+    }
+    if (!gdocUserLink && productDetails?.v_video_gdocuser) {
+        gdocUserLink = String(productDetails.v_video_gdocuser).trim();
+    }
+
+    const videoSources = [];
+    if (userVideoLink) {
+        videoSources.push({ label: "User Video", url: userVideoLink });
+    } else if (genericVideoLink) {
+        videoSources.push({ label: "Video", url: genericVideoLink });
+    }
+    if (pblVideoLink) {
+        videoSources.push({ label: "PBL Video", url: pblVideoLink });
+    }
+
+    const youtubeVideos = videoSources
+        .map((video) => {
+            const videoId = getYouTubeVideoId(video.url);
+            if (!videoId) return null;
+            return {
+                ...video,
+                embedUrl: `https://www.youtube.com/embed/${videoId}`,
+            };
+        })
+        .filter(Boolean);
+
+    const userYoutubeVideo =
+        youtubeVideos.find((video) => video.label === "User Video") ||
+        youtubeVideos.find((video) => video.label === "Video") ||
+        null;
+    const pblYoutubeVideo = youtubeVideos.find((video) => video.label === "PBL Video") || null;
+    const selectedYoutubeVideo = (isMyShop || isCompanyShop) ? userYoutubeVideo : pblYoutubeVideo;
+
+    const selectedGdocLink = (isMyShop || isCompanyShop)
+        ? (gdocUserLink || gdocPblLink || "")
+        : (gdocPblLink || "");
+    const shouldShowGdocButton = Boolean(selectedGdocLink);
+
+    const handleGdocOpen = () => {
+        if (!selectedGdocLink) {
+            toast.error("Document link not available.");
+            return;
+        }
+
+        const normalizedLink = /^https?:\/\//i.test(selectedGdocLink) ? selectedGdocLink : `https://${selectedGdocLink}`;
+        window.open(normalizedLink, "_blank", "noopener,noreferrer");
+    };
+
+    const handleOpenAdditionalSecretDocumentModal = () => {
+        if (additionalSecretDocumentImages.length === 0) {
+            toast.error("Additional secret document not available.");
+            return;
+        }
+
+        setShowDocumentModal(true);
+    };
 
 
 
@@ -209,6 +436,10 @@ const ProductDetails = ({ productDetails }) => {
         if (productDetails?.v_fitness_exp_date) {
             detailsToCopy += `Fitness : ${productDetails?.v_fitness_exp_date}\n`;
         }
+        // Auction type
+        if (!isMyShop && !isCompanyShop && productDetails?.v_auction_type) {
+            detailsToCopy += `Auction Type : ${productDetails?.v_auction_type}\n`;
+        }
 
         try {
             await navigator.clipboard.writeText(detailsToCopy);
@@ -252,7 +483,7 @@ const ProductDetails = ({ productDetails }) => {
         let allDetails = '';
 
         // Features সেকশন
-          allDetails += `\nFeatures:\n`;
+        allDetails += `\nFeatures:\n`;
 
         // Brand
         if (productDetails?.v_brand_name) {
@@ -375,7 +606,20 @@ const ProductDetails = ({ productDetails }) => {
             return;
         }
 
-        const productUrl = `${domain}/product/${productDetails.v_id}`;
+        const domain = 'https://click4details.app';
+
+        const shouldUseShopProductUrl =
+            pathname.startsWith("/my-shop/") ||
+            pathname.startsWith("/company-shop/") ||
+            pathname.startsWith("/member-shop/") ||
+            pathname.startsWith("/user-shop/") ||
+            pathname.startsWith("/product/my-shop") ||
+            pathname.startsWith("/product/company-shop");
+        const productPath = shouldUseShopProductUrl
+            ? `/product/my-shop/${productDetails?.v_id}`
+            : `/product/${productDetails?.v_id}`;
+        const productUrl = `${domain}${productPath}`;
+
         const text = `Check out this product: ${productUrl}`;
         const title = productDetails?.v_title || 'Product Images';
 
@@ -479,6 +723,57 @@ const ProductDetails = ({ productDetails }) => {
         //     window.open(whatsappUrl, '_blank');
         // }
     };
+
+    const handleEditProduct = (item) => {
+        if (!item?.v_id) return;
+        router.push(`/dashboard/products/vehicle/edit/${item.v_id}`);
+    };
+
+    const handleAddToCart = (item) => {
+        if (!item?.v_id) return;
+
+        let price = 0;
+        const rawPrice = isMyOrCompanyDetails
+            ? item?.vehicle_price?.user_price
+            : item?.vehicle_price?.pbl_price;
+
+        if (rawPrice !== "Call for Price") {
+            price = rawPrice;
+        }
+
+        const priceId = item?.vehicle_price?.v_price_id;
+
+        const cartItem = {
+            c_user_id: user?.id || null,
+            c_session_id: user?.id ? null : getSessionId(),
+            ci_product_id: item.v_id,
+            ci_type_id: item?.v_category?.c_id,
+            ci_qty: 1,
+            ci_price: price || 0,
+            ci_url: item?.vehicle_front_image?.url || "",
+            ci_name: item.v_title,
+            ci_subtotal: price * 1,
+            ci_product_price_id: priceId,
+        };
+
+        addToCart(item.v_id, cartItem);
+    };
+
+    const handleCallClick = () => {
+        const phoneNumber = user?.phone || "+8809638660077";
+        window.location.href = `tel:${phoneNumber}`;
+    };
+
+    const handleWhatsappClick = () => {
+        const rawPhoneNumber = "+8801407054400";
+        const phoneNumber = rawPhoneNumber.replace("+", "");
+        const productDetailsUrl = window.location.href;
+        const message = `Hello,\nI am interested about this product. Please give me more information.\n${productDetailsUrl}`;
+        const whatsappText = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${whatsappText}`;
+        window.open(whatsappUrl, "_blank");
+    };
+
     return (
         <div className="px-4">
             <div>
@@ -488,7 +783,92 @@ const ProductDetails = ({ productDetails }) => {
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
                     </div>
 
-                    <div className="hidden md:block">
+                    <div className="hidden md:flex md:items-center md:justify-end gap-2 flex-wrap">
+                        <div className="flex gap-2">
+                            {isPublicProductDetails && (
+                                <button
+                                    onClick={() => setShopModalOpen(true)}
+                                    className="flex-1 border border-blue-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Copy className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                </button>
+                            )}
+
+                            <button
+                                onClick={() => setShareModalOpen(true)}
+                                className="flex-1 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Share2 className="h-4 w-4 text-green-600" />
+                                </div>
+                            </button>
+
+                            {
+                                (!isMyShop && !isCompanyShop) && (
+                                    <button
+                                        onClick={handleCallClick}
+                                        className="flex-1 border border-purple-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    >
+                                        <div className="flex items-center justify-center gap-2">
+                                            <PhoneOutgoing className="h-4 w-4 text-purple-600" />
+                                        </div>
+                                    </button>
+                                )
+                            }
+
+                            {isPublicProductDetails && (
+                                <button
+                                    onClick={handleWhatsappClick}
+                                    className="flex-1 border-2 border-green-600 font-bold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <FaWhatsapp className="h-6 w-6 text-green-600" />
+                                    </div>
+                                </button>
+                            )}
+
+                            {
+                                (!isMyShop && !isCompanyShop) && (
+                                    <button
+                                        onClick={() => handleAddToCart(productDetails)}
+                                        className="flex-1 border border-orange-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    >
+                                        <div className="flex items-center justify-center gap-2">
+                                            <ShoppingCart className="h-4 w-4 text-orange-600" />
+                                        </div>
+                                    </button>
+                                )
+                            }
+
+                            <button
+                                type="button"
+                                onClick={() => toggleCompare(productDetails?.v_id)}
+                                title={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                                aria-label={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                                className={`flex-1 border font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95 ${isInCompare(productDetails?.v_id) ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-300'}`}
+                            >
+                                <div className="flex items-center justify-center gap-1.5">
+                                    <GitCompare className={`h-4 w-4 ${isInCompare(productDetails?.v_id) ? 'text-white' : 'text-cyan-600'}`} />
+                                    {isInCompare(productDetails?.v_id) && (
+                                        <span className="text-xs text-white">Added</span>
+                                    )}
+                                </div>
+                            </button>
+
+                            {isMyOrCompanyDetails && (
+                                <button
+                                    onClick={() => handleEditProduct(productDetails)}
+                                    className="flex-1 border border-pink-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Edit className="h-4 w-4 text-pink-600" />
+                                    </div>
+                                </button>
+                            )}
+                        </div>
+
                         <button
                             onClick={handleCopyAllClick}
                             className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
@@ -544,7 +924,7 @@ const ProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Click4details'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -566,7 +946,10 @@ const ProductDetails = ({ productDetails }) => {
                                     <div>
                                         <div className="font-bold  text-gray-600 text-md md:text-xl flex flex-col">
 
-                                            {(productDetails?.vehicle_price?.user_price || productDetails?.vehicle_price?.pbl_price) !== 'Call for Price' && 'TK. '}
+                                            {(productDetails?.vehicle_price?.user_price || productDetails?.vehicle_price?.pbl_price) !== 'Call for Price' && productDetails?.vehicle_db_price?.vp_currency + '. '}
+
+                                            {/* {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. ' } */}
+
                                             {
                                                 basePath == '/product/my-shop' ?
                                                     formatPrice(productDetails?.vehicle_price?.user_price)
@@ -611,17 +994,21 @@ const ProductDetails = ({ productDetails }) => {
 
                                 {/* ====================== */}
 
-
                                 <div className="space-y-2">
-                                    <div className="">
-                                        <button
-                                            type="button"
-                                            onClick={handleImageShare}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
-                                        >
-                                            <Share2 className="h-4 w-4" /> 
-                                        </button>
-                                    </div>
+                                    {
+                                        canShowAdditionalSecretDocument && (
+                                            <div className="">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleOpenAdditionalSecretDocumentModal}
+                                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        )
+                                    }
+
 
                                     <div>
                                         <div>
@@ -630,7 +1017,7 @@ const ProductDetails = ({ productDetails }) => {
                                                 onClick={() => setShowModal(true)}
                                                 className="px-4 py-2 text-sm font-medium text-white bg-lime-600 border border-lime-700 rounded-l hover:bg-lime-700 flex items-center gap-2"
                                             >
-                                                <Download className="h-4 w-4" /> 
+                                                <Download className="h-4 w-4" />
                                             </button>
                                             {showModal && (
                                                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -687,7 +1074,96 @@ const ProductDetails = ({ productDetails }) => {
                 </div>
 
 
+
+
+
                 <div className="md:hidden">
+
+                    <div className="flex items-center justify-end gap-2 mb-4">
+                        {isPublicProductDetails && (
+                            <button
+                                onClick={() => setShopModalOpen(true)}
+                                className="flex-1 border border-blue-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Copy className="h-4 w-4 text-blue-600" />
+                                </div>
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => setShareModalOpen(true)}
+                            className="flex-1 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                        >
+                            <div className="flex items-center justify-center gap-2">
+                                <Share2 className="h-4 w-4 text-green-600" />
+                            </div>
+                        </button>
+
+                        {
+                            (!isMyShop && !isCompanyShop) && (
+                                <button
+                                    onClick={handleCallClick}
+                                    className="flex-1 border border-purple-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <PhoneOutgoing className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                </button>
+                            )
+                        }
+
+                        {isPublicProductDetails && (
+                            <button
+                                onClick={handleWhatsappClick}
+                                className="flex-1 border-2 border-green-600 font-bold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <FaWhatsapp className="h-6 w-6 text-green-600" />
+                                </div>
+                            </button>
+                        )}
+
+                        {
+                            (!isMyShop && !isCompanyShop) && (
+                                <button
+                                    onClick={() => handleAddToCart(productDetails)}
+                                    className="flex-1 border border-orange-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <ShoppingCart className="h-4 w-4 text-orange-600" />
+                                    </div>
+                                </button>
+                            )
+                        }
+
+                        <button
+                            type="button"
+                            onClick={() => toggleCompare(productDetails?.v_id)}
+                            title={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                            aria-label={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                            className={`flex-1 border font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95 ${isInCompare(productDetails?.v_id) ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-300'}`}
+                        >
+                            <div className="flex items-center justify-center gap-1.5">
+                                <GitCompare className={`h-4 w-4 ${isInCompare(productDetails?.v_id) ? 'text-white' : 'text-cyan-600'}`} />
+                                {isInCompare(productDetails?.v_id) && (
+                                    <span className="text-xs text-white">Added</span>
+                                )}
+                            </div>
+                        </button>
+
+                        {isMyOrCompanyDetails && (
+                            <button
+                                onClick={() => handleEditProduct(productDetails)}
+                                className="flex-1 border border-pink-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Edit className="h-4 w-4 text-pink-600" />
+                                </div>
+                            </button>
+                        )}
+                    </div>
+
                     <button
                         onClick={handleCopyAllClick}
                         className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
@@ -701,7 +1177,7 @@ const ProductDetails = ({ productDetails }) => {
                 <div className="md:col-span-2 md:col-start-4">
                     <div className="border rounded shadow-sm p-4">
                         <div className=" mb-4 border-b pb-2 flex items-center justify-between">
-                            <h2 className="text-lg font-medium text-blue-600">Featuress</h2>
+                            <h2 className="text-lg font-medium text-blue-600">Features</h2>
                             {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
                             <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleCopyClick}>
                                 <Copy /> Copy
@@ -749,6 +1225,18 @@ const ProductDetails = ({ productDetails }) => {
                                     <div className="col-span-3 text-base">Mileage:</div>
                                     <div className="col-span-3 text-base font-semibold">{productDetails?.v_mileage}</div>
                                 </div>
+
+                                {
+                                    !isMyShop && !isCompanyShop && (
+                                        <div className="grid grid-cols-6 gap-2">
+                                            <div className="col-span-3 text-base">Auc:</div>
+                                            <div className="col-span-3 text-base font-semibold">
+                                                {productDetails?.v_auction_type ? String(productDetails.v_auction_type).toUpperCase() : ""}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
                             </div>
                             <div>
                                 <div className="grid grid-cols-6 gap-2">
@@ -776,6 +1264,8 @@ const ProductDetails = ({ productDetails }) => {
                                     <div className="col-span-3 text-base font-semibold">{productDetails?.v_seat_name}</div>
                                 </div>
 
+
+
                                 {/* {
                                     user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl') && (
                                         <div className="grid grid-cols-6 gap-2">
@@ -786,7 +1276,7 @@ const ProductDetails = ({ productDetails }) => {
                                 } */}
 
                                 {
-                                    ( basePath === "/product/my-shop" || basePath === "/product/company-shop" || (user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl' || basePath === "/product" ))) && (
+                                    canShowChassisNumber && (
                                         <div className="grid grid-cols-6 gap-2">
                                             <div className="col-span-3 text-base">Chassis No :</div>
                                             <div className="col-span-3 text-base font-semibold">{productDetails?.v_chassis}</div>
@@ -800,12 +1290,34 @@ const ProductDetails = ({ productDetails }) => {
                                 </div>
                                 <div className="grid grid-cols-6 gap-2">
                                     <div className="col-span-3 text-base">Tax Token :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_tax_token_exp_date}</div>
+                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_tax_token_exp_date)}</div>
                                 </div>
                                 <div className="grid grid-cols-6 gap-2">
                                     <div className="col-span-3 text-base">Fitness :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_fitness_exp_date}</div>
+                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_fitness_exp_date)}</div>
                                 </div>
+                                <div className="grid grid-cols-6 gap-2">
+                                    <div className="col-span-3 text-base">Arrival Date :</div>
+                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_arrival_date)}</div>
+                                </div>
+
+                                {
+                                    shouldShowGdocButton && (
+                                        <div className="grid grid-cols-6 gap-2">
+                                            <div className="col-span-3 text-base">Download Pic :</div>
+                                            <div className="col-span-3 text-base font-semibold">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleGdocOpen}
+                                                    className="px-4 py-2 bg-lime-600 border border-lime-700 rounded-lg hover:bg-lime-700 flex items-center gap-2 text-white"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
                             </div>
                         </div>
                     </div>
@@ -838,6 +1350,27 @@ const ProductDetails = ({ productDetails }) => {
                             }
                         </div>
                     </div>
+
+                    {selectedYoutubeVideo && (
+                        <div className="border rounded shadow-sm p-4 mt-4">
+                            <div className="mb-4 border-b pb-2">
+                                <h2 className="text-lg font-medium text-blue-600">YouTube Video</h2>
+                            </div>
+                            <div>
+                                <p className="mb-2 text-sm font-medium text-gray-700">{selectedYoutubeVideo.label}</p>
+                                <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingTop: "56.25%" }}>
+                                    <iframe
+                                        src={selectedYoutubeVideo.embedUrl}
+                                        title={selectedYoutubeVideo.label}
+                                        className="absolute left-0 top-0 h-full w-full"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
 
@@ -845,6 +1378,16 @@ const ProductDetails = ({ productDetails }) => {
                 <div className="mt-4 inline md:hidden">
                     <ProductDetailsDescription productDetails={productDetails} />
                 </div>
+            )}
+
+            <ProductShareModal open={shareModalOpen} setOpen={setShareModalOpen} product={productDetails} />
+            <ShopSelectModal open={shopModalOpen} setOpen={setShopModalOpen} product={productDetails} />
+            {showDocumentModal && (
+                <ModalSlider
+                    setShowModal={setShowDocumentModal}
+                    images={additionalSecretDocumentImages}
+                    activeIndex={0}
+                />
             )}
         </div>
     );

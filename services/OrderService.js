@@ -19,6 +19,20 @@ const Commands = {
         return commandApi.post("/api/order", data, { headers });
     },
 
+    quickOrder: (data, token = null) => {
+        const headers = {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        };
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
+        return commandApi.post("/api/order/quick-order", data, { headers });
+    },
+
     // updateCart: (id, data) => commandApi.post(`/api/cart/update/${id}`, data, {
     //     headers: {
     //         "Content-Type": "multipart/form-data",

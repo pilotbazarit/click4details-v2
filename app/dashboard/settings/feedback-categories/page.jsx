@@ -5,12 +5,30 @@ import { Plus, Edit, Trash2 } from 'lucide-react';
 import FeedbackCategoryService from '@/services/FeedbackCategoryService';
 import { toast } from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const FeedbackCategoriesPage = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
+
+    const { permissionList, user } = useAppContext();
+
+    const canShowAddFeedbackCategoryButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "FeedbackCategories", "ShowFeedbackCategoryAddButton")
+
+    const canShowEditFeedbackCategoryButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "FeedbackCategories", "ShowFeedbackCategoryEditButton")
+
+
+    const canShowDeleteFeedbackCategoryButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "FeedbackCategories", "ShowFeedbackCategoryDeleteButton")
+
     const [formData, setFormData] = useState({
         name: '',
         status: 'active',
@@ -38,7 +56,7 @@ const FeedbackCategoriesPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             if (editingCategory) {
                 const response = await FeedbackCategoryService.Commands.updateFeedbackCategory(editingCategory.id, formData);
@@ -122,13 +140,18 @@ const FeedbackCategoriesPage = () => {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Feedback Categories</h1>
-                <button
-                    onClick={openModal}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Feedback Category
-                </button>
+                {
+                    canShowAddFeedbackCategoryButton && (
+                        <button
+                            onClick={openModal}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add New Feedback Category
+                        </button>
+                    )
+                }
+
             </div>
 
             {/* Feedback Categories Table */}
@@ -164,30 +187,39 @@ const FeedbackCategoriesPage = () => {
                                             {category.name}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${ 
-                                                category.status === 'active' 
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}> 
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${category.status === 'active'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-red-100 text-red-800'
+                                                }`}>
                                                 {category.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => handleEdit(category)}
-                                                    className="text-blue-600 hover:text-blue-900"
-                                                    title="Edit"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(category.id)}
-                                                    className="text-red-600 hover:text-red-900"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {
+                                                    canShowEditFeedbackCategoryButton && (
+                                                        <button
+                                                            onClick={() => handleEdit(category)}
+                                                            className="text-blue-600 hover:text-blue-900"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    )
+                                                }
+                                                
+                                                {
+                                                    canShowDeleteFeedbackCategoryButton && (
+                                                        <button
+                                                            onClick={() => handleDelete(category.id)}
+                                                            className="text-red-600 hover:text-red-900"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )
+                                                }
+
                                             </div>
                                         </td>
                                     </tr>
@@ -225,7 +257,7 @@ const FeedbackCategoriesPage = () => {
                                     <input
                                         type="text"
                                         value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
                                     />
@@ -237,7 +269,7 @@ const FeedbackCategoriesPage = () => {
                                     </label>
                                     <select
                                         value={formData.status}
-                                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
                                     >

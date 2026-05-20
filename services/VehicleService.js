@@ -35,6 +35,37 @@ const Commands = {
             Accept: "application/json",
         }
     }),
+
+
+    approvedVehicle: (id, data) => commandApi.post(`/api/vehicle/approve-sale-by-pbl/${id}`, data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+        }
+    }),
+
+    createPayment: (data) => commandApi.post(`/api/payment`, data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+    }),
+
+    updatePayment: (id, data) => commandApi.post(`/api/payment/${id}`, data, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+    }),
+
+    deletePayment: (id) => commandApi.delete(`/api/payment/${id}`, {
+        headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+    }),
 };
 
 const Queries = {
@@ -47,6 +78,9 @@ const Queries = {
 
     getVehiclesWithLogin: (params) => commandApi.get(`/api/vehicle`, {params}),
 
+
+    getRequestedVehicles: (params) => commandApi.get(`/api/vehicle`, {params}),
+
     getVehiclesSortBYBrandModalPackage: (params) => commandApi.get(`/api/vehicle/sortByBrandModelPackage`, {params}),
 
 
@@ -58,14 +92,20 @@ const Queries = {
 
     getPriceHistory: (params) => commandApi.get(`/api/history`, {params}),
 
+    getPaymentHistory: (params) => commandApi.get(`/api/payment`, {params}),
+
     // getMemberShopVehicle: (params) => commandApi.get(`/api/user-member-vehicles`, {params}),
     getMemberShopVehicle: (params) => commandApi.get(`/api/vehicle`, {params}),
 
     // getUserPartnerVehicle: (params) => commandApi.get(`/api/user-partner-vehicles`, {params}),
     getUserPartnerVehicle: (params) => commandApi.get(`/api/vehicle`, {params}),
+
+    getVehiclesForCompare: (ids) => commandApi.get(`/api/vehicle/compare`, { params: { ids: ids.join(',') } }),
 };
 
-export default {
+const VehicleService = {
     Commands,
     Queries
 };
+
+export default VehicleService;

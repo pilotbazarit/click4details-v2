@@ -8,6 +8,23 @@ import toast from "react-hot-toast";
 import { getSessionId } from "@/lib/utils";
 import { formatPermissions } from "@/helpers/functions";
 
+const COMPARE_STORAGE_KEY = "compare_items";
+const MAX_COMPARE_ITEMS = 4;
+
+const getFormattedUserPermissions = (userValue) => {
+  if (!userValue) return [];
+
+  try {
+    const parsedUser = typeof userValue === "string" ? JSON.parse(userValue) : userValue;
+    const finalUser = typeof parsedUser === "string" ? JSON.parse(parsedUser) : parsedUser;
+
+    return formatPermissions(finalUser?.permissions ?? []);
+  } catch (error) {
+    console.log("Failed to parse user permissions", error);
+    return [];
+  }
+};
+
 // Create the application context
 export const AppContext = createContext();
 
@@ -33,7 +50,12 @@ export const AppContextProvider = ({ children }) => {
   const [companyShops, setCompanyShops] = useState([]);           // Shops list
   const [selectedShop, setSelectedShop] = useState(''); // Currently selected shop
   const [selectedCompanyShop, setSelectedCompanyShop] = useState('');
-  const [permissionList, setPermissionList] = useState([]); // Currently selected shop
+  const [permissionList, setPermissionList] = useState([]);
+  const [compareItems, setCompareItems] = useState([]);
+
+  useEffect(() => {
+    setPermissionList(getFormattedUserPermissions(user));
+  }, [user]);
 
   // Fetch products (dummy data) on mount and initialize sample cart data
   // useEffect(() => {
@@ -60,14 +82,7 @@ export const AppContextProvider = ({ children }) => {
       setUser(userString ? JSON.parse(userString) : null);
 
       if (userString) {
-        const parsedUser = typeof userString === "string" ? JSON.parse(userString) : userString;
-
-        const finalUser = typeof parsedUser === "string" ? JSON.parse(parsedUser) : parsedUser;
-
-        if(finalUser.permissions.length > 0){
-          const formattedPermissions = formatPermissions(finalUser?.permissions);
-          setPermissionList(formattedPermissions);
-        }
+        setPermissionList(getFormattedUserPermissions(userString));
         
         // if (finalUser.permissions.length > 0) {
         //   const permissionData = finalUser.permissions.map(item => {
@@ -103,18 +118,61 @@ export const AppContextProvider = ({ children }) => {
   }, [user]);
 
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(COMPARE_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCompareItems(parsed.slice(0, MAX_COMPARE_ITEMS));
+        }
+      }
+    } catch {
+      setCompareItems([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(compareItems));
+  }, [compareItems]);
+
+  const addToCompare = (productId) => {
+    if (compareItems.includes(productId)) return;
+    if (compareItems.length >= MAX_COMPARE_ITEMS) {
+      toast.error(`You can compare up to ${MAX_COMPARE_ITEMS} products only`);
+      return;
+    }
+    setCompareItems((prev) => [...prev, productId]);
+    toast.success("Added to compare");
+  };
+
+  const removeFromCompare = (productId) => {
+    if (!compareItems.includes(productId)) return;
+    setCompareItems((prev) => prev.filter((id) => id !== productId));
+    toast.success("Removed from compare");
+  };
+
+  const toggleCompare = (productId) => {
+    if (compareItems.includes(productId)) {
+      removeFromCompare(productId);
+    } else {
+      addToCompare(productId);
+    }
+  };
+
+  const clearCompare = () => {
+    setCompareItems([]);
+    toast.success("Compare list cleared");
+  };
+
+  const isInCompare = (productId) => compareItems.includes(productId);
+
   let parsedUser = null;
   try {
     parsedUser = user ? JSON.parse(user) : null;
   } catch (error) {
-    console.error("Failed to parse user data:", error);
+    console.log("Failed to parse user data:", error);
   }
-
-  // console.log("cartItems cart page", cartItems);
-  // console.log("user Info", parsedUser?.id);
-
-
-  //  c_session_id: parsedUser?.id ? null : getSessionId(),
 
   const fetchCartItems = async () => {
     try {
@@ -127,7 +185,7 @@ export const AppContextProvider = ({ children }) => {
           currentUser = JSON.parse(currentUser);
         }
       } catch (error) {
-        console.error("Failed to parse user:", error);
+        console.log("Failed to parse user:", error);
         currentUser = null;
       }
 
@@ -148,8 +206,7 @@ export const AppContextProvider = ({ children }) => {
 
       const response = await CartService.Queries.getCartList(params);
 
-
-      console.log("App context 152 get cart response::", response);
+      // console.log("get cart item app context00000000000000000000151", response?.data?.data);
 
       if (response.status === "success") {
         // Transform cart data to required format - loop through all carts
@@ -157,7 +214,6 @@ export const AppContextProvider = ({ children }) => {
 
         response?.data?.data.length > 0 && response?.data?.data?.forEach(cart => {
           // setCartId(cart.c_id);
-          console.log("App context 160 cart", cart);
           cart?.items?.forEach(item => {
             transformedCartItems.push({
               cart_id: cart.c_id,
@@ -168,6 +224,7 @@ export const AppContextProvider = ({ children }) => {
               ci_url: item?.ci_product_details?.image || '',
               ci_name: item?.ci_product_details?.name || '',
               ci_product_price_id: item.ci_product_price_id,
+              ci_currency: item.ci_product_details?.currency || 'BDT',
             });
           });
         });
@@ -177,7 +234,7 @@ export const AppContextProvider = ({ children }) => {
         setCartItems(transformedCartItems);
       }
     } catch (error) {
-      console.error("Error fetching cart items:", error);
+      console.log("Error fetching cart items:", error);
     }
   };
 
@@ -197,7 +254,7 @@ export const AppContextProvider = ({ children }) => {
         toast.success("Product added to cart");
       }
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      console.log("Error adding to cart:", error);
       toast.error("Failed to add product to cart");
     }
   };
@@ -226,7 +283,7 @@ export const AppContextProvider = ({ children }) => {
         // toast.success("Product added to cart");
       }
     } catch (error) {
-      console.error("Error updating cart:", error);
+      console.log("Error updating cart:", error);
       toast.error("Failed to update cart");
     }
   };
@@ -244,7 +301,7 @@ export const AppContextProvider = ({ children }) => {
         toast.success("Product removed from cart");
       }
     } catch (error) {
-      console.error("Error removing from cart:", error);
+      console.log("Error removing from cart:", error);
       toast.error("Failed to remove product from cart");
     }
   };
@@ -292,7 +349,13 @@ export const AppContextProvider = ({ children }) => {
     setCompanyShops,
     selectedCompanyShop,
     setSelectedCompanyShop,
-    permissionList
+    permissionList,
+    compareItems,
+    addToCompare,
+    removeFromCompare,
+    toggleCompare,
+    clearCompare,
+    isInCompare,
   };
 
   // Render the provider with the value

@@ -27,8 +27,19 @@ const SearchHistoryService = {
       const response = await get(`search-customer-by-mobile?customer_mobile=${mobile}`);
       return response;
     },
+    searchCustomer: async ({ mobile, name }) => {
+      const query = new URLSearchParams();
+      if (mobile) query.append("customer_mobile", mobile);
+      if (name) query.append("customer_name", name);
+      const response = await get(`search-customer?${query.toString()}`);
+      return response;
+    },
     getSearchHistory: async (mobile) => {
       const response = await get(`search-history?customer_mobile=${mobile}`);
+      return response;
+    },
+    getSearchHistoryByCustomerId: async (customerId) => {
+      const response = await get("search-history/by-customer-id", { customer_id: customerId });
       return response;
     },
   },

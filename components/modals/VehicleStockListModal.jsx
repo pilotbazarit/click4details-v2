@@ -47,6 +47,7 @@ const VehicleStockListModal = ({ open, setOpen, user }) => {
         { id: 'detailLink', label: 'Detail Link' },
         { id: 'askingPrice', label: 'Asking Price' },
         { id: 'fixedPrice', label: 'Fixed Price' },
+        { id: 'color', label: 'Color' },
     ];
 
     // State to track selected features - Initially all features are selected
@@ -107,6 +108,7 @@ const VehicleStockListModal = ({ open, setOpen, user }) => {
                 'askingPrice': 'ask',
                 'chassisNumber': 'chass',
                 'engineNumber': 'eng',
+                'color': 'clr'
             };
 
             // Build featureMap with only selectedFeatures

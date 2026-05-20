@@ -24,7 +24,6 @@ const OrderStatusModal = ({ open, setOpen, order, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(order?.o_status || "");
   const [loading, setLoading] = useState(false);
 
-  // console.log("order===========", order);
 
   const handleStatusChange = async () => {
     if (!newStatus || newStatus === order?.o_status) {

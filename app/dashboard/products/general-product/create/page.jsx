@@ -28,6 +28,7 @@ import constData from "@/lib/constant";
 import FeatureSpecificationService from "@/services/FeatureSpecificationService";
 import CategoryService from "@/services/CategoryService";
 import GeneralProductService from "@/services/GeneralProductService";
+import UserService from "@/services/UserService";
 import Swal from "sweetalert2";
 import ProductFeatureSpecificationModal from "@/components/modals/ProductFeatureSpecificationModal";
 
@@ -187,7 +188,16 @@ const AttributeField = ({ control, index, watch, features, remove, showRemoveBut
 };
 
 const GeneralProductCreate = () => {
-    const { user } = useAppContext();
+    const { user: contextUser } = useAppContext();
+    const singleUser = (() => {
+        try {
+            const parsedUser = typeof contextUser === "string" ? JSON.parse(contextUser) : contextUser;
+            return typeof parsedUser === "string" ? JSON.parse(parsedUser) : parsedUser;
+        } catch (error) {
+            console.log("Failed to parse user data:", error);
+            return null;
+        }
+    })();
     const api = createApiRequest(API_URL);
     const router = useRouter();
 
@@ -199,6 +209,7 @@ const GeneralProductCreate = () => {
     const [isModelLoading, setIsModelLoading] = useState(false);
 
     const [shopData, setShopData] = useState([]);
+    const [partnerData, setPartnerData] = useState([]);
     // const [shopCodeData, setShopCodeData] = useState([]);
     const [isShopCodeLoading, setIsShopCodeLoading] = useState(false);
 
@@ -221,6 +232,9 @@ const GeneralProductCreate = () => {
     const [selectedFsId, setSelectedFsId] = useState([]);
     const [featureModalShow, setFeatureModalShow] = useState(false);
     const [materCategoryItems, setMaterCategoryItems] = useState([]);
+
+
+    console.log("Userrrrrrrrrrr===================", singleUser);
 
 
     useEffect(() => {
@@ -255,6 +269,7 @@ const GeneralProductCreate = () => {
             brand: "",
             model: "",
             p_package_id: "",
+            p_partner_id: "",
             shop: "",
             // code: "",
             location: "",
@@ -509,14 +524,26 @@ const GeneralProductCreate = () => {
     const [features, setFeatures] = useState([]);
     const [featureSpecification, setFeatureSpecification] = useState([]);
 
-    console.log("selectedProductTypeId", selectedProductTypeId);
+    // console.log("selectedProductTypeId", selectedProductTypeId);
+
+    //  console.log("singleUser?.user_mode=====================", singleUser);
 
     useEffect(() => {
 
 
         const getShopData = async () => {
             try {
-                const response = await ShopService.Queries.getShops({ _page: 1, _perPage: 1000 });
+                if (!singleUser?.id) return;
+
+                const params = {
+                    order: "desc",
+                    orderBy: "md_id",
+                    _page: 1,
+                    _perPage: 1000,
+                    ...(singleUser?.user_mode !== "admin" && { _user_id: singleUser.id }),
+                };
+
+                const response = await ShopService.Queries.getShops(params);
                 const shopOptions = response.data.data.map((shop) => ({
                     value: shop.s_id,
                     label: shop.s_title,
@@ -527,6 +554,30 @@ const GeneralProductCreate = () => {
             }
         };
         getShopData();
+
+        const getPartnerData = async () => {
+            try {
+                const response = await UserService.Queries.getUsers({
+                    order: "desc",
+                    orderBy: "md_id",
+                    _page: 1,
+                    _perPage: 1000,
+                    _mode: "partner",
+                    _status: "active",
+                });
+
+                const partnerOptions = response.data.data.map((partner) => ({
+                    value: partner.id,
+                    label: partner.name,
+                }));
+
+                setPartnerData(partnerOptions);
+            } catch (error) {
+                toast.error(error.response?.data?.message || "Failed to fetch data");
+            }
+        };
+        getPartnerData();
+
         const getCountryData = async () => {
             try {
                 const country_code = constData.COUNTRY_CODE;
@@ -564,7 +615,33 @@ const GeneralProductCreate = () => {
 
 
 
-    }, []);
+    }, [singleUser?.id, singleUser?.user_mode]);
+
+    const handlePartnerChange = async (item) => {
+        if (!item?.value) return;
+
+        try {
+            const response = await ShopService.Queries.getShops({
+                order: "desc",
+                orderBy: "md_id",
+                _page: 1,
+                _perPage: 1000,
+                _user_id: item.value,
+            });
+
+            const shopOptions = response.data.data.map((shop) => ({
+                value: shop.s_id,
+                label: shop.s_title,
+            }));
+
+            setShopData(shopOptions);
+            setValue("shop", "");
+            setValue("outlet", "");
+            setOutletData([]);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to fetch data");
+        }
+    };
 
     useEffect(() => {
         const fetchModels = async () => {
@@ -739,7 +816,6 @@ const GeneralProductCreate = () => {
 
     const onSubmit = async (data) => {
         setIsSubmitting(true);
-        console.log("Data", data);
         const formData = new FormData();
         formData.append("p_type_id", data.p_type_id || '')
         formData.append("p_category_id", data.category || '');
@@ -1102,10 +1178,40 @@ const GeneralProductCreate = () => {
 
 
 
+                            {
+                                ((singleUser?.user_mode === 'supreme') || (singleUser?.user_mode === 'admin')) && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-base font-medium" htmlFor="p_partner_id">
+                                            Partner List
+                                        </label>
+                                        <Controller
+                                            name="p_partner_id"
+                                            control={control}
+                                            rules={{ required: "Partner is required" }}
+                                            render={({ field }) => (
+                                                <Select
+                                                    {...field}
+                                                    options={partnerData}
+                                                    onChange={(selectedOption) => {
+                                                        field.onChange(selectedOption ? selectedOption.value : "");
+                                                        handlePartnerChange(selectedOption);
+                                                    }}
+                                                    value={partnerData.find((option) => option.value === field.value) || null}
+                                                    placeholder="Select Partner"
+                                                    className="react-select-container"
+                                                    classNamePrefix="react-select"
+                                                />
+                                            )}
+                                        />
+                                        {errors.p_partner_id && <p className="text-red-500 text-sm">{errors.p_partner_id.message}</p>}
+                                    </div>
+                                )
+                            }
+
                             {/* Shop */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-base font-medium" htmlFor="shop">
-                                    Shop
+                                    Shop List
                                 </label>
                                 <Controller
                                     name="shop"
@@ -1285,7 +1391,7 @@ const GeneralProductCreate = () => {
                                 </label>
                                 <textarea
                                     id="special_description"
-                                    placeholder="PBL description"
+                                    placeholder="Special description"
                                     className={`outline-none py-2 px-4 rounded border ${errors.special_description ? "border-red-500" : "border-gray-300"} focus:border-orange-500 transition`}
                                     {...register("special_description")}
                                     rows="6"
@@ -1701,6 +1807,7 @@ const GeneralProductCreate = () => {
                 setFormData={setFormData}
                 featureData={featureData}
                 setSelectedFsId={setSelectedFsId}
+                user={singleUser}
             />
         </div>
     );

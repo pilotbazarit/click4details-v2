@@ -6,6 +6,8 @@ import FeedbackTemplateService from "@/services/FeedbackTemplateService";
 import { Copy, Edit, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const FeedbackTemplatesPage = () => {
   const [feedbackTemplates, setFeedbackTemplates] = useState([]);
@@ -24,6 +26,21 @@ const FeedbackTemplatesPage = () => {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
+  const { permissionList, user } = useAppContext();
+
+  const canShowAddFeedbackTemplateButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FeedbackTemplates", "ShowFeedbackTemplateAddButton")
+
+
+  const canShowEditFeedbackTemplateButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FeedbackTemplates", "ShowFeedbackTemplateEditButton")
+
+
+  const canShowDeleteFeedbackTemplateButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "FeedbackTemplates", "ShowFeedbackTemplateDeleteButton")
 
   const TruncatedText = ({ text, maxLength }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -153,13 +170,18 @@ const FeedbackTemplatesPage = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Feedback Templates</h1>
-        <button
-          onClick={openModal}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Feedback Template
-        </button>
+        {
+          canShowAddFeedbackTemplateButton && (
+            <button
+              onClick={openModal}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Feedback Template
+            </button>
+          )
+        }
+
       </div>
 
       {/* Search and Controls */}
@@ -260,21 +282,30 @@ const FeedbackTemplatesPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          feedbackTemplate.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }`}
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${feedbackTemplate.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          }`}
                       >
                         {feedbackTemplate.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button onClick={() => handleEdit(feedbackTemplate)} className="text-blue-600 hover:text-blue-900" title="Edit">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(feedbackTemplate.id)} className="text-red-600 hover:text-red-900" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {
+                          canShowEditFeedbackTemplateButton && (
+                            <button onClick={() => handleEdit(feedbackTemplate)} className="text-blue-600 hover:text-blue-900" title="Edit">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )
+                        }
+
+                        {
+                          canShowDeleteFeedbackTemplateButton && (
+                            <button onClick={() => handleDelete(feedbackTemplate.id)} className="text-red-600 hover:text-red-900" title="Delete">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )
+                        }
+
                       </div>
                     </td>
                   </tr>
@@ -303,9 +334,8 @@ const FeedbackTemplatesPage = () => {
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
-                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                    currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                  }`}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                    }`}
                 >
                   {page}
                 </button>
