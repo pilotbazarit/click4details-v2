@@ -557,6 +557,7 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
+  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -960,7 +961,17 @@ const NavbarContent = () => {
             }
 
 
+             <Link
+              href="/how-to-use"
+              className={`transition duration-300 ${isActiveHowToUse
+                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
+                : 'hover:text-gray-900'
+                }`}
+            >
+               How to use
+            </Link>
 
+         
 
           </div>
         </div>

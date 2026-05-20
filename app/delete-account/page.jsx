@@ -178,8 +178,8 @@ export default function AccountDeletionPage() {
                 <h2 className="text-xl font-bold mb-2 text-gray-900">Contact Us</h2>
                 <p className="text-gray-600">
                   For any questions about account deletion or data privacy, contact us at:{' '}
-                  <a href="mailto:pilotbazar.com@gmail.com" className="text-blue-600 font-semibold hover:underline">
-                    pilotbazar.com@gmail.com
+                  <a href="mailto:click4details.com@gmail.com" className="text-blue-600 font-semibold hover:underline">
+                    click4details.com@gmail.com
                   </a>
                 </p>
               </section>
