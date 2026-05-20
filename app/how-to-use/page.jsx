@@ -8,80 +8,158 @@ const HowToUse = () => {
     const videoTutorials = [
         {
             id: 1,
-            title: "Getting Started with Click4Details",
-            description: "Learn how to browse, search, and find your perfect car on our platform",
-            videoId: "MOuUaB4h-k4",
-            src: "https://www.youtube.com/embed/MOuUaB4h-k4"
+            title: "লগইন, রেজিস্ট্রেশন ও পাসওয়ার্ড পরিবর্তনের করুন | Click4Details",
+            description: "Click4Details-এ লগইন, রেজিস্ট্রেশন এবং পাসওয়ার্ড পরিবর্তনের সম্পূর্ণ গাইড। আপনার অ্যাকাউন্ট নিরাপদ রাখুন এবং সহজেই পরিচালনা করুন।",
+            videoId: "NF1I0p3WV_4",
+            src: "https://www.youtube.com/embed/NF1I0p3WV_4"
         },
         {
             id: 2,
-            title: "How to Buy a Car - Complete Guide",
-            description: "Step-by-step guide to purchasing your dream car through Click4Details",
-            videoId: "7K9Fyhg6_io",
-            src: "https://www.youtube.com/embed/7K9Fyhg6_io"
+            title: "দ্রুত বিক্রি করতে চান? ফিক্সড এবং সঠিক প্রাইসিং কেন গুরুত্বপূর্ণ তা জানুন | Click4Details",
+            description: "Click4Details-এ দ্রুত বিক্রি করতে ফিক্সড এবং সঠিক প্রাইসিং কেন গুরুত্বপূর্ণ তা জানুন। আপনার গাড়ির সঠিক মূল্য নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন এবং দ্রুত বিক",
+            videoId: "-ixjjdM7_Js",
+            src: "https://www.youtube.com/embed/-ixjjdM7_Js"
         },
         {
             id: 3,
-            title: "Advanced Features Tutorial",
-            description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "a9Uka5UxOpw",
-            src: "https://www.youtube.com/embed/a9Uka5UxOpw"
+            title: "পার্টনার হলে কি কি সুবিধা পাবেন | Click4Details ",
+            description: "Click4Details-এ পার্টনার হলে কি কি সুবিধা পাবেন তা জানুন। আপনার ব্যবসা বৃদ্ধির জন্য সহজ এবং কার্যকর সমাধানগুলি পেতে পারেন।",
+            videoId: "cKZ0ggw1V-A",
+            src: "https://www.youtube.com/embed/cKZ0ggw1V-A"
         },
         {
             id: 4,
-            title: "Getting Started with Click4Details",
-            description: "Learn how to browse, search, and find your perfect car on our platform",
-            videoId: "rqueFRUuUSA",
-            src: "https://www.youtube.com/embed/rqueFRUuUSA"
+            title: "প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম | Click4Details",
+            description: "Click4Details-এ প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম জানুন। আপনার পণ্যের মূল্য সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
+            videoId: "XIT-qGd_AiA",
+            src: "https://www.youtube.com/embed/XIT-qGd_AiA"
         },
         {
             id: 5,
-            title: "How to Buy a Car - Complete Guide",
-            description: "Step-by-step guide to purchasing your dream car through Click4Details",
-            videoId: "xreFNC-ZKBo",
-            src: "https://www.youtube.com/embed/xreFNC-ZKBo"
+            title: "প্রোডাক্টের তথ্য এডিট করার  নিয়ম | Click4Details",
+            description: "Click4Details-এ প্রোডাক্টের তথ্য এডিট করার নিয়ম জানুন। আপনার পণ্যের তথ্য সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
+            videoId: "-jPRlWFbll0",
+            src: "https://www.youtube.com/embed/-jPRlWFbll0"
         },
         {
             id: 6,
-            title: "Advanced Features Tutorial",
-            description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "UofsXIjvjkc",
-            src: "https://www.youtube.com/embed/UofsXIjvjkc"
+            title: "দ্রুত এবং সহজে প্রোডাক্ট কিভাবে শেয়ার করবেন | Click4Details",
+            description: "Click4Details-এ দ্রুত এবং সহজে প্রোডাক্ট শেয়ার করার নিয়ম জানুন।",
+            videoId: "3K88q9Mqfls",
+            src: "https://www.youtube.com/embed/3K88q9Mqfls"
         },
          {
             id: 7,
-            title: "Getting Started with Click4Details",
-            description: "Learn how to browse, search, and find your perfect car on our platform",
-            videoId: "2EfnkonVi9Q",
-            src: "https://www.youtube.com/embed/2EfnkonVi9Q"
+            title: "Sold, Booked, Available আপডেট করব কিভাবে | Click4Details",
+            description: "Sold, Booked, Available আপডেট করার নিয়ম জানুন। আপনার প্রোডাক্টের স্ট্যাটাস সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
+            videoId: "vhme9eAsuWw",
+            src: "https://www.youtube.com/embed/vhme9eAsuWw"
         },
         {
             id: 8,
-            title: "How to Buy a Car - Complete Guide",
-            description: "Step-by-step guide to purchasing your dream car through Click4Details",
-            videoId: "W6rr97rgois",
-            src: "https://www.youtube.com/embed/W6rr97rgois"
+            title: "প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম  | Click4Details",
+            description: "Click4Details-এ প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম জানুন।",
+            videoId: "0ndMhvB12X4",
+            src: "https://www.youtube.com/embed/0ndMhvB12X4"
         },
         {
             id: 9,
-            title: "Advanced Features Tutorial",
-            description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "ne5ptPMjs6Q",
-            src: "https://www.youtube.com/embed/ne5ptPMjs6Q"
+            title: "প্রোডাক্টের আউটলেট পরিবর্তন করার নিয়ম | Click4Details",
+            description: "Click4Details-এ প্রোডাক্টের আউটলেট পরিবর্তন করার নিয়ম জানুন।",
+            videoId: "_COOEFpEfL8",
+            src: "https://www.youtube.com/embed/_COOEFpEfL8"
         },
         {
             id: 10,
-            title: "Advanced Features Tutorial",
-            description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "UTiahfY9qf4",
-            src: "https://www.youtube.com/embed/UTiahfY9qf4"
+            title: "প্রোডাক্ট ডিলিট করার নিয়ম | Click4Details ",
+            description: "Click4Details-এ প্রোডাক্ট ডিলিট করার নিয়ম জানুন। আপনার পণ্যের তথ্য সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
+            videoId: "fzhKg6Zt23U",
+            src: "https://www.youtube.com/embed/fzhKg6Zt23U"
         },
         {
             id: 11,
-            title: "Advanced Features Tutorial",
-            description: "Explore advanced features and tips to get the most out of Click4Details",
-            videoId: "oy8KH-aCI6k",
-            src: "https://www.youtube.com/embed/oy8KH-aCI6k"
+            title: "প্রোডাক্ট এডিট করার নিয়ম | Click4Details",
+            description: "Click4Details-এ প্রোডাক্ট এডিট করার নিয়ম জানুন।",
+            videoId: "-jPRlWFbll0",
+            src: "https://www.youtube.com/embed/-jPRlWFbll0"
+        },
+
+        {
+            id: 12,
+            title: "গাড়ির প্রফেশনাল Quotation তৈরি করার নিয়ম | Click4Details",
+            description: "Click4Details-এ গাড়ির জন্য প্রফেশনাল Quotation তৈরি করার সহজ নিয়ম জানুন। গ্রাহকের কাছে দাম, তথ্য এবং প্রয়োজনীয় বিস্তারিত সুন্দরভাবে উপস্থাপন করুন।",
+            videoId: "nXc50JJn6A4",
+            src: "https://www.youtube.com/embed/nXc50JJn6A4"
+        },
+        {
+            id: 13,
+            title: "গাড়ির ডেলিভারি Challan তৈরি করার নিয়ম | Click4Details",
+            description: "Click4Details-এ গাড়ির ডেলিভারি Challan তৈরি করার নিয়ম জানুন। ডেলিভারির সময় প্রয়োজনীয় তথ্য যোগ করে পেশাদারভাবে রেকর্ড সংরক্ষণ করুন।",
+            videoId: "5nq4Y_p1B4Q",
+            src: "https://www.youtube.com/embed/5nq4Y_p1B4Q"
+        },
+        {
+            id: 14,
+            title: "একাধিক শপ কিভাবে তৈরী করব | Click4Details",
+            description: "Click4Details-এ একাধিক শপ তৈরি করার ধাপগুলো জানুন। আপনার ব্যবসার বিভিন্ন শাখা বা আউটলেট সহজে আলাদা করে পরিচালনা করুন।",
+            videoId: "DB-o7WcPVw8",
+            src: "https://www.youtube.com/embed/DB-o7WcPVw8"
+        },
+        {
+            id: 15,
+            title: "সেলসমেন ও ম্যানেজার কোম্পানি শপে অ্যাড করব কিভাবে | Click4Details",
+            description: "Click4Details-এ কোম্পানি শপে সেলসমেন ও ম্যানেজার অ্যাড করার নিয়ম জানুন। টিম মেম্বারদের দায়িত্ব ভাগ করে শপ পরিচালনা সহজ করুন।",
+            videoId: "w1-SRuPwERo",
+            src: "https://www.youtube.com/embed/w1-SRuPwERo"
+        },
+        {
+            id: 16,
+            title: "কিভাবে দ্রুত এবং সহজে প্রোডাক্ট শেয়ার করবেন | Click4Details",
+            description: "Click4Details-এ দ্রুত এবং সহজে প্রোডাক্ট শেয়ার করার নিয়ম জানুন। গ্রাহক বা সোশ্যাল প্ল্যাটফর্মে পণ্যের তথ্য সহজে পৌঁছে দিন।",
+            videoId: "3K88q9Mqfls",
+            src: "https://www.youtube.com/embed/3K88q9Mqfls"
+        },
+        {
+            id: 17,
+            title: "পাসওয়ার্ড ভূলে গেলে বা কিভাবে পরিবর্তন করব | Click4Details",
+            description: "Click4Details-এ পাসওয়ার্ড ভুলে গেলে কীভাবে পুনরুদ্ধার করবেন এবং প্রয়োজন হলে নতুন পাসওয়ার্ড সেট করবেন তা জানুন।",
+            videoId: "Yj1pIin4G0Q",
+            src: "https://www.youtube.com/embed/Yj1pIin4G0Q"
+        },
+        {
+            id: 18,
+            title: "নতুন অ্যাকাউন্ট কিভাবে খুলব | Click4Details",
+            description: "Click4Details-এ নতুন অ্যাকাউন্ট খোলার সহজ ধাপগুলো জানুন। প্রয়োজনীয় তথ্য দিয়ে দ্রুত রেজিস্ট্রেশন সম্পন্ন করুন।",
+            videoId: "IwDJoGGFAqs",
+            src: "https://www.youtube.com/embed/IwDJoGGFAqs"
+        },
+        {
+            id: 19,
+            title: "লগইন করার সহজ নিয়ম | Click4Details",
+            description: "Click4Details-এ লগইন করার সহজ নিয়ম জানুন। আপনার অ্যাকাউন্টে নিরাপদে প্রবেশ করে প্রয়োজনীয় ফিচার ব্যবহার করুন।",
+            videoId: "lS8Z7OhqAYI",
+            src: "https://www.youtube.com/embed/lS8Z7OhqAYI"
+        },
+        {
+            id: 20,
+            title: "গাড়ির আমদানী খরচ ও দাম হিসাব করার নিয়ম | Click4Details",
+            description: "Click4Details-এ গাড়ির আমদানী খরচ ও বিক্রয় মূল্য হিসাব করার নিয়ম জানুন। খরচ, চার্জ এবং প্রাইসিং পরিষ্কারভাবে নির্ধারণ করে ব্যবসার সিদ্ধান্ত সহজ করুন।",
+            videoId: "0U_dOU235IU",
+            src: "https://www.youtube.com/embed/0U_dOU235IU"
+        },
+        {
+            id: 21,
+            title: "১ ক্লিকের ম্যাজিক! | শোরুম ম্যানেজমেন্ট ১ ক্লিকে | Click4Details",
+            description: "Click4Details-এ এক ক্লিকে শোরুম ম্যানেজমেন্টের সুবিধাগুলো জানুন। প্রোডাক্ট, শপ, টিম এবং দৈনন্দিন কাজ দ্রুত ও সহজভাবে পরিচালনা করুন।",
+            videoId: "0MEBcdKJ8-E",
+            src: "https://www.youtube.com/embed/0MEBcdKJ8-E"
+        },
+        {
+            id: 22,
+            title: "Click4Details অ্যাপ কী এবং কেন ব্যবহার করবেন?",
+            description: "Click4Details অ্যাপের মূল সুবিধা, ব্যবহারযোগ্যতা এবং ব্যবসা পরিচালনায় এর প্রয়োজনীয়তা সম্পর্কে জানুন। গাড়ি ও শোরুম ম্যানেজমেন্ট সহজ করতে কেন এটি ব্যবহার করবেন তা দেখুন।",
+            videoId: "7K9Fyhg6_io",
+            src: "https://www.youtube.com/embed/7K9Fyhg6_io"
         }
     ];
 
