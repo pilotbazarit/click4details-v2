@@ -6,6 +6,20 @@ import { Play, CheckCircle, Car, Search, ShoppingCart } from 'lucide-react';
 
 const HowToUse = () => {
     const videoTutorials = [
+         {
+            id: 21,
+            title: "১ ক্লিকের ম্যাজিক! | শোরুম ম্যানেজমেন্ট ১ ক্লিকে | Click4Details",
+            description: "Click4Details-এ এক ক্লিকে শোরুম ম্যানেজমেন্টের সুবিধাগুলো জানুন। প্রোডাক্ট, শপ, টিম এবং দৈনন্দিন কাজ দ্রুত ও সহজভাবে পরিচালনা করুন।",
+            videoId: "0MEBcdKJ8-E",
+            src: "https://www.youtube.com/embed/0MEBcdKJ8-E"
+        },
+        {
+            id: 22,
+            title: "Click4Details অ্যাপ কী এবং কেন ব্যবহার করবেন?",
+            description: "Click4Details অ্যাপের মূল সুবিধা, ব্যবহারযোগ্যতা এবং ব্যবসা পরিচালনায় এর প্রয়োজনীয়তা সম্পর্কে জানুন। গাড়ি ও শোরুম ম্যানেজমেন্ট সহজ করতে কেন এটি ব্যবহার করবেন তা দেখুন।",
+            videoId: "7K9Fyhg6_io",
+            src: "https://www.youtube.com/embed/7K9Fyhg6_io"
+        },
         {
             id: 1,
             title: "লগইন, রেজিস্ট্রেশন ও পাসওয়ার্ড পরিবর্তনের করুন | Click4Details",
@@ -146,20 +160,6 @@ const HowToUse = () => {
             description: "Click4Details-এ গাড়ির আমদানী খরচ ও বিক্রয় মূল্য হিসাব করার নিয়ম জানুন। খরচ, চার্জ এবং প্রাইসিং পরিষ্কারভাবে নির্ধারণ করে ব্যবসার সিদ্ধান্ত সহজ করুন।",
             videoId: "0U_dOU235IU",
             src: "https://www.youtube.com/embed/0U_dOU235IU"
-        },
-        {
-            id: 21,
-            title: "১ ক্লিকের ম্যাজিক! | শোরুম ম্যানেজমেন্ট ১ ক্লিকে | Click4Details",
-            description: "Click4Details-এ এক ক্লিকে শোরুম ম্যানেজমেন্টের সুবিধাগুলো জানুন। প্রোডাক্ট, শপ, টিম এবং দৈনন্দিন কাজ দ্রুত ও সহজভাবে পরিচালনা করুন।",
-            videoId: "0MEBcdKJ8-E",
-            src: "https://www.youtube.com/embed/0MEBcdKJ8-E"
-        },
-        {
-            id: 22,
-            title: "Click4Details অ্যাপ কী এবং কেন ব্যবহার করবেন?",
-            description: "Click4Details অ্যাপের মূল সুবিধা, ব্যবহারযোগ্যতা এবং ব্যবসা পরিচালনায় এর প্রয়োজনীয়তা সম্পর্কে জানুন। গাড়ি ও শোরুম ম্যানেজমেন্ট সহজ করতে কেন এটি ব্যবহার করবেন তা দেখুন।",
-            videoId: "7K9Fyhg6_io",
-            src: "https://www.youtube.com/embed/7K9Fyhg6_io"
         }
     ];
 
@@ -194,10 +194,10 @@ const HowToUse = () => {
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                        How to Use Click4Details
+                        Click4Details ব্যবহার করার পদ্ধতি
                     </h1>
                     <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
-                        Your complete guide to finding and buying your dream car
+                        যেকোনো অসুবিধায় আমাদেরকে কল দিন: +8809638660077
                     </p>
                 </div>
             </div>
