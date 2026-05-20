@@ -38,7 +38,7 @@ const AboutUs = () => {
                             </h1>
                             <div className="w-36 h-1 bg-gradient-to-r from-orange-500 to-orange-300 rounded-full mt-3 z-10"></div>
 
-                            <div className='mt-4 text-gray-600 text-xl text-center'>
+                            <div className='mt-4 text-gray-600 text-xl'>
                                 <p>Click4Details-এ আপনাকে স্বাগতম। <br/>
 
                                     Click4Details একটি আধুনিক ও ব্যবহারকারী-বান্ধব প্ল্যাটফর্ম, যেখানে আপনি সহজেই বিভিন্ন ধরনের তথ্য, পণ্য এবং সেবা সম্পর্কে বিস্তারিত জানতে পারেন। আমাদের মূল লক্ষ্য হলো মানুষের প্রয়োজনীয় তথ্যকে সহজ, দ্রুত এবং নির্ভরযোগ্যভাবে সবার কাছে পৌঁছে দেওয়া।<br/>
