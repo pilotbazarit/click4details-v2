@@ -123,6 +123,7 @@ const normalizeContactCustomer = (item = {}) => {
     description: String(
       item?.cci_desc ?? item?.description ?? item?.desc ?? ""
     ).trim(),
+    nid: String(item?.cci_nid ?? item?.nid ?? "").trim(),
     statusValue: statusMeta.value,
     statusLabel: statusMeta.label,
     statusClassName: statusMeta.className,

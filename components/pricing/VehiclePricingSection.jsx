@@ -107,9 +107,9 @@ const normalizeCurrency = (value) => {
   return ["BDT", "USD", "YEN"].includes(nextValue) ? nextValue : "BDT";
 };
 
-const SYSTEM_DOC_TYPE_ID = 474;
-const PURCHASE_EXPENDITURE_SUGGESTION_TYPE_ID = 475;
-const OTHER_CHARGES_SUGGESTION_TYPE_ID = 476;
+const SYSTEM_DOC_TYPE_ID = 475;
+const PURCHASE_EXPENDITURE_SUGGESTION_TYPE_ID = 476;
+const OTHER_CHARGES_SUGGESTION_TYPE_ID = 477;
 
 const formatDateParam = (date) => {
   const year = date.getFullYear();

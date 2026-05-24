@@ -1069,7 +1069,7 @@ const Profile = () => {
                                                                     </div>
 
                                                                     {/* Quotation Checkbox */}
-                                                                    <div className="flex items-center gap-2 ml-2">
+                                                                    {/* <div className="flex items-center gap-2 ml-2">
                                                                         <input
                                                                             type="checkbox"
                                                                             id={`quotation-${index}`}
@@ -1080,7 +1080,7 @@ const Profile = () => {
                                                                         <label htmlFor={`quotation-${index}`} className="text-sm text-gray-700 whitespace-nowrap">
                                                                             Show in Quotation
                                                                         </label>
-                                                                    </div>
+                                                                    </div> */}
 
                                                                     {/* Remove Button */}
                                                                     {rows.length > 1 && (

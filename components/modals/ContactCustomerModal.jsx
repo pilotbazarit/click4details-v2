@@ -26,6 +26,7 @@ const schema = yup.object({
   cci_phone: yup.string().trim().required("Phone is required"),
   cci_address: yup.string().trim().required("Address is required"),
   cci_desc: yup.string().nullable(),
+  cci_nid: yup.string().nullable(),
   cci_status: yup.string().required("Status is required"),
 });
 
@@ -35,6 +36,7 @@ const DEFAULT_FORM_VALUES = {
   cci_phone: "",
   cci_address: "",
   cci_desc: "",
+  cci_nid: "",
   cci_status: "1",
 };
 
@@ -115,6 +117,7 @@ const ContactCustomerModal = ({
         cci_phone: selectedItem.phone || "",
         cci_address: selectedItem.address || "",
         cci_desc: selectedItem.description || "",
+        cci_nid: selectedItem.nid || selectedItem.cci_nid || "",
         cci_status: selectedItem.statusValue || "1",
       });
       return;
@@ -291,6 +294,19 @@ const ContactCustomerModal = ({
             />
             {errors.cci_desc && (
               <p className="text-sm text-red-600">{errors.cci_desc.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cci_nid">NID</Label>
+            <Input
+              id="cci_nid"
+              placeholder="Enter NID"
+              {...register("cci_nid")}
+              disabled={isSubmitting}
+            />
+            {errors.cci_nid && (
+              <p className="text-sm text-red-600">{errors.cci_nid.message}</p>
             )}
           </div>
 

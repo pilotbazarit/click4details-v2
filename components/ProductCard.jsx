@@ -75,18 +75,18 @@ const normalizeProductCardCustomer = (customer = {}) => {
   ).trim();
   const phone = String(
     customer?.cci_phone ??
-      customer?.mobile ??
-      customer?.phone ??
-      customer?.customer_phone ??
-      customer?.email ??
-      ""
+    customer?.mobile ??
+    customer?.phone ??
+    customer?.customer_phone ??
+    customer?.email ??
+    ""
   ).trim();
   const address = String(
     customer?.cci_address ??
-      customer?.address ??
-      customer?.customer_address ??
-      customer?.cci_customer_address ??
-      ""
+    customer?.address ??
+    customer?.customer_address ??
+    customer?.cci_customer_address ??
+    ""
   ).trim();
 
   return {
@@ -147,9 +147,16 @@ const buildInitialChalanForm = (product = {}) => ({
   customerName: "",
   customerPhone: "",
   reference: "",
-  date: dayjs().format("YYYY-MM-DD"),
+  date: "",
   address: "",
+  fromAddress: "",
   note: "",
+  customerNid: "",
+  calanNo: "",
+  sellerMobile: "",
+  receiverMobile: "",
+  goodsDescriptions: [],
+  isDuplicate: false,
   registrationNo: getProductCardFilterValue([
     product?.registration_no,
     product?.v_registration_no,
@@ -163,17 +170,22 @@ const buildInitialQuotationForm = (product = {}) => ({
   customerId: "",
   customerName: "",
   customerPhone: "",
+  customerNid: "",
   customerFromAddress: "",
+  date: "",
+  deliveryAddress: "",
+  deliveryMobile: "",
+  deliveryEmail: "",
   bankName: "",
   bankBranch: "",
   bankAddress: "",
   price: "",
   priceInWords: "",
   priceNegotiation: "Fixed",
-  registrationCharge: "Include",
-  vat: "Exclude",
-  insurance: "Exclude",
-  offerValidityDate: dayjs().format("YYYY-MM-DD"),
+  registrationCharge: "Included",
+  vat: "Excluded",
+  insurance: "Excluded",
+  offerValidityDate: "",
   paymentMethod: "Cash",
   note: "",
 });
@@ -339,6 +351,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   const [isChalanCustomersLoading, setIsChalanCustomersLoading] = useState(false);
   const [isChalanSubmitting, setIsChalanSubmitting] = useState(false);
   const [chalanForm, setChalanForm] = useState(() => buildInitialChalanForm(product));
+  const [goodsDescriptionOptions, setGoodsDescriptionOptions] = useState([]);
+  const [isGoodsDescriptionLoading, setIsGoodsDescriptionLoading] = useState(false);
   const [quotationModalOpen, setQuotationModalOpen] = useState(false);
   const [contactCustomerModalOpen, setContactCustomerModalOpen] = useState(false);
   const [quotationCustomers, setQuotationCustomers] = useState([]);
@@ -348,7 +362,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   const [isQuotationPriceDropdownOpen, setIsQuotationPriceDropdownOpen] = useState(false);
   const [displayVehiclePrice, setDisplayVehiclePrice] = useState(product?.vehicle_price || {});
 
-  
+
   const quotationPriceOptions = useMemo(
     () => buildProductCardPriceOptions(quotationForm.price),
     [quotationForm.price]
@@ -415,11 +429,11 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       product?.v_location?.l_id ||
       product?.v_location_id
       ? String(
-          product?.v_location?.loc_id ||
-            product?.v_location?.location_id ||
-            product?.v_location?.l_id ||
-            product?.v_location_id
-        )
+        product?.v_location?.loc_id ||
+        product?.v_location?.location_id ||
+        product?.v_location?.l_id ||
+        product?.v_location_id
+      )
       : ""
   );
   const [currentLocationName, setCurrentLocationName] = useState(product?.v_location?.location_name || "");
@@ -660,14 +674,14 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
     // console.log("Hello");
 
     // if (parsedUser) {
-      if (product?.v_code) {
+    if (product?.v_code) {
 
-        const cleanedCode = product.v_code.replace(/^[^-]*-/, "");
+      const cleanedCode = product.v_code.replace(/^[^-]*-/, "");
 
-        navigator.clipboard.writeText(cleanedCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }
+      navigator.clipboard.writeText(cleanedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
     // }else{
     //   setLoginOpen(true);
     // }
@@ -683,7 +697,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   let isCompanyShop = pathname.includes("company-shop");
   let isFilterProductPage = pathname.includes("filter-products");
   let isSearchResultsPage = pathname.includes("search-results");
-  const hasClientPaymentHistoryPermission = 
+  const hasClientPaymentHistoryPermission =
     !isCompanyShop ||
     hasPermission(
       permissionList,
@@ -700,23 +714,23 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       "Delete"
     );
 
-    const hasChalanViewPermission =
-      !isCompanyShop ||
-      hasPermission(
-        permissionList,
-        Number(selectedCompanyShop?.shop?.s_id),
-        "Vehicle",
-        "ClientChallanView"
-      );
+  const hasChalanViewPermission =
+    !isCompanyShop ||
+    hasPermission(
+      permissionList,
+      Number(selectedCompanyShop?.shop?.s_id),
+      "Vehicle",
+      "ClientChallanView"
+    );
 
-    const hasQuationViewPermission =
-      !isCompanyShop ||
-      hasPermission(
-        permissionList,
-        Number(selectedCompanyShop?.shop?.s_id),
-        "Vehicle",
-        "ClientQuatationView"
-      );
+  const hasQuationViewPermission =
+    !isCompanyShop ||
+    hasPermission(
+      permissionList,
+      Number(selectedCompanyShop?.shop?.s_id),
+      "Vehicle",
+      "ClientQuatationView"
+    );
 
   useEffect(() => {
     if (!chalanModalOpen) return;
@@ -749,9 +763,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
           setChalanCustomers([]);
           toast.error(
             error?.message ||
-              error?.data?.message ||
-              error?.response?.data?.message ||
-              "Failed to load customers."
+            error?.data?.message ||
+            error?.response?.data?.message ||
+            "Failed to load customers."
           );
         }
       } finally {
@@ -767,6 +781,52 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       isCancelled = true;
     };
   }, [chalanContactUserId, chalanModalOpen]);
+
+  useEffect(() => {
+    if (!chalanModalOpen || goodsDescriptionOptions.length > 0) return;
+
+    let isCancelled = false;
+
+    const fetchGoodsDescriptions = async () => {
+      try {
+        setIsGoodsDescriptionLoading(true);
+        const response = await MasterDataService.Queries.getMasterDataByTypeCode(
+          constData.GOODS_DESCRIPTION_CODE
+        );
+        const masterData = response?.data?.master_data || [];
+        const options = masterData
+          .map((item) => ({
+            value: String(item.md_id),
+            label: item.md_title,
+          }))
+          .filter((option) => option.value && option.label);
+
+        if (!isCancelled) {
+          setGoodsDescriptionOptions(options);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setGoodsDescriptionOptions([]);
+          toast.error(
+            error?.message ||
+            error?.data?.message ||
+            error?.response?.data?.message ||
+            "Failed to load goods descriptions."
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsGoodsDescriptionLoading(false);
+        }
+      }
+    };
+
+    fetchGoodsDescriptions();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [chalanModalOpen, goodsDescriptionOptions.length]);
 
   useEffect(() => {
     if (!quotationModalOpen) return;
@@ -799,9 +859,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
           setQuotationCustomers([]);
           toast.error(
             error?.message ||
-              error?.data?.message ||
-              error?.response?.data?.message ||
-              "Failed to load customers."
+            error?.data?.message ||
+            error?.response?.data?.message ||
+            "Failed to load customers."
           );
         }
       } finally {
@@ -1047,7 +1107,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
     setChalanForm(buildInitialChalanForm(product));
     setChalanModalOpen(true);
   };
-  
+
 
   const handleChalanFormChange = (field, value) => {
     console.log("setChalanForm", chalanForm);
@@ -1065,6 +1125,25 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       customerPhone: option?.phone || "",
       address: option?.address || "",
     }));
+  };
+
+  const handleChalanGoodsDescriptionToggle = (value, isChecked) => {
+    setChalanForm((prev) => {
+      const currentGoodsDescriptions = Array.isArray(prev.goodsDescriptions)
+        ? prev.goodsDescriptions
+        : [];
+      const normalizedValue = String(value || "");
+      const goodsDescriptions = isChecked
+        ? Array.from(new Set([...currentGoodsDescriptions, normalizedValue]))
+        : currentGoodsDescriptions.filter(
+            (descriptionValue) => descriptionValue !== normalizedValue
+          );
+
+      return {
+        ...prev,
+        goodsDescriptions,
+      };
+    });
   };
 
   const handleContactCustomerModalChange = (isOpen) => {
@@ -1126,6 +1205,18 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
     const customerName = String(chalanForm.customerName || "").trim();
     const customerPhone = String(chalanForm.customerPhone || "").trim();
     const customerToAddress = String(chalanForm.address || "").trim();
+    const selectedGoodsDescriptions = (Array.isArray(chalanForm.goodsDescriptions)
+      ? chalanForm.goodsDescriptions
+      : []
+    )
+      .map((value) => {
+        const normalizedValue = String(value || "").trim();
+        const selectedOption = goodsDescriptionOptions.find(
+          (option) => option.value === normalizedValue
+        );
+        return String(selectedOption?.label || normalizedValue).trim();
+      })
+      .filter(Boolean);
 
     if (!selectedCustomerId) {
       if (!customerName) {
@@ -1155,16 +1246,25 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         _date: String(chalanForm.date || "").trim(),
         _is_down: "1",
         _c_to_addr: customerToAddress,
+        _c_from_addr: String(chalanForm.fromAddress || "").trim(),
+        _c_name: customerName,
+        _c_phone: customerPhone,
         _note: String(chalanForm.note || "").trim(),
         _registration_no: String(chalanForm.registrationNo || "").trim(),
+        _c_nid: String(chalanForm.customerNid || "").trim(),
+        _calan_no: String(chalanForm.calanNo || "").trim(),
+        _s_mob: String(chalanForm.sellerMobile || "").trim(),
+        _r_mob: String(chalanForm.receiverMobile || "").trim(),
+        _is_duplicate: chalanForm.isDuplicate ? "1" : "0",
       });
 
       if (selectedCustomerId) {
         queryParams.append("_cci_id", selectedCustomerId);
-      } else {
-        queryParams.append("_c_name", customerName);
-        queryParams.append("_c_phone", customerPhone);
       }
+
+      selectedGoodsDescriptions.forEach((value, index) => {
+        queryParams.append(`_goods_desc[${index}]`, value);
+      });
 
       const response = await fetch(
         `${API_URL}api/vehicle/delivery-challan-pdf?${queryParams.toString()}`,
@@ -1312,11 +1412,18 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         _bank_name: String(quotationForm.bankName || "").trim(),
         _bank_branch: String(quotationForm.bankBranch || "").trim(),
         _bank_address: String(quotationForm.bankAddress || "").trim(),
+        _c_nid: String(quotationForm.customerNid || "").trim(),
+        _date: String(quotationForm.date || "").trim(),
         _c_from_addr: customerFromAddress,
+        _d_addr: String(quotationForm.deliveryAddress || "").trim(),
+        _d_mob: String(quotationForm.deliveryMobile || "").trim(),
+        _d_email: String(quotationForm.deliveryEmail || "").trim(),
+        _c_name: customerName,
+        _c_phone: customerPhone,
         _price: String(quotationForm.price || "").trim(),
         _price_in_words: String(quotationForm.priceInWords || "").trim(),
         _price_negotiation: String(quotationForm.priceNegotiation || "Fixed"),
-        _registration_charge: String(quotationForm.registrationCharge || "Include"),
+        _registration_charge: String(quotationForm.registrationCharge || "Included"),
         _vat: String(quotationForm.vat || "Exclude"),
         _insurance: String(quotationForm.insurance || "Exclude"),
         _offer_validity_date: String(quotationForm.offerValidityDate || "").trim(),
@@ -1326,9 +1433,6 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
       if (selectedCustomerId) {
         queryParams.append("_cci_id", selectedCustomerId);
-      } else {
-        queryParams.append("_c_name", customerName);
-        queryParams.append("_c_phone", customerPhone);
       }
 
       const response = await fetch(
@@ -1721,7 +1825,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
   const shouldShowOutletName = pathname !== '/pb-home' && pathname !== '/pb-home/';
 
-    // console.log("updateProductPermission product card 433", updateProductPermission);
+  // console.log("updateProductPermission product card 433", updateProductPermission);
 
   return (
     <div className="h-full relative group">
@@ -1900,20 +2004,20 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
           <div className="w-[33%]">
             <div className="relative flex justify-end pr-4">
 
-              
+
 
               <div className="-mt-1">
                 {
                   <div
-                      className="relative mr-2 flex h-6 w-6 items-center justify-center drop-shadow-sm cursor-pointer"
-                      title={product?.v_color_name ? `${product.v_color_name}` : "Color information not available"}
-                    >
-                      <Palette className="h-7 w-7  text-pink-600" />
-                      
-                      {/* <span className="absolute  text-[12px] mt-0.5 font-bold leading-none text-gray-900">
+                    className="relative mr-2 flex h-6 w-6 items-center justify-center drop-shadow-sm cursor-pointer"
+                    title={product?.v_color_name ? `${product.v_color_name}` : "Color information not available"}
+                  >
+                    <Palette className="h-7 w-7  text-pink-600" />
+
+                    {/* <span className="absolute  text-[12px] mt-0.5 font-bold leading-none text-gray-900">
                         Red
                       </span> */}
-                    </div>
+                  </div>
                 }
               </div>
 
@@ -1983,7 +2087,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div>
               <div className="font-extrabold text-gray-900 text-xl mb-1">
                 {/* {displayVehiclePrice?.user_price !== 'Call for Price' && ''} */}
-                {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. ' }
+                {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. '}
                 {(pathname === '/my-shop/' || pathname === '/company-shop/')
                   ? formatPrice(displayVehiclePrice?.user_price)
                   : formatPrice(displayVehiclePrice?.pbl_price)
@@ -2010,7 +2114,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </div>
 
             {
-              (!isMyShop && !isCompanyShop) && 
+              (!isMyShop && !isCompanyShop) &&
               Number(parsedUser?.id) !== Number(product?.v_user_id) && (
                 <button
                   // onClick={() => setChatOpen(true)}
@@ -2121,7 +2225,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               (!isMyShop && !isCompanyShop) && (
                 <button
                   onClick={() => {
-                    const phoneNumber = parsedUser?.phone || '+8809638660077';
+                    const phoneNumber = parsedUser?.phone || '+8801969944400';
                     window.location.href = `tel:${phoneNumber}`;
                   }}
                   title="Contact Via Phone"
@@ -2341,11 +2445,11 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               </button>
             </div>
 
-            <div 
+            <div
               className="mt-3 grid grid-cols-2 gap-3"
             >
               <div
-               title={!hasChalanViewPermission ? "You don't have permission" : ""}
+                title={!hasChalanViewPermission ? "You don't have permission" : ""}
               >
                 <button
                   type="button"
@@ -2380,7 +2484,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div className="mt-4 flex items-center gap-3">
               <span className="text-3xl font-bold text-gray-800">Status</span>
 
-              <div className="relative w-full max-w-[160px]"> 
+              <div className="relative w-full max-w-[160px]">
                 <select
                   value={selectedAvailabilityStatus}
                   onChange={(e) => handleAvailabilityStatusUpdate(e.target.value)}
@@ -2398,9 +2502,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               </div>
             </div>
 
-           
 
-          
+
+
 
             <div className="mt-3 grid grid-cols-4 gap-2">
               {availabilityStatusOptions.map((option) => (
@@ -2518,9 +2622,44 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   />
                 </div>
 
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    NID
+                  </label>
+                  <input
+                    type="text"
+                    value={chalanForm.customerNid}
+                    onChange={(event) =>
+                      handleChalanFormChange("customerNid", event.target.value)
+                    }
+                    disabled={isChalanSubmitting}
+                    className={chalanInputClass}
+                    placeholder="NID"
+                  />
+                </div>
+
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={chalanForm.date}
+                    onChange={(event) =>
+                      handleChalanFormChange("date", event.target.value)
+                    }
+                    disabled={isChalanSubmitting}
+                    className={chalanInputClass}
+                  />
+                </div>
+
+
+
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Customer Address
+                    Customer Address / To Address
                   </label>
                   <textarea
                     value={chalanForm.address}
@@ -2531,6 +2670,73 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     className="w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
                     placeholder="Customer Address"
                     rows={3}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    From Address
+                  </label>
+                  <textarea
+                    value={chalanForm.fromAddress}
+                    onChange={(event) =>
+                      handleChalanFormChange("fromAddress", event.target.value)
+                    }
+                    disabled={isChalanSubmitting}
+                    className="w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    placeholder="From Address"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Sender Mobile Number
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="tel"
+                    value={chalanForm.sellerMobile}
+                    onChange={(event) =>
+                      handleChalanFormChange("sellerMobile", event.target.value)
+                    }
+                    disabled={isChalanSubmitting}
+                    className={chalanInputClass}
+                    placeholder="Sender Mobile Number"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Receiver Mobile Number
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="tel"
+                    value={chalanForm.receiverMobile}
+                    onChange={(event) =>
+                      handleChalanFormChange("receiverMobile", event.target.value)
+                    }
+                    disabled={isChalanSubmitting}
+                    className={chalanInputClass}
+                    placeholder="Receiver Mobile Number"
+                  />
+                </div>
+
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Chalan Number
+                  </label>
+                  <input
+                    type="text"
+                    value={chalanForm.calanNo}
+                    onChange={(event) =>
+                      handleChalanFormChange("calanNo", event.target.value)
+                    }
+                    disabled={isChalanSubmitting}
+                    className={chalanInputClass}
+                    placeholder="Chalan Number"
                   />
                 </div>
 
@@ -2550,22 +2756,26 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   />
                 </div>
 
-                <div>
+
+
+
+
+                <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Date
+                    Registration Number (if any)
                   </label>
                   <input
-                    type="date"
-                    value={chalanForm.date}
+                    type="text"
+                    value={chalanForm.registrationNo}
                     onChange={(event) =>
-                      handleChalanFormChange("date", event.target.value)
+                      handleChalanFormChange("registrationNo", event.target.value)
                     }
                     disabled={isChalanSubmitting}
                     className={chalanInputClass}
+                    placeholder="Registration Number"
                   />
                 </div>
 
-               
 
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -2583,20 +2793,73 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   />
                 </div>
 
+
+
+
+
+
+
                 <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Registration Number (if any)
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                      Goods Description
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+                    {isGoodsDescriptionLoading ? (
+                      <div className="col-span-full flex items-center gap-2 text-sm font-medium text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading goods descriptions...
+                      </div>
+                    ) : goodsDescriptionOptions.length ? (
+                      goodsDescriptionOptions.map((option) => {
+                        const isChecked = (chalanForm.goodsDescriptions || []).includes(
+                          option.value
+                        );
+
+                        return (
+                          <label
+                            key={option.value}
+                            className="flex min-h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(event) =>
+                                handleChalanGoodsDescriptionToggle(
+                                  option.value,
+                                  event.target.checked
+                                )
+                              }
+                              disabled={isChalanSubmitting}
+                              className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="col-span-full text-sm font-medium text-gray-500">
+                        No goods description found
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(chalanForm.isDuplicate)}
+                      onChange={(event) =>
+                        handleChalanFormChange("isDuplicate", event.target.checked)
+                      }
+                      disabled={isChalanSubmitting}
+                      className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                    <span>Duplicate Challan</span>
                   </label>
-                  <input
-                    type="text"
-                    value={chalanForm.registrationNo}
-                    onChange={(event) =>
-                      handleChalanFormChange("registrationNo", event.target.value)
-                    }
-                    disabled={isChalanSubmitting}
-                    className={chalanInputClass}
-                    placeholder="Registration Number"
-                  />
                 </div>
               </div>
             </div>
@@ -2612,7 +2875,12 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               </button>
               <button
                 type="submit"
-                disabled={isChalanSubmitting || isChalanCustomersLoading || !productId}
+                disabled={
+                  isChalanSubmitting ||
+                  isChalanCustomersLoading ||
+                  isGoodsDescriptionLoading ||
+                  !productId
+                }
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-pink-600 px-4 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isChalanSubmitting ? (
@@ -2637,6 +2905,57 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                               <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    (To) Bank / Institution Name
+                  </label>
+                  <input
+                    type="text"
+                    value={quotationForm.bankName}
+                    onChange={(event) =>
+                      handleQuotationFormChange("bankName", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                    placeholder="Bank Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    (To) Bank Branch / Institution Area
+                  </label>
+                  <input
+                    type="text"
+                    value={quotationForm.bankBranch}
+                    onChange={(event) =>
+                      handleQuotationFormChange("bankBranch", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                    placeholder="Bank Branch"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    (To) Bank / Institution Address
+                  </label>
+                  <input
+                    type="text"
+                    value={quotationForm.bankAddress}
+                    onChange={(event) =>
+                      handleQuotationFormChange("bankAddress", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                    placeholder="Bank Address"
+                  />
+                </div>
+
+
+
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Select Customer
@@ -2701,6 +3020,37 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   />
                 </div>
 
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    NID
+                  </label>
+                  <input
+                    type="text"
+                    value={quotationForm.customerNid}
+                    onChange={(event) =>
+                      handleQuotationFormChange("customerNid", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                    placeholder="NID"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={quotationForm.date}
+                    onChange={(event) =>
+                      handleQuotationFormChange("date", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                  />
+                </div>
+
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Customer Address
@@ -2717,53 +3067,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Bank Name
-                  </label>
-                  <input
-                    type="text"
-                    value={quotationForm.bankName}
-                    onChange={(event) =>
-                      handleQuotationFormChange("bankName", event.target.value)
-                    }
-                    disabled={isQuotationSubmitting}
-                    className={quotationInputClass}
-                    placeholder="Bank Name"
-                  />
-                </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Bank Branch
-                  </label>
-                  <input
-                    type="text"
-                    value={quotationForm.bankBranch}
-                    onChange={(event) =>
-                      handleQuotationFormChange("bankBranch", event.target.value)
-                    }
-                    disabled={isQuotationSubmitting}
-                    className={quotationInputClass}
-                    placeholder="Bank Branch"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Bank Address
-                  </label>
-                  <input
-                    type="text"
-                    value={quotationForm.bankAddress}
-                    onChange={(event) =>
-                      handleQuotationFormChange("bankAddress", event.target.value)
-                    }
-                    disabled={isQuotationSubmitting}
-                    className={quotationInputClass}
-                    placeholder="Bank Address"
-                  />
-                </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -2778,7 +3082,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                         const nextValue = event.target.value.replace(/\D+/g, "").slice(0, 12);
                         handleQuotationFormChange("price", nextValue);
                         setIsQuotationPriceDropdownOpen(nextValue.length > 0);
-                        
+
                         // Automatically update price in words
                         const words = numberToProductCardIndianWords(nextValue);
                         handleQuotationFormChange("priceInWords", words);
@@ -2846,6 +3150,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   >
                     <option value="Fixed">Fixed</option>
                     <option value="Negotiable">Negotiable</option>
+                    <option value="Not Applicable">Not Applicable</option>
+                    <option value="As per Discussion">As per Discussion</option>
                     <option value="Others">Others</option>
                   </select>
                 </div>
@@ -2862,9 +3168,17 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     disabled={isQuotationSubmitting}
                     className={quotationInputClass}
                   >
-                    <option value="Include">Include</option>
-                    <option value="Exclude">Exclude</option>
+                    <option value="Included">Included</option>
+                    <option value="Excluded">Excluded</option>
                     <option value="Not Applicable">Not Applicable</option>
+                    <option value="As per Discussion">As per Discussion</option>
+                    <option value="Free">Free</option>
+                    <option value="Buyer Will Pay">Buyer Will Pay</option>
+                    <option value="Customer Will Pay">Customer Will Pay</option>
+                    <option value="Seller Will Pay">Seller Will Pay</option>
+                    <option value="Institution Will Pay">Institution Will Pay</option>
+                    <option value="Institution Will Pay">Institution Will Pay</option>
+                    <option value="Others">Others</option>
                   </select>
                 </div>
 
@@ -2880,9 +3194,17 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     disabled={isQuotationSubmitting}
                     className={quotationInputClass}
                   >
-                    <option value="Include">Include</option>
-                    <option value="Exclude">Exclude</option>
+                    <option value="Included">Included</option>
+                    <option value="Excluded">Excluded</option>
                     <option value="Not Applicable">Not Applicable</option>
+                    <option value="As per Discussion">As per Discussion</option>
+                    <option value="Free">Free</option>
+                    <option value="Buyer Will Pay">Buyer Will Pay</option>
+                    <option value="Customer Will Pay">Customer Will Pay</option>
+                    <option value="Seller Will Pay">Seller Will Pay</option>
+                    <option value="Institution Will Pay">Institution Will Pay</option>
+                    <option value="Institution Will Pay">Institution Will Pay</option>
+                    <option value="Others">Others</option>
                   </select>
                 </div>
 
@@ -2898,9 +3220,17 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     disabled={isQuotationSubmitting}
                     className={quotationInputClass}
                   >
-                    <option value="Include">Include</option>
-                    <option value="Exclude">Exclude</option>
+                    <option value="Included">Included</option>
+                    <option value="Excluded">Excluded</option>
                     <option value="Not Applicable">Not Applicable</option>
+                    <option value="As per Discussion">As per Discussion</option>
+                    <option value="Free">Free</option>
+                    <option value="Buyer Will Pay">Buyer Will Pay</option>
+                    <option value="Customer Will Pay">Customer Will Pay</option>
+                    <option value="Seller Will Pay">Seller Will Pay</option>
+                    <option value="Institution Will Pay">Institution Will Pay</option>
+                    <option value="Institution Will Pay">Institution Will Pay</option>
+                    <option value="Others">Others</option>
                   </select>
                 </div>
 
@@ -2920,6 +3250,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     <option value="Any">Any</option>
                     <option value="Pay Order">Pay Order</option>
                     <option value="Check">Check</option>
+                    <option value="RTGS">RTGS</option>
                     <option value="Others">Others</option>
                   </select>
                 </div>
@@ -2939,6 +3270,57 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   />
                 </div>
 
+
+                                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Delivery Place Address
+                  </label>
+                  <textarea
+                    value={quotationForm.deliveryAddress}
+                    onChange={(event) =>
+                      handleQuotationFormChange("deliveryAddress", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className="w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    placeholder="Delivery Address"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Delivery Place Mobile
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="tel"
+                    value={quotationForm.deliveryMobile}
+                    onChange={(event) =>
+                      handleQuotationFormChange("deliveryMobile", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                    placeholder="Delivery Mobile"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Delivery Place Email
+                  </label>
+                  <input
+                    type="email"
+                    value={quotationForm.deliveryEmail}
+                    onChange={(event) =>
+                      handleQuotationFormChange("deliveryEmail", event.target.value)
+                    }
+                    disabled={isQuotationSubmitting}
+                    className={quotationInputClass}
+                    placeholder="Delivery Email"
+                  />
+                </div>
+
+
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Note
@@ -2953,6 +3335,18 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     placeholder="Note"
                     rows={3}
                   />
+                </div>
+                <div className="sm:col-span-2 flex flex-col gap-2 font-semibold text-red-500 text-sm sm:flex-row sm:items-center sm:justify-start">
+                  <span>NB. Bank Account Information will be Taken From Profile Page</span>
+                  <button
+                    type="button"
+                    target="_blank"
+                    onClick={() => router.push("/profile/#bank-accounts")}
+                    className="inline-flex h-9 w-fit items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </button>
                 </div>
               </div>
             </div>
@@ -3137,12 +3531,12 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
           <div className="p-5 sm:p-6">
             <DialogHeader className="items-center text-center">
               <DialogTitle className="text-2xl font-bold leading-tight text-white">
-                Choose Order Type 
+                Choose Order Type
               </DialogTitle>
             </DialogHeader>
 
             <DialogFooter className="mt-6 !flex !flex-col gap-3 !space-x-0 sm:!flex-col sm:!justify-start sm:!space-x-0">
-              
+
               <button
                 type="button"
                 onClick={handleQuickOrderClick}
@@ -3174,7 +3568,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
               <div className="mt-4"></div>
 
-             <button
+              <button
                 type="button"
                 onClick={handleManualOrderClick}
                 className="group flex min-h-[58px] w-full items-center gap-3 rounded-lg border border-white/45 bg-white/10 px-4 py-3 text-left text-white shadow-[0_0_16px_rgba(96,165,250,0.18)] backdrop-blur transition hover:-translate-y-0.5 hover:border-white/75 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40"
@@ -3188,8 +3582,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 </span>
               </button>
 
-              
-               <button
+
+              <button
                 type="button"
                 onClick={handleSignupOrderClick}
                 className="group flex min-h-[58px] w-full items-center gap-3 rounded-lg border border-white/45 bg-white/10 px-4 py-3 text-left text-white shadow-[0_0_16px_rgba(96,165,250,0.18)] backdrop-blur transition hover:-translate-y-0.5 hover:border-white/75 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40"
@@ -3205,10 +3599,10 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
 
               <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 flex items-center justify-center gap-2">
-                  <p>Our Only Bkash Account: +8801407054400</p>
+                <p>Our Only Bkash Account: +8801407054400</p>
               </div>
-              
-              
+
+
 
 
             </DialogFooter>
@@ -3268,7 +3662,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 />
               </div>
 
-            
+
 
               <div className="hidden">
                 <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor={`quick-order-qty-${product?.v_id}`}>

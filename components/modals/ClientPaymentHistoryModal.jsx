@@ -24,6 +24,7 @@ import {
   Users,
   Wallet,
   X,
+  Banknote,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -245,8 +246,8 @@ const getClientPaymentDocuments = (entry = {}) => {
   const rawDocuments = Array.isArray(entry?.p_docs)
     ? entry.p_docs
     : Array.isArray(entry?.docs)
-    ? entry.docs
-    : [];
+      ? entry.docs
+      : [];
 
   rawDocuments.forEach((document, index) => {
     const documentUrl = document?.secure_url || document?.secureUrl || document?.url || null;
@@ -314,6 +315,8 @@ const buildInitialCreatePaymentForm = (
   method: "cash",
   currency: "BDT",
   amount: "",
+  paAmount: String(initialValues.paAmount ?? ""),
+  paReason: String(initialValues.paReason ?? ""),
   soldPrice: String(initialValues.soldPrice ?? ""),
   duePrice: String(initialValues.duePrice ?? ""),
   status: "pending",
@@ -395,11 +398,11 @@ const normalizePaymentCustomer = (customer = {}) => {
   ).trim();
   const phone = String(
     customer?.cci_phone ??
-      customer?.mobile ??
-      customer?.phone ??
-      customer?.customer_phone ??
-      customer?.email ??
-      ""
+    customer?.mobile ??
+    customer?.phone ??
+    customer?.customer_phone ??
+    customer?.email ??
+    ""
   ).trim();
 
   return {
@@ -569,6 +572,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   );
   const [isSoldPriceDropdownOpen, setIsSoldPriceDropdownOpen] = useState(false);
   const [isAmountDropdownOpen, setIsAmountDropdownOpen] = useState(false);
+  const [isPaAmountDropdownOpen, setIsPaAmountDropdownOpen] = useState(false);
   const productId = getPaymentHistoryFilterValue([product?.id, product?.v_id]);
   const customerPhone = getPaymentHistoryFilterValue([
     product?.cus_phone,
@@ -607,6 +611,10 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const amountOptions = useMemo(
     () => buildClientPaymentPriceOptions(createPaymentForm.amount),
     [createPaymentForm.amount]
+  );
+  const paAmountOptions = useMemo(
+    () => buildClientPaymentPriceOptions(createPaymentForm.paAmount),
+    [createPaymentForm.paAmount]
   );
   const createPaymentCustomerOptions = useMemo(
     () =>
@@ -721,9 +729,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       } catch (error) {
         toast.error(
           error?.message ||
-            error?.data?.message ||
-            error?.response?.data?.message ||
-            "Failed to load customer payment pricing."
+          error?.data?.message ||
+          error?.response?.data?.message ||
+          "Failed to load customer payment pricing."
         );
         return {
           soldPrice: "",
@@ -764,9 +772,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       setCreatePaymentCustomers([]);
       toast.error(
         error?.message ||
-          error?.data?.message ||
-          error?.response?.data?.message ||
-          "Failed to load contact customers."
+        error?.data?.message ||
+        error?.response?.data?.message ||
+        "Failed to load contact customers."
       );
     } finally {
       setIsCreatePaymentCustomersLoading(false);
@@ -801,6 +809,16 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           entry?.vehicle_due_price ??
           entry?.price_due ??
           0;
+        const paAmountValue =
+          entry?.p_a_amount ??
+          entry?.pa_amount ??
+          entry?.adjustment_amount ??
+          "";
+        const paReasonValue =
+          entry?.p_a_reason ??
+          entry?.pa_reason ??
+          entry?.adjustment_reason ??
+          "";
         const documents = getClientPaymentDocuments(entry);
 
         return {
@@ -808,6 +826,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           method: entry?.p_method || entry?.payment_method || entry?.method || entry?.type || entry?.pm_method || "N/A",
           status: String(entry?.p_status || entry?.payment_status || entry?.status || entry?.pm_status || "unknown").toLowerCase(),
           amount: parseClientPaymentNumber(amountValue),
+          paAmount: String(paAmountValue ?? "").trim(),
+          paReason: String(paReasonValue ?? "").trim(),
           soldPrice: parseClientPaymentNumber(soldPriceValue),
           duePrice: parseClientPaymentNumber(duePriceValue),
           currency: String(entry?.p_currency || entry?.currency || "BDT").toUpperCase(),
@@ -899,8 +919,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
         customerId:
           String(
             matchedCustomer?.id ||
-              historyItem?.contactCustomerId ||
-              ""
+            historyItem?.contactCustomerId ||
+            ""
           ) || "",
         reference: String(historyItem?.reference || "").trim(),
         paidAt: dayjs(historyItem?.paidAt).isValid()
@@ -912,6 +932,11 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           historyItem?.amount !== undefined && historyItem?.amount !== null
             ? String(historyItem.amount)
             : "",
+        paAmount:
+          historyItem?.paAmount !== undefined && historyItem?.paAmount !== null
+            ? String(historyItem.paAmount)
+            : "",
+        paReason: String(historyItem?.paReason || "").trim(),
         soldPrice:
           historyItem?.soldPrice !== undefined && historyItem?.soldPrice !== null
             ? String(historyItem.soldPrice)
@@ -944,6 +969,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     setCreatePaymentForm(initialForm);
     setIsSoldPriceDropdownOpen(false);
     setIsAmountDropdownOpen(false);
+    setIsPaAmountDropdownOpen(false);
     setCreatePaymentCustomerPaidAmount(0);
     setIsCreatePaymentSoldPriceLocked(false);
     setAdvancedDetailsOpen(true);
@@ -1081,13 +1107,13 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     );
     const nextDuePrice = soldPriceRaw
       ? String(
-          Math.max(
-            parseClientPaymentNumber(soldPriceRaw) -
-              createPaymentCustomerPaidAmount -
-              currentAmount,
-            0
-          )
+        Math.max(
+          parseClientPaymentNumber(soldPriceRaw) -
+          createPaymentCustomerPaidAmount -
+          currentAmount,
+          0
         )
+      )
       : "";
 
     setCreatePaymentForm((prev) => {
@@ -1153,6 +1179,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
     setIsSoldPriceDropdownOpen(false);
     setIsAmountDropdownOpen(false);
+    setIsPaAmountDropdownOpen(false);
     setCreatePaymentForm((prev) => ({
       ...prev,
       customerId,
@@ -1172,6 +1199,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       setIsCreatePaymentSoldPriceLocked(false);
       setIsSoldPriceDropdownOpen(false);
       setIsAmountDropdownOpen(false);
+      setIsPaAmountDropdownOpen(false);
       setCreatePaymentForm(buildInitialCreatePaymentForm(customerName, customerPhone));
       setAdvancedDetailsOpen(true);
     }
@@ -1180,6 +1208,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const handleEditPayment = (historyItem) => {
     setEditingPaymentItem(historyItem);
     setCreatePaymentForm(buildPaymentFormFromHistoryItem(historyItem));
+    setIsPaAmountDropdownOpen(false);
     setAdvancedDetailsOpen(true);
     setCreatePaymentOpen(true);
   };
@@ -1228,9 +1257,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     } catch (error) {
       toast.error(
         error?.message ||
-          error?.data?.message ||
-          error?.response?.data?.message ||
-          "Failed to delete payment."
+        error?.data?.message ||
+        error?.response?.data?.message ||
+        "Failed to delete payment."
       );
     } finally {
       setDeletingPaymentId(null);
@@ -1329,7 +1358,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     } catch (error) {
       toast.error(
         error?.message ||
-          "Failed to download payment history."
+        "Failed to download payment history."
       );
       return false;
     } finally {
@@ -1398,6 +1427,12 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       return;
     }
 
+    const normalizedPaAmount = parseClientPaymentNumber(createPaymentForm.paAmount);
+    if (String(createPaymentForm.paAmount).trim() && normalizedPaAmount < 0) {
+      toast.error("Please enter a valid P/A amount.");
+      return;
+    }
+
     const normalizedSoldPrice = parseClientPaymentNumber(createPaymentForm.soldPrice);
     if (String(createPaymentForm.soldPrice).trim() === "" || normalizedSoldPrice <= 0) {
       toast.error("Please enter a valid sold price.");
@@ -1420,6 +1455,11 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     formData.append("p_entity_id", String(productId));
     formData.append("p_user_id", String(createPaymentUserId));
     formData.append("p_amount", String(normalizedAmount));
+    formData.append(
+      "p_a_amount",
+      String(createPaymentForm.paAmount).trim() ? String(normalizedPaAmount) : ""
+    );
+    formData.append("p_a_reason", createPaymentForm.paReason.trim());
     formData.append("p_currency", createPaymentForm.currency);
     formData.append("p_method", createPaymentForm.method);
     formData.append("p_status", createPaymentForm.status);
@@ -1464,9 +1504,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       ) {
         toast.success(
           response?.message ||
-            (isEditPaymentMode
-              ? "Payment updated successfully."
-              : "Payment created successfully.")
+          (isEditPaymentMode
+            ? "Payment updated successfully."
+            : "Payment created successfully.")
         );
         handleCreatePaymentModalChange(false);
         await fetchClientPaymentHistory();
@@ -1475,9 +1515,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
       toast.error(
         response?.message ||
-          (isEditPaymentMode
-            ? "Failed to update payment."
-            : "Failed to create payment.")
+        (isEditPaymentMode
+          ? "Failed to update payment."
+          : "Failed to create payment.")
       );
     } catch (error) {
       toast.error(
@@ -1505,7 +1545,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
               <div className="flex items-start justify-between gap-3">
                 <DialogTitle className="text-2xl font-bold text-gray-800">Client Payment History/Money Receipt</DialogTitle>
                 <div className="flex items-center gap-2">
-                  
+
                   <div>
                     <button
                       type="button"
@@ -1521,7 +1561,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                       Download Payment History
                     </button>
                   </div>
-                  
+
                   <div className="relative min-w-[250px]">
                     <Users className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <Select
@@ -1596,9 +1636,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     {isClientPaymentHistoryLoading
                       ? "--"
                       : formatClientPaymentAmount(
-                          clientPaymentSummary.soldPrice,
-                          clientPaymentSummary.currency
-                        )}
+                        clientPaymentSummary.soldPrice,
+                        clientPaymentSummary.currency
+                      )}
                   </p>
                 </div>
 
@@ -1610,9 +1650,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     {isClientPaymentHistoryLoading
                       ? "--"
                       : formatClientPaymentAmount(
-                          clientPaymentSummary.paidPrice,
-                          clientPaymentSummary.currency
-                        )}
+                        clientPaymentSummary.paidPrice,
+                        clientPaymentSummary.currency
+                      )}
                   </p>
                 </div>
 
@@ -1624,9 +1664,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     {isClientPaymentHistoryLoading
                       ? "--"
                       : formatClientPaymentAmount(
-                          clientPaymentSummary.duePrice,
-                          clientPaymentSummary.currency
-                        )}
+                        clientPaymentSummary.duePrice,
+                        clientPaymentSummary.currency
+                      )}
                   </p>
                 </div>
               </div>
@@ -1648,164 +1688,164 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                   <div className="w-full overflow-x-auto">
                     <div className="max-h-[64vh] min-w-[1180px] overflow-y-auto overscroll-contain">
                       <table className="w-full border-collapse text-left text-sm text-slate-700">
-                      <thead className="sticky top-0 z-10 bg-[#f8fafc]">
-                        <tr className="border-b border-[#d7dee8]">
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Payment Method
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Payment Status
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Amount
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Transaction No
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Reference No
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Created
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Paid At
-                          </th>
-                          <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Image
-                          </th>
-                          <th className="px-4 py-3 text-base font-semibold leading-snug text-slate-500">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
+                        <thead className="sticky top-0 z-10 bg-[#f8fafc]">
+                          <tr className="border-b border-[#d7dee8]">
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Payment Method
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Payment Status
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Amount
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Transaction No
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Reference No
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Created
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Paid At
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Image
+                            </th>
+                            <th className="px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
 
-                      <tbody>
-                        {clientPaymentHistory.map((historyItem, index) => {
-                          const primaryDocument = historyItem.documents[0] || null;
+                        <tbody>
+                          {clientPaymentHistory.map((historyItem, index) => {
+                            const primaryDocument = historyItem.documents[0] || null;
 
-                          return (
-                            <tr
-                              key={historyItem.id || `${productId || "product"}-payment-${index}`}
-                              className="border-b border-[#e4eaf2] align-middle transition hover:bg-[#fafcff]"
-                            >
-                              <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-semibold text-slate-700">
-                                {formatClientPaymentText(historyItem.method)}
-                              </td>
+                            return (
+                              <tr
+                                key={historyItem.id || `${productId || "product"}-payment-${index}`}
+                                className="border-b border-[#e4eaf2] align-middle transition hover:bg-[#fafcff]"
+                              >
+                                <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-semibold text-slate-700">
+                                  {formatClientPaymentText(historyItem.method)}
+                                </td>
 
-                              <td className="border-r border-[#e4eaf2] px-5 py-5">
-                                <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${getClientPaymentStatusClasses(historyItem.status)}`}
-                                >
-                                  {formatClientPaymentText(historyItem.status)}
-                                </span>
-                              </td>
-
-                              <td className="border-r border-[#e4eaf2] px-5 py-5">
-                                <p className="text-lg font-semibold text-slate-800">
-                                  {formatClientPaymentAmount(historyItem.amount, historyItem.currency)}
-                                </p>
-                                <p className="mt-1 text-sm text-slate-500">{historyItem.currency}</p>
-                              </td>
-
-                              <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-medium text-slate-700">
-                                {historyItem.transactionId || "N/A"}
-                              </td>
-
-                              <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-medium text-slate-700">
-                                {historyItem.reference || "N/A"}
-                              </td>
-
-                              <td className="border-r border-[#e4eaf2] px-5 py-5 text-base text-slate-700">
-                                {formatClientPaymentDateTime(historyItem.createdAt)}
-                              </td>
-
-                              <td className="border-r border-[#e4eaf2] px-5 py-5 text-base text-slate-700">
-                                {formatClientPaymentDateTime(historyItem.paidAt)}
-                              </td>
-
-                              <td className="border-r border-[#e4eaf2] px-5 py-5">
-                                {primaryDocument ? (
-                                  <div className="flex min-w-[190px] items-center gap-3">
-                                    <a
-                                      href={primaryDocument.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="group block h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#d7dee8] bg-slate-100"
-                                      title="Open payment image"
-                                    >
-                                      {primaryDocument.isImage ? (
-                                        <img
-                                          src={primaryDocument.url}
-                                          alt={`Payment attachment ${index + 1}`}
-                                          className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
-                                        />
-                                      ) : (
-                                        <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
-                                          {primaryDocument.format || "FILE"}
-                                        </div>
-                                      )}
-                                    </a>
-
-                                    <div className="min-w-0">
-                                      <p className="truncate text-sm font-medium text-slate-700">
-                                        {getClientPaymentAttachmentSummary(historyItem.documents)}
-                                      </p>
-                                      {historyItem.documents.length > 1 && (
-                                        <p className="mt-1 text-xs text-slate-500">
-                                          +{historyItem.documents.length - 1} more file
-                                          {historyItem.documents.length > 2 ? "s" : ""}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-base text-slate-400">No image</span>
-                                )}
-                              </td>
-
-                              <td className="px-5 py-5">
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditPayment(historyItem)}
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7dee8] text-[#2563eb] transition hover:border-[#2563eb] hover:bg-blue-50"
-                                    aria-label={`Edit payment ${index + 1}`}
-                                    title="Edit payment"
+                                <td className="border-r border-[#e4eaf2] px-5 py-5">
+                                  <span
+                                    className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${getClientPaymentStatusClasses(historyItem.status)}`}
                                   >
-                                    <Pencil className="h-5 w-5" />
-                                  </button>
+                                    {formatClientPaymentText(historyItem.status)}
+                                  </span>
+                                </td>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeletePayment(historyItem)}
-                                    disabled={deletingPaymentId === historyItem.id}
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#fecaca] text-[#dc2626] transition hover:border-[#dc2626] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                    aria-label={`Delete payment ${index + 1}`}
-                                    title="Delete payment"
-                                  >
-                                    <Trash2 className="h-5 w-5" />
-                                  </button>
+                                <td className="border-r border-[#e4eaf2] px-5 py-5">
+                                  <p className="text-lg font-semibold text-slate-800">
+                                    {formatClientPaymentAmount(historyItem.amount, historyItem.currency)}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-500">{historyItem.currency}</p>
+                                </td>
 
+                                <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-medium text-slate-700">
+                                  {historyItem.transactionId || "N/A"}
+                                </td>
+
+                                <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-medium text-slate-700">
+                                  {historyItem.reference || "N/A"}
+                                </td>
+
+                                <td className="border-r border-[#e4eaf2] px-5 py-5 text-base text-slate-700">
+                                  {formatClientPaymentDateTime(historyItem.createdAt)}
+                                </td>
+
+                                <td className="border-r border-[#e4eaf2] px-5 py-5 text-base text-slate-700">
+                                  {formatClientPaymentDateTime(historyItem.paidAt)}
+                                </td>
+
+                                <td className="border-r border-[#e4eaf2] px-5 py-5">
                                   {primaryDocument ? (
-                                    <a
-                                      href={primaryDocument.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7dee8] text-[#f97316] transition hover:border-[#f97316] hover:bg-orange-50"
-                                      aria-label={`Open payment attachment ${index + 1}`}
-                                      title="Open attachment"
+                                    <div className="flex min-w-[190px] items-center gap-3">
+                                      <a
+                                        href={primaryDocument.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="group block h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#d7dee8] bg-slate-100"
+                                        title="Open payment image"
+                                      >
+                                        {primaryDocument.isImage ? (
+                                          <img
+                                            src={primaryDocument.url}
+                                            alt={`Payment attachment ${index + 1}`}
+                                            className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                                          />
+                                        ) : (
+                                          <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                            {primaryDocument.format || "FILE"}
+                                          </div>
+                                        )}
+                                      </a>
+
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-medium text-slate-700">
+                                          {getClientPaymentAttachmentSummary(historyItem.documents)}
+                                        </p>
+                                        {historyItem.documents.length > 1 && (
+                                          <p className="mt-1 text-xs text-slate-500">
+                                            +{historyItem.documents.length - 1} more file
+                                            {historyItem.documents.length > 2 ? "s" : ""}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-base text-slate-400">No image</span>
+                                  )}
+                                </td>
+
+                                <td className="px-5 py-5">
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditPayment(historyItem)}
+                                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7dee8] text-[#2563eb] transition hover:border-[#2563eb] hover:bg-blue-50"
+                                      aria-label={`Edit payment ${index + 1}`}
+                                      title="Edit payment"
                                     >
-                                      <ExternalLink className="h-5 w-5" />
-                                    </a>
-                                  ) : null}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                      <Pencil className="h-5 w-5" />
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeletePayment(historyItem)}
+                                      disabled={deletingPaymentId === historyItem.id}
+                                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#fecaca] text-[#dc2626] transition hover:border-[#dc2626] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                      aria-label={`Delete payment ${index + 1}`}
+                                      title="Delete payment"
+                                    >
+                                      <Trash2 className="h-5 w-5" />
+                                    </button>
+
+                                    {primaryDocument ? (
+                                      <a
+                                        href={primaryDocument.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#d7dee8] text-[#f97316] transition hover:border-[#f97316] hover:bg-orange-50"
+                                        aria-label={`Open payment attachment ${index + 1}`}
+                                        title="Open attachment"
+                                      >
+                                        <ExternalLink className="h-5 w-5" />
+                                      </a>
+                                    ) : null}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
@@ -2054,7 +2094,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                 </div>
               </div>
 
-             
+
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -2062,7 +2102,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     Sold Price
                   </label>
                   <div className="relative">
-                    <DollarSign className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                    <Banknote className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
                     <input
                       type="text"
                       inputMode="numeric"
@@ -2114,7 +2154,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     Due Price
                   </label>
                   <div className="relative">
-                    <DollarSign className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                    <Banknote className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
                     <input
                       type="number"
                       min="0"
@@ -2134,7 +2174,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Amount</label>
                   <div className="relative">
-                    <DollarSign className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                    <Banknote className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
                     <input
                       type="text"
                       inputMode="numeric"
@@ -2195,6 +2235,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                 </div>
               </div>
 
+
               <div className="rounded-2xl border border-gray-300 bg-gray-100 p-3.5">
                 <button
                   type="button"
@@ -2221,12 +2262,85 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                 {advancedDetailsOpen && (
                   <div className="mt-3 space-y-2.5">
 
+
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Additional Payments</label>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Reason
+                        </label>
+                        <div className="relative">
+                          <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                          <input
+                            type="text"
+                            value={createPaymentForm.paReason}
+                            onChange={(event) => handleCreatePaymentFieldChange("paReason", event.target.value)}
+                            className={formInputClass}
+                            placeholder="Reason"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Amount
+                        </label>
+                        <div className="relative">
+                          <Banknote className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formatClientPaymentInputNumber(createPaymentForm.paAmount)}
+                            onChange={(event) => {
+                              const nextValue = event.target.value.replace(/\D+/g, "").slice(0, 12);
+                              handleCreatePaymentFieldChange(
+                                "paAmount",
+                                nextValue
+                              );
+                              setIsPaAmountDropdownOpen(nextValue.length > 0);
+                            }}
+                            onFocus={() => setIsPaAmountDropdownOpen(paAmountOptions.length > 0)}
+                            onBlur={() => {
+                              setTimeout(() => setIsPaAmountDropdownOpen(false), 120);
+                            }}
+                            className={formInputClass}
+                            placeholder="Amount"
+                          />
+                          {isPaAmountDropdownOpen && paAmountOptions.length > 0 && (
+                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
+                              {paAmountOptions.map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
+                                  onClick={() => {
+                                    handleCreatePaymentFieldChange("paAmount", option.value);
+                                    setIsPaAmountDropdownOpen(false);
+                                  }}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                                    <p className="mt-1 text-xs text-gray-700">{option.words}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+
+                    </div>
+
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Reference Name
                       </label>
                       <div className="relative">
-                         <Ticket className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                        <Ticket className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
                         <input
                           type="text"
                           value={createPaymentForm.reference}
@@ -2330,8 +2444,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     ? "Updating..."
                     : "Creating..."
                   : isEditPaymentMode
-                  ? "Update"
-                  : "Create"}
+                    ? "Update"
+                    : "Create"}
               </button>
             </div>
           </form>
