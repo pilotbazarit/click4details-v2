@@ -315,8 +315,6 @@ const buildInitialCreatePaymentForm = (
   method: "cash",
   currency: "BDT",
   amount: "",
-  paAmount: String(initialValues.paAmount ?? ""),
-  paReason: String(initialValues.paReason ?? ""),
   soldPrice: String(initialValues.soldPrice ?? ""),
   duePrice: String(initialValues.duePrice ?? ""),
   status: "pending",
@@ -559,6 +557,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const [paymentHistoryDownloadForm, setPaymentHistoryDownloadForm] = useState({
     description: "",
     customerId: "",
+    paAmount: "",
+    paReason: "",
   });
   const [deletingPaymentId, setDeletingPaymentId] = useState(null);
   const [createPaymentCustomers, setCreatePaymentCustomers] = useState([]);
@@ -572,7 +572,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   );
   const [isSoldPriceDropdownOpen, setIsSoldPriceDropdownOpen] = useState(false);
   const [isAmountDropdownOpen, setIsAmountDropdownOpen] = useState(false);
-  const [isPaAmountDropdownOpen, setIsPaAmountDropdownOpen] = useState(false);
+  const [isPaymentHistoryDownloadPaAmountDropdownOpen, setIsPaymentHistoryDownloadPaAmountDropdownOpen] = useState(false);
   const productId = getPaymentHistoryFilterValue([product?.id, product?.v_id]);
   const customerPhone = getPaymentHistoryFilterValue([
     product?.cus_phone,
@@ -612,9 +612,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     () => buildClientPaymentPriceOptions(createPaymentForm.amount),
     [createPaymentForm.amount]
   );
-  const paAmountOptions = useMemo(
-    () => buildClientPaymentPriceOptions(createPaymentForm.paAmount),
-    [createPaymentForm.paAmount]
+  const paymentHistoryDownloadPaAmountOptions = useMemo(
+    () => buildClientPaymentPriceOptions(paymentHistoryDownloadForm.paAmount),
+    [paymentHistoryDownloadForm.paAmount]
   );
   const createPaymentCustomerOptions = useMemo(
     () =>
@@ -809,16 +809,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           entry?.vehicle_due_price ??
           entry?.price_due ??
           0;
-        const paAmountValue =
-          entry?.p_a_amount ??
-          entry?.pa_amount ??
-          entry?.adjustment_amount ??
-          "";
-        const paReasonValue =
-          entry?.p_a_reason ??
-          entry?.pa_reason ??
-          entry?.adjustment_reason ??
-          "";
         const documents = getClientPaymentDocuments(entry);
 
         return {
@@ -826,8 +816,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           method: entry?.p_method || entry?.payment_method || entry?.method || entry?.type || entry?.pm_method || "N/A",
           status: String(entry?.p_status || entry?.payment_status || entry?.status || entry?.pm_status || "unknown").toLowerCase(),
           amount: parseClientPaymentNumber(amountValue),
-          paAmount: String(paAmountValue ?? "").trim(),
-          paReason: String(paReasonValue ?? "").trim(),
           soldPrice: parseClientPaymentNumber(soldPriceValue),
           duePrice: parseClientPaymentNumber(duePriceValue),
           currency: String(entry?.p_currency || entry?.currency || "BDT").toUpperCase(),
@@ -932,11 +920,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           historyItem?.amount !== undefined && historyItem?.amount !== null
             ? String(historyItem.amount)
             : "",
-        paAmount:
-          historyItem?.paAmount !== undefined && historyItem?.paAmount !== null
-            ? String(historyItem.paAmount)
-            : "",
-        paReason: String(historyItem?.paReason || "").trim(),
         soldPrice:
           historyItem?.soldPrice !== undefined && historyItem?.soldPrice !== null
             ? String(historyItem.soldPrice)
@@ -969,7 +952,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     setCreatePaymentForm(initialForm);
     setIsSoldPriceDropdownOpen(false);
     setIsAmountDropdownOpen(false);
-    setIsPaAmountDropdownOpen(false);
     setCreatePaymentCustomerPaidAmount(0);
     setIsCreatePaymentSoldPriceLocked(false);
     setAdvancedDetailsOpen(true);
@@ -1143,9 +1125,12 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     setPaymentHistoryDownloadOpen(isOpen);
 
     if (!isOpen) {
+      setIsPaymentHistoryDownloadPaAmountDropdownOpen(false);
       setPaymentHistoryDownloadForm({
         description: "",
         customerId: "",
+        paAmount: "",
+        paReason: "",
       });
     }
   };
@@ -1154,7 +1139,10 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     setPaymentHistoryDownloadForm({
       description: "",
       customerId: selectedPaymentCustomerId,
+      paAmount: "",
+      paReason: "",
     });
+    setIsPaymentHistoryDownloadPaAmountDropdownOpen(false);
     setPaymentHistoryDownloadOpen(true);
   };
 
@@ -1179,7 +1167,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
     setIsSoldPriceDropdownOpen(false);
     setIsAmountDropdownOpen(false);
-    setIsPaAmountDropdownOpen(false);
     setCreatePaymentForm((prev) => ({
       ...prev,
       customerId,
@@ -1199,7 +1186,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       setIsCreatePaymentSoldPriceLocked(false);
       setIsSoldPriceDropdownOpen(false);
       setIsAmountDropdownOpen(false);
-      setIsPaAmountDropdownOpen(false);
       setCreatePaymentForm(buildInitialCreatePaymentForm(customerName, customerPhone));
       setAdvancedDetailsOpen(true);
     }
@@ -1208,7 +1194,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const handleEditPayment = (historyItem) => {
     setEditingPaymentItem(historyItem);
     setCreatePaymentForm(buildPaymentFormFromHistoryItem(historyItem));
-    setIsPaAmountDropdownOpen(false);
     setAdvancedDetailsOpen(true);
     setCreatePaymentOpen(true);
   };
@@ -1269,6 +1254,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const handleDownloadPaymentHistory = async ({
     description = "",
     customerId = "",
+    paAmount = "",
+    paReason = "",
   } = {}) => {
     if (!productId) {
       toast.error("Product id not found.");
@@ -1289,6 +1276,10 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
         p_entity_id: String(productId),
         _is_down: "1",
         p_desc: String(description || "").trim(),
+        p_a_amount: String(paAmount || "").trim()
+          ? String(parseClientPaymentNumber(paAmount))
+          : "",
+        p_a_reason: String(paReason || "").trim(),
       });
 
       const normalizedCustomerId = String(customerId || "").trim();
@@ -1372,6 +1363,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     const didDownload = await handleDownloadPaymentHistory({
       description: paymentHistoryDownloadForm.description,
       customerId: paymentHistoryDownloadForm.customerId,
+      paAmount: paymentHistoryDownloadForm.paAmount,
+      paReason: paymentHistoryDownloadForm.paReason,
     });
 
     if (didDownload) {
@@ -1427,12 +1420,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       return;
     }
 
-    const normalizedPaAmount = parseClientPaymentNumber(createPaymentForm.paAmount);
-    if (String(createPaymentForm.paAmount).trim() && normalizedPaAmount < 0) {
-      toast.error("Please enter a valid P/A amount.");
-      return;
-    }
-
     const normalizedSoldPrice = parseClientPaymentNumber(createPaymentForm.soldPrice);
     if (String(createPaymentForm.soldPrice).trim() === "" || normalizedSoldPrice <= 0) {
       toast.error("Please enter a valid sold price.");
@@ -1455,11 +1442,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     formData.append("p_entity_id", String(productId));
     formData.append("p_user_id", String(createPaymentUserId));
     formData.append("p_amount", String(normalizedAmount));
-    formData.append(
-      "p_a_amount",
-      String(createPaymentForm.paAmount).trim() ? String(normalizedPaAmount) : ""
-    );
-    formData.append("p_a_reason", createPaymentForm.paReason.trim());
     formData.append("p_currency", createPaymentForm.currency);
     formData.append("p_method", createPaymentForm.method);
     formData.append("p_status", createPaymentForm.status);
@@ -1869,7 +1851,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
         open={paymentHistoryDownloadOpen}
         onOpenChange={handlePaymentHistoryDownloadModalChange}
       >
-        <DialogContent className="w-[92vw] max-w-md rounded-2xl border border-gray-200 p-0">
+        <DialogContent className="w-[94vw] max-w-2xl rounded-2xl border border-gray-200 p-0">
           <form onSubmit={handlePaymentHistoryDownloadSubmit}>
             <div className="p-5 sm:p-6">
               <DialogHeader className="text-left">
@@ -1939,6 +1921,91 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label
+                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600"
+                      htmlFor="payment-history-download-pa-reason"
+                    >
+                     Additional Reason
+                    </label>
+                    <div className="relative">
+                      <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                      <input
+                        id="payment-history-download-pa-reason"
+                        type="text"
+                        value={paymentHistoryDownloadForm.paReason}
+                        onChange={(event) =>
+                          handlePaymentHistoryDownloadFormChange(
+                            "paReason",
+                            event.target.value
+                          )
+                        }
+                        disabled={isPaymentHistoryDownloading}
+                        className={formInputClass}
+                        placeholder="Reason"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600"
+                      htmlFor="payment-history-download-pa-amount"
+                    >
+                      Additional Amount
+                    </label>
+                    <div className="relative">
+                      <Banknote className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                      <input
+                        id="payment-history-download-pa-amount"
+                        type="text"
+                        inputMode="numeric"
+                        value={formatClientPaymentInputNumber(paymentHistoryDownloadForm.paAmount)}
+                        onChange={(event) => {
+                          const nextValue = event.target.value.replace(/\D+/g, "").slice(0, 12);
+                          handlePaymentHistoryDownloadFormChange("paAmount", nextValue);
+                          setIsPaymentHistoryDownloadPaAmountDropdownOpen(nextValue.length > 0);
+                        }}
+                        onFocus={() =>
+                          setIsPaymentHistoryDownloadPaAmountDropdownOpen(
+                            paymentHistoryDownloadPaAmountOptions.length > 0
+                          )
+                        }
+                        onBlur={() => {
+                          setTimeout(() => setIsPaymentHistoryDownloadPaAmountDropdownOpen(false), 120);
+                        }}
+                        disabled={isPaymentHistoryDownloading}
+                        className={formInputClass}
+                        placeholder="Amount"
+                      />
+                      {isPaymentHistoryDownloadPaAmountDropdownOpen &&
+                        paymentHistoryDownloadPaAmountOptions.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
+                            {paymentHistoryDownloadPaAmountOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
+                                onClick={() => {
+                                  handlePaymentHistoryDownloadFormChange("paAmount", option.value);
+                                  setIsPaymentHistoryDownloadPaAmountDropdownOpen(false);
+                                }}
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                                  <p className="mt-1 text-xs text-gray-700">{option.words}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -2262,78 +2329,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                 {advancedDetailsOpen && (
                   <div className="mt-3 space-y-2.5">
 
-
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Additional Payments</label>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
-
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Reason
-                        </label>
-                        <div className="relative">
-                          <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-                          <input
-                            type="text"
-                            value={createPaymentForm.paReason}
-                            onChange={(event) => handleCreatePaymentFieldChange("paReason", event.target.value)}
-                            className={formInputClass}
-                            placeholder="Reason"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Amount
-                        </label>
-                        <div className="relative">
-                          <Banknote className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={formatClientPaymentInputNumber(createPaymentForm.paAmount)}
-                            onChange={(event) => {
-                              const nextValue = event.target.value.replace(/\D+/g, "").slice(0, 12);
-                              handleCreatePaymentFieldChange(
-                                "paAmount",
-                                nextValue
-                              );
-                              setIsPaAmountDropdownOpen(nextValue.length > 0);
-                            }}
-                            onFocus={() => setIsPaAmountDropdownOpen(paAmountOptions.length > 0)}
-                            onBlur={() => {
-                              setTimeout(() => setIsPaAmountDropdownOpen(false), 120);
-                            }}
-                            className={formInputClass}
-                            placeholder="Amount"
-                          />
-                          {isPaAmountDropdownOpen && paAmountOptions.length > 0 && (
-                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
-                              {paAmountOptions.map((option) => (
-                                <button
-                                  key={option.value}
-                                  type="button"
-                                  onMouseDown={(event) => event.preventDefault()}
-                                  className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
-                                  onClick={() => {
-                                    handleCreatePaymentFieldChange("paAmount", option.value);
-                                    setIsPaAmountDropdownOpen(false);
-                                  }}
-                                >
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900">{option.label}</p>
-                                    <p className="mt-1 text-xs text-gray-700">{option.words}</p>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-
-                    </div>
 
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
