@@ -1159,8 +1159,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       const goodsDescriptions = isChecked
         ? Array.from(new Set([...currentGoodsDescriptions, normalizedValue]))
         : currentGoodsDescriptions.filter(
-            (descriptionValue) => descriptionValue !== normalizedValue
-          );
+          (descriptionValue) => descriptionValue !== normalizedValue
+        );
 
       return {
         ...prev,
@@ -2051,21 +2051,27 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 }
               </div>
 
-              <div className="-mt-1">
-                {
-                  formattedUserRating
-                    ? <div
-                      className="relative mr-2 flex h-6 w-6 items-center justify-center drop-shadow-sm cursor-pointer"
-                      title={`Importer rating ${formattedUserRating}`}
-                    >
-                      <Star className="h-8 w-8 fill-amber-300 text-amber-400" />
-                      <span className="absolute  text-[12px] mt-0.5 font-bold leading-none text-gray-900">
-                        {formattedUserRating}
-                      </span>
-                    </div>
-                    : null
-                }
-              </div>
+              {
+                (!isMyShop && !isCompanyShop) &&
+                <div className="-mt-1">
+                  {
+                    formattedUserRating
+                      ? <div
+                        className="relative mr-2 flex h-6 w-6 items-center justify-center drop-shadow-sm cursor-pointer"
+                        title={`Importer rating ${formattedUserRating}`}
+                      >
+                        <Star className="h-8 w-8 fill-amber-300 text-amber-400" />
+                        <span className="absolute  text-[12px] mt-0.5 font-bold leading-none text-gray-900">
+                          {formattedUserRating}
+                        </span>
+                      </div>
+                      : null
+                  }
+                </div>
+              }
+
+
+
 
               <div
                 onMouseEnter={() => setShowTooltip(true)}
@@ -2947,7 +2953,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-                               <div>
+                <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     (To) Bank / Institution Name
                   </label>
@@ -3312,7 +3318,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 </div>
 
 
-                                <div className="sm:col-span-2">
+                <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Delivery Place Address
                   </label>
