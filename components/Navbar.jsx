@@ -790,11 +790,14 @@ const NavbarContent = () => {
   useEffect(() => {
     if (!parsedUser) return; // Only run if user is logged in
 
-    const intervalId = setInterval(() => {
-      getUnreadNotifications();
-    }, 5000);
+    // const intervalId = setInterval(() => {
+    //   getUnreadNotifications();
+    // }, 5000);
 
-    return () => clearInterval(intervalId);
+    // return () => clearInterval(intervalId);
+
+    getUnreadNotifications();
+    
   }, [parsedUser]);
 
   return (

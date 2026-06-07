@@ -324,6 +324,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
     { value: "sold", label: "Sold" },
     { value: "booked", label: "Booked" },
     { value: "hold", label: "Hold" },
+    { value: "dealer_boock", label: "Dealer Booked" },
   ];
 
   const normalizeAvailabilityStatus = (status) => {
@@ -331,6 +332,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
     const isValidStatus = availabilityStatusOptions.some((option) => option.value === value);
     return isValidStatus ? value : "available";
   };
+
+  const getAvailabilityStatusLabel = (status) =>
+    availabilityStatusOptions.find((option) => option.value === status)?.label || "Available";
 
   // console.log("parsedUser product card 49", parsedUser);
 
@@ -457,6 +461,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   const [updateLocationPermission, setUpdateLocationPermission] = useState(false);
   const [updateOutletPermission, setUpdateOutletPermission] = useState(false);
   const [updateStatusPermission, setUpdateStatusPermission] = useState(false);
+  const [updateDealerBookedPermission, setUpdateDealerBookedPermission] = useState(false);
 
   useEffect(() => {
     setSelectedAvailabilityStatus(normalizeAvailabilityStatus(product?.v_availability_status));
@@ -538,12 +543,21 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         "ChangeSold/Booked"
       );
       setUpdateStatusPermission(Boolean(hasUpdateStatusPermission));
+
+      const hasUpdateDealerBookedPermission = hasPermission(
+        permissionList,
+        Number(companyShopId),
+        "Vehicle",
+        "ChangeDealer/Booked"
+      );
+      setUpdateDealerBookedPermission(Boolean(hasUpdateDealerBookedPermission));
       return;
     }
 
     setUpdateProductPermission(true);
     setUpdatePricePermission(true);
     setUpdateStatusPermission(true);
+    setUpdateDealerBookedPermission(true);
     setUpdateLocationPermission(true);
     setUpdateOutletPermission(true);
   }, [permissionList, selectedCompanyShop, selectedShop]);
@@ -713,6 +727,15 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       "Vehicle",
       "Delete"
     );
+  const canUpdateAvailabilityStatus = (statusValue) => {
+    if (!isCompanyShop) return true;
+
+    return statusValue === "dealer_boock"
+      ? updateDealerBookedPermission
+      : updateStatusPermission;
+  };
+  const canUpdateAnyAvailabilityStatus =
+    !isCompanyShop || updateStatusPermission || updateDealerBookedPermission;
 
   const hasChalanViewPermission =
     !isCompanyShop ||
@@ -1630,7 +1653,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   const handleAvailabilityStatusUpdate = async (status) => {
     const nextStatus = normalizeAvailabilityStatus(status);
 
-    if (isCompanyShop && !updateStatusPermission) {
+    if (!canUpdateAvailabilityStatus(nextStatus)) {
       alert("You don't have permission");
       return;
     }
@@ -1756,6 +1779,12 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       return isActive
         ? "border-yellow-400 bg-yellow-100 text-yellow-600"
         : "border-yellow-400 bg-white text-yellow-500";
+    }
+
+    if (statusValue === "dealer_boock") {
+      return isActive
+        ? "border-orange-500 bg-orange-100 text-orange-700"
+        : "border-orange-400 bg-white text-orange-600";
     }
 
     return isActive
@@ -1967,13 +1996,14 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
         <div className="text-gray-600 text-sm w-full flex mt-2 py-2 border-t border-gray-100">
           <div className="w-[34%]">
-            <span className={`${selectedAvailabilityStatus === "sold" || selectedAvailabilityStatus === "booked"
-              ? "text-red-600"
-              : "text-gray-600"
+            <span className={`${selectedAvailabilityStatus === "dealer_boock"
+              ? "text-orange-600"
+              : selectedAvailabilityStatus === "sold" || selectedAvailabilityStatus === "booked"
+                ? "text-red-600"
+                : "text-gray-600"
               } text-xs sm:text-sm md:text-sm lg:text-xs xl:text-xs 2xl:text-sm 3xl:text-sm 4xl:text-sm font-medium`}>
               {selectedAvailabilityStatus
-                ? selectedAvailabilityStatus.charAt(0).toUpperCase() +
-                selectedAvailabilityStatus.slice(1) + ' '
+                ? `${getAvailabilityStatusLabel(selectedAvailabilityStatus)} `
                 : <span className="text-gray-600">Available</span>}
             </span>
           </div>
@@ -2484,16 +2514,20 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div className="mt-4 flex items-center gap-3">
               <span className="text-3xl font-bold text-gray-800">Status</span>
 
-              <div className="relative w-full max-w-[160px]">
+              <div className="relative w-full max-w-[190px]">
                 <select
                   value={selectedAvailabilityStatus}
                   onChange={(e) => handleAvailabilityStatusUpdate(e.target.value)}
                   // disabled={isAvailabilityUpdating || isDeletingProduct || !updateStatusPermission}
-                  disabled={isCompanyShop && !updateStatusPermission}
-                  className="h-11 w-full appearance-none rounded-xl border border-gray-300 bg-[#eeecfb] px-3 pr-10 text-lg font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#c8c2f7] disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isAvailabilityUpdating || isDeletingProduct || !canUpdateAnyAvailabilityStatus}
+                  className="h-11 w-full appearance-none rounded-xl border border-gray-300 bg-[#eeecfb] px-3 pr-10 text-base font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#c8c2f7] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {availabilityStatusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      disabled={!canUpdateAvailabilityStatus(option.value)}
+                    >
                       {option.label}
                     </option>
                   ))}
@@ -2506,18 +2540,25 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
 
 
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              {availabilityStatusOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleAvailabilityStatusUpdate(option.value)}
-                  disabled={isCompanyShop && !updateStatusPermission}
-                  className={`h-10 rounded-2xl border-2 px-2 text-base font-semibold transition ${getStatusButtonClasses(option.value)} ${isAvailabilityUpdating || isDeletingProduct || (isCompanyShop && !updateStatusPermission) ? "cursor-not-allowed opacity-60" : ""}`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="mx-auto mt-3 flex max-w-[340px] flex-wrap justify-center gap-2">
+              {availabilityStatusOptions.map((option) => {
+                const isStatusUpdateDisabled =
+                  isAvailabilityUpdating ||
+                  isDeletingProduct ||
+                  !canUpdateAvailabilityStatus(option.value);
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleAvailabilityStatusUpdate(option.value)}
+                    disabled={isStatusUpdateDisabled}
+                    className={`min-h-10 rounded-2xl border-2 px-3 text-sm font-semibold leading-none transition sm:text-base ${option.value === "dealer_boock" ? "min-w-[126px]" : "min-w-[80px]"} ${getStatusButtonClasses(option.value)} ${isStatusUpdateDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+                  >
+                    <span className="whitespace-nowrap">{option.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {isAvailabilityUpdating && (

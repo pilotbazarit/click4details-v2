@@ -9,12 +9,15 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    alert("Hello")
     setLoading(true);
     setSuccessMsg("");
     setErrorMsg("");
 
     try {
       const res = await LoginService.Commands.forgotPassword({ email });
+
+      console.log("Forgot Password Response:", res);
 
       if (res.status === "success") {
         setSuccessMsg("Password token has been sent to your email.");
@@ -25,7 +28,8 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
         setErrorMsg("Failed to send password reset link. Please try again.");
       }
     } catch (error) {
-      setErrorMsg("An error occurred. Please try again.");
+      console.log("Forgot Password Error:", error);
+      setErrorMsg(error || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

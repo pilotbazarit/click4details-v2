@@ -899,9 +899,12 @@ const FilterProducts = () => {
 
   const selectedCategoryOption = categoryData.find((opt) => opt.value === filterFields?.category);
   const showVehicleFilters =
-    selectedCategoryOption?.label?.toLowerCase() === "vehicle" ||
-    String(filterFields?.category || "").toLowerCase() === "vehicle";
+    selectedCategoryOption?.label === "Vehicle (গাড়ি)" || selectedCategoryOption?.label === "Vehicle" || 
+    String(filterFields?.category || "") === "Vehicle (গাড়ি)" ||  String(filterFields?.category || "") === "Vehicle)";
   const isCategorySelected = Boolean(filterFields?.category);
+
+
+  // console.log("Render with showVehicleFilters:", showVehicleFilters);
 
   return (
     <>

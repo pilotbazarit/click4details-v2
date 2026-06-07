@@ -760,7 +760,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8809638660077";
+        const phoneNumber = user?.phone || "+8801969944400";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -892,7 +892,7 @@ const ProductDetails = ({ productDetails }) => {
                                                     user ? (
                                                         <a href={`tel:${user?.phone}`}>{user?.phone}</a>
                                                     ) : (
-                                                        <a href="tel:+8809638660077">+8809638660077</a>
+                                                        <a href="tel:+8801969944400">+8801969944400</a>
                                                     )
                                                 }
                                             </p>
@@ -924,7 +924,7 @@ const ProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Click4details'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -1229,7 +1229,7 @@ const ProductDetails = ({ productDetails }) => {
                                 {
                                     !isMyShop && !isCompanyShop && (
                                         <div className="grid grid-cols-6 gap-2">
-                                            <div className="col-span-3 text-base">Auc:</div>
+                                            <div className="col-span-3 text-base">Auction Type:</div>
                                             <div className="col-span-3 text-base font-semibold">
                                                 {productDetails?.v_auction_type ? String(productDetails.v_auction_type).toUpperCase() : ""}
                                             </div>

@@ -1855,7 +1855,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           <form onSubmit={handlePaymentHistoryDownloadSubmit}>
             <div className="p-5 sm:p-6">
               <DialogHeader className="text-left">
-                <DialogTitle className="text-2xl font-bold text-gray-900">
+                <DialogTitle className="text-2xl font-bold text-gray-900 uppercase">
                   Download Payment History
                 </DialogTitle>
               </DialogHeader>
@@ -1863,7 +1863,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
               <div className="mt-5 space-y-4">
                 <div>
                   <label
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600"
+                    className="mb-1.5 block text-xs font-semibold normal-case text-gray-600"
                     htmlFor="payment-history-download-customer"
                   >
                     Customer Section
@@ -1898,7 +1898,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
                 <div>
                   <label
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600"
+                    className="mb-1.5 block text-xs font-semibold normal-case tracking-wide text-gray-600"
                     htmlFor="payment-history-download-description"
                   >
                     Description
@@ -1925,7 +1925,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label
-                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600"
+                      className="mb-1.5 block text-xs font-semibold normal-case tracking-wide text-gray-600"
                       htmlFor="payment-history-download-pa-reason"
                     >
                      Additional Reason
@@ -1951,7 +1951,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
                   <div>
                     <label
-                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600"
+                      className="mb-1.5 block text-xs font-semibold normal-case tracking-wide text-gray-600"
                       htmlFor="payment-history-download-pa-amount"
                     >
                       Additional Amount

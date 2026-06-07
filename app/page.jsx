@@ -9,11 +9,13 @@ import LoginService from "@/services/LoginService";
 import { useRouter } from "next/navigation";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import ResetPasswordModal from "@/components/modals/ResetPasswordModal";
 
 const Home = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(true);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [fullPhone, setFullPhone] = useState(""); // Full phone with country code
   const [countryData, setCountryData] = useState(null); // Store country info
   const [password, setPassword] = useState("");
@@ -32,6 +34,18 @@ const Home = () => {
   const handlePhoneChange = (value, country) => {
     setFullPhone(value);
     setCountryData(country);
+  };
+
+
+  const openResetPasswordModal = () => {
+    setIsForgotPasswordOpen(false);
+    setIsResetPasswordModalOpen(true);
+    // setIsForgotPasswordOpen
+  };
+
+
+  const closeResetPasswordModal = () => {
+    setIsResetPasswordModalOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -319,7 +333,13 @@ const Home = () => {
         <ForgotPasswordModal
           isOpen={isForgotPasswordOpen}
           onClose={() => setIsForgotPasswordOpen(false)}
-          openResetPasswordModal={() => setIsForgotPasswordOpen(false)}
+          // openResetPasswordModal={() => setIsForgotPasswordOpen(false)}
+          openResetPasswordModal={openResetPasswordModal} 
+        />
+
+        <ResetPasswordModal
+          isOpen={isResetPasswordModalOpen} 
+          onClose={closeResetPasswordModal} 
         />
       </div>
       {/* </div> */}

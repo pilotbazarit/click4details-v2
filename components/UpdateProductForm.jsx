@@ -42,24 +42,24 @@ const MAX_ADDITIONAL_IMAGES = 12;
 
 const auctionTypeOptions = [
     {
-        value: "mod",
-        label: "MOD",
+      value: "orginal_auc",
+      label: "Orginal Auc",
     },
     {
-        value: "ussr",
-        label: "USSR",
+      value: "dealer_auc",
+      label: "Dealer Auc",
     },
     {
-        value: "d",
-        label: "D",
+      value: "car_mods_bd",
+      label: "Car Mods BD",
     },
     {
-        value: "u",
-        label: "U",
+      value: "ussr_auc",
+      label: "USSR Auc",
     },
     {
-        value: "o",
-        label: "O",
+      value: "not_orginal_auc",
+      label: "Not Orginal Auc",
     },
 ];
 
