@@ -104,7 +104,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     address = selectedCompanyShop?.shop?.user?.address;
   } else {
-    address = "Plot 1A,Road 138, Gulshan 1, Dhaka";
+    address = "Plot 1/A,Road 138, Gulshan 1, Dhaka";
   }
 
 

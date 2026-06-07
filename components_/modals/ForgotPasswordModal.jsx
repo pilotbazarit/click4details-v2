@@ -100,6 +100,16 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
               >
                 {loading ? "Sending..." : "Submit"}
               </button>
+
+              <p className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                📞 কোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন:{" "}
+                <a
+                  href="tel:+8809638660077"
+                  className="font-semibold text-blue-700 hover:underline dark:text-blue-400"
+                >
+                  +8809638660077
+                </a>
+              </p>
             </form>
           </div>
         </div>

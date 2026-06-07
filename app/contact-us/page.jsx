@@ -38,7 +38,7 @@ const ContactUs = () => {
                             <div className="space-y-4 text-gray-700">
                                 <div>
                                     <strong>📍 Address:</strong>
-                                    <p>Plot 1A, Road 138, Gulshan 1, Dhaka, Bangladesh</p>
+                                    <p>Plot 1/A, Road 138, Gulshan 1, Dhaka, Bangladesh</p>
                                 </div>
                                 <div>
                                     <strong>📞 Phone:</strong>
