@@ -188,7 +188,7 @@ const Vehicle = () => {
   const [featureData, setFeatureData] = useState([]);
   const [featureModalShow, setFeatureModalShow] = useState(false);
   const [fontImageError, setFontImageError] = useState(false);
-  const [showAdditionalFields, setShowAdditionalFields] = useState(true);
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
   const [user, setUser] = useState(null);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isPackageLoading, setIsPackageLoading] = useState(false);
