@@ -987,16 +987,7 @@ const WelcomeHero = () => {
   console.log("parsedContextUser=============", parsedContextUser);
 
 
-  const visibleTabs = useMemo(
-    () => tabs.filter((tab) => tab.id !== 'accounts' || isSupremeUser),
-    [isSupremeUser],
-  );
-
-  useEffect(() => {
-    if (!isSupremeUser && activeTab === 'accounts') {
-      setActiveTab('product');
-    }
-  }, [activeTab, isSupremeUser]);
+  const visibleTabs = tabs;
 
   const getShopData = useCallback(async (currentUser) => {
     try {

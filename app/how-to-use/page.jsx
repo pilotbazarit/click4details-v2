@@ -264,6 +264,14 @@ const HowToUse = () => {
                                             referrerPolicy="strict-origin-when-cross-origin"
                                         ></iframe>
                                     </div>
+                                    <div className="px-4 py-3">
+                                        <div className="flex items-start gap-2">
+                                            <Play className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                                            <h3 className="text-sm sm:text-base font-semibold text-gray-800 leading-snug">
+                                                {video.title}
+                                            </h3>
+                                        </div>
+                                    </div>
                                     {/* <div className="p-6">
                                         <div className="flex items-start space-x-3 mb-3">
                                             <Play className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />

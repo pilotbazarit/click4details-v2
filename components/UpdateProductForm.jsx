@@ -234,6 +234,10 @@ const UpdateProductForm = ({ productId }) => {
             value: "hold",
             label: "Hold",
         },
+        {
+            value: "slightly_negotiable",
+            label: "Slightly Negotiable",
+        }
     ]);
 
     const [isOutletLoading, setIsOutletLoading] = useState(false);

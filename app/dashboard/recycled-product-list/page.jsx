@@ -110,7 +110,13 @@ const ProductList = () => {
 
 
 
-    const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery, newPriorityQuery = priorityQuery) => {
+    const getProducts = async (
+        newCodeQuery = codeQuery,
+        newEditionQuery = editionQuery,
+        newChassisQuery = chassisQuery,
+        newPriorityQuery = priorityQuery,
+        searchQuery = query
+    ) => {
         try {
 
             const userData = localStorage.getItem("user");
@@ -136,8 +142,8 @@ const ProductList = () => {
                 params._user_id = user?.id;
             }
 
-            if (query) {
-                params._name = query;
+            if (searchQuery) {
+                params._title = searchQuery;
             }
 
             if (newCodeQuery) {
@@ -158,6 +164,7 @@ const ProductList = () => {
                 params._order = newPriorityQuery;
             }
 
+            params._status = 'inactive';
 
             // console.log("_priority_order", _priority_order);
 
@@ -180,8 +187,8 @@ const ProductList = () => {
         }
     }
 
-    const fetchSearchResults = (value) => {
-        // getModels(value);
+    const fetchSearchResults = (value = query) => {
+        getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, value);
     };
 
     const handleAdd = async () => {
@@ -198,8 +205,8 @@ const ProductList = () => {
     }
 
     useEffect(() => {
-        getProducts(undefined, undefined, undefined, undefined);
-    }, [currentPage, itemsPerPage, query, sortColumn, sortOrder]);
+        getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery);
+    }, [currentPage, itemsPerPage, sortColumn, sortOrder]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -340,7 +347,16 @@ const ProductList = () => {
                 </div>
 
                 {/* Search Filter */}
-                <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search..." />
+                <TableFilter
+                    query={query}
+                    setQuery={setQuery}
+                    setCurrentPage={setCurrentPage}
+                    fetchSearchResults={fetchSearchResults}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    placeholder="Search..."
+                    onClearSearch={() => getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, '')}
+                />
 
 
                 {/* Table Container */}

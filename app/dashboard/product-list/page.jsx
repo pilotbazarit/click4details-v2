@@ -1091,7 +1091,17 @@ const ProductList = () => {
   }
 
 
-  const handleShopData = async (shopType) => {
+  const getStoredUser = () => {
+    try {
+      const userData = localStorage.getItem("user");
+      const userInfo = userData && JSON.parse(userData);
+      return typeof userInfo === "string" ? JSON.parse(userInfo) : userInfo;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleShopData = async (shopType, userOverride = null) => {
 
 
     // if (shopType !== "company-shop") {
@@ -1101,10 +1111,11 @@ const ProductList = () => {
 
     // console.log("shopType", shopType);
 
+    const activeUser = userOverride || user || getStoredUser();
     const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
     const params = {
       // _user_id: user?.id,
-      ...(user?.user_mode !== "admin" && user?.user_mode !== "supreme" && { _user_id: user?.id }),
+      ...(activeUser?.user_mode !== "admin" && activeUser?.user_mode !== "supreme" && activeUser?.id && { _user_id: activeUser.id }),
       _type: type,
       _page: 1,
       _perPage: 1000
@@ -1125,6 +1136,7 @@ const ProductList = () => {
         .filter(Boolean);
 
       setAllShop(shopOptions);
+      setShopData(shopOptions);
       if (shopType === "company-shop") {
         setCompanyShops(shopOptions);
       }
@@ -1674,13 +1686,12 @@ const ProductList = () => {
 
   useEffect(() => {
 
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
     }
 
-    handleShopData('my-shop');
+    handleShopData('my-shop', storedUser);
   }, []);
 
 

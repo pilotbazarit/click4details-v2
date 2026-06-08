@@ -1769,27 +1769,15 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   const getStatusButtonClasses = (statusValue) => {
     const isActive = selectedAvailabilityStatus === statusValue;
 
+    if (!isActive) {
+      return "border-gray-300 bg-gray-50 text-gray-500";
+    }
+
     if (statusValue === "available") {
-      return isActive
-        ? "border-green-500 bg-green-100 text-green-700"
-        : "border-green-500 bg-white text-green-600";
+      return "border-green-500 bg-green-100 text-green-700";
     }
 
-    if (statusValue === "hold") {
-      return isActive
-        ? "border-yellow-400 bg-yellow-100 text-yellow-600"
-        : "border-yellow-400 bg-white text-yellow-500";
-    }
-
-    if (statusValue === "dealer_boock") {
-      return isActive
-        ? "border-orange-500 bg-orange-100 text-orange-700"
-        : "border-orange-400 bg-white text-orange-600";
-    }
-
-    return isActive
-      ? "border-red-500 bg-red-100 text-red-700"
-      : "border-red-500 bg-white text-red-500";
+    return "border-red-500 bg-red-100 text-red-700";
   };
 
 
@@ -2475,7 +2463,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   setEditModalOpen(false);
                   handleEditProduct("Client payment history", product);
                 }}
-                className="h-11 w-full rounded-xl border border-blue-300 bg-blue-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
               >
                 Payment History/Money Receipt
               </button>
@@ -2493,7 +2481,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   onClick={() => {
                     openChalanModal();
                   }}
-                  className="h-11 w-full rounded-xl border border-pink-300 bg-pink-50 px-3 text-base font-semibold text-pink-700 transition hover:bg-pink-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Chalan
                 </button>
@@ -2508,7 +2496,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   onClick={() => {
                     openQuotationModal();
                   }}
-                  className="h-11 w-full rounded-xl border border-orange-300 bg-orange-50 px-3 text-base font-semibold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Quotation
                 </button>
@@ -2546,7 +2534,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
 
 
 
-            <div className="mx-auto mt-3 flex max-w-[340px] flex-wrap justify-center gap-2">
+            <div className="mx-auto mt-3 grid w-full max-w-[340px] grid-cols-2 gap-2">
               {availabilityStatusOptions.map((option) => {
                 const isStatusUpdateDisabled =
                   isAvailabilityUpdating ||
@@ -2559,7 +2547,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                     type="button"
                     onClick={() => handleAvailabilityStatusUpdate(option.value)}
                     disabled={isStatusUpdateDisabled}
-                    className={`min-h-10 rounded-2xl border-2 px-3 text-sm font-semibold leading-none transition sm:text-base ${option.value === "dealer_boock" ? "min-w-[126px]" : "min-w-[80px]"} ${getStatusButtonClasses(option.value)} ${isStatusUpdateDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+                    className={`min-h-10 w-full min-w-0 rounded-2xl border-2 px-3 text-sm font-semibold leading-none transition sm:text-base ${getStatusButtonClasses(option.value)} ${isStatusUpdateDisabled ? "cursor-not-allowed opacity-60" : ""}`}
                   >
                     <span className="whitespace-nowrap">{option.label}</span>
                   </button>

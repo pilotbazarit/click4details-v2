@@ -164,10 +164,10 @@ const Home = () => {
 
               <div className="text-center mb-8">
                 <p className="text-white text-sm font-medium tracking-wider mb-2">
-                  WELCOME BACK Click4Details
+                  Click4Details
                 </p>
                 <p className="text-white/80 text-xs">
-                  LOG IN TO CONTINUE
+                  Login To Continue
                 </p>
               </div>
 
