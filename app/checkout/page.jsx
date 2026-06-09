@@ -1085,7 +1085,7 @@ const Checkout = () => {
                   <span className="ml-3 text-gray-700">Cash on Delivery</span>
                 </label>
 
-                <label className="flex items-center p-4 border border-gray-300 cursor-pointer hover:bg-gray-50">
+                {/* <label className="flex items-center p-4 border border-gray-300 cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
                     name="payment"
@@ -1107,7 +1107,10 @@ const Checkout = () => {
                     className="w-4 h-4 text-blue-600"
                   />
                   <span className="ml-3 text-gray-700">Credit/Debit Card</span>
-                </label>
+                </label> */}
+
+
+                
               </div>
             </div>
 

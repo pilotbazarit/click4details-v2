@@ -22,7 +22,7 @@ import VehicleModelService from "@/services/VehicleModelService";
 import ShopService from "@/services/ShopService";
 import VehicleService from "@/services/VehicleService";
 import PackageService from "@/services/PackageService";
-import LocationService from "@/services/LocationService";
+import CartService from "@/services/CartService";
 import OutletService from "@/services/OutletService";
 import constData from "@/lib/constant";
 import FeatureSpecificationService from "@/services/FeatureSpecificationService";
@@ -309,6 +309,69 @@ const GeneralProductCreate = () => {
     const selectedModelId = watch("model");
     const selectedCountryId = watch("country");
     const selectedProductTypeId = watch("p_type_id");
+
+    const calculateDiscountPrice = (regularPrice, discountPercentage) => {
+        if (
+            regularPrice === "" ||
+            regularPrice === null ||
+            regularPrice === undefined ||
+            discountPercentage === "" ||
+            discountPercentage === null ||
+            discountPercentage === undefined
+        ) {
+            return "";
+        }
+
+        const regularAmount = Number(regularPrice);
+        const discountAmount = Number(discountPercentage);
+
+        if (Number.isNaN(regularAmount) || Number.isNaN(discountAmount)) {
+            return "";
+        }
+
+        const discountedPrice = regularAmount - (regularAmount * discountAmount) / 100;
+        return Number.isInteger(discountedPrice) ? String(discountedPrice) : discountedPrice.toFixed(2);
+    };
+
+    const calculateDiscountPercentage = (regularPrice, discountPrice) => {
+        if (
+            regularPrice === "" ||
+            regularPrice === null ||
+            regularPrice === undefined ||
+            discountPrice === "" ||
+            discountPrice === null ||
+            discountPrice === undefined
+        ) {
+            return "";
+        }
+
+        const regularAmount = Number(regularPrice);
+        const discountedAmount = Number(discountPrice);
+
+        if (Number.isNaN(regularAmount) || Number.isNaN(discountedAmount) || regularAmount <= 0) {
+            return "";
+        }
+
+        const discountPercentage = ((regularAmount - discountedAmount) / regularAmount) * 100;
+        const clampedDiscount = Math.max(0, Math.min(100, discountPercentage));
+        return Number.isInteger(clampedDiscount) ? String(clampedDiscount) : clampedDiscount.toFixed(2);
+    };
+
+    const updateDiscountPrice = (index, regularPrice, discountPercentage) => {
+        setValue(
+            `prices.${index}.discount_price`,
+            calculateDiscountPrice(regularPrice, discountPercentage),
+            { shouldDirty: true, shouldValidate: true }
+        );
+    };
+
+    const updateDiscountPercentage = (index, regularPrice, discountPrice) => {
+        setValue(
+            `prices.${index}.discount`,
+            calculateDiscountPercentage(regularPrice, discountPrice),
+            { shouldDirty: true, shouldValidate: true }
+        );
+    };
 
     const fetchMasterCategories = async (parentId) => {
         setIsCategoryLoading(true);
@@ -757,24 +820,25 @@ const GeneralProductCreate = () => {
     // console.log("getFeatureSpecification", featureSpecification);
 
     useEffect(() => {
-        const fetchLocationDetails = async () => {
+        const fetchDistrictDetails = async () => {
             if (selectedCountryId) {
                 setIsLocationLoading(true);
                 setLocationData([]);
                 setValue("location", null);
                 try {
-                    const response = await LocationService.Queries.getLocationByCountryId({
-                        _country_id: selectedCountryId,
+                    const response = await CartService.Queries.getDistrictList({
+                        _parent_id: 0,
+                        _entity: "district",
                         _page: 1,
                         _perPage: 1000,
                     });
-                    const locationData = response.data?.data.map((location) => ({
-                        value: location.l_id,
-                        label: location.l_name,
+                    const districtData = response.data?.data?.map((district) => ({
+                        value: district.id,
+                        label: district.name,
                     }));
-                    setLocationData(locationData);
+                    setLocationData(districtData || []);
                 } catch (error) {
-                    toast.error("Failed to fetch locations");
+                    toast.error("Failed to fetch districts");
                 } finally {
                     setIsLocationLoading(false);
                 }
@@ -782,7 +846,7 @@ const GeneralProductCreate = () => {
                 setLocationData([]);
             }
         };
-        fetchLocationDetails();
+        fetchDistrictDetails();
     }, [selectedCountryId, setValue]);
 
     useEffect(() => {
@@ -1025,7 +1089,7 @@ const GeneralProductCreate = () => {
                             {/* Category */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-base font-medium" htmlFor="category">
-                                    Category
+                                    Category <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative" ref={categoryDropdownRef}>
                                     <div onClick={() => selectedProductTypeId && setIsCategoryListVisible(!isCategoryListVisible)} className={`flex justify-between items-center border rounded-lg p-2 bg-white shadow-sm ${selectedProductTypeId ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'}`}>
@@ -1086,7 +1150,7 @@ const GeneralProductCreate = () => {
                             {/* Product Name */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-base font-medium" htmlFor="product-name">
-                                    Product Name
+                                    Product Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     id="product-name"
@@ -1182,7 +1246,8 @@ const GeneralProductCreate = () => {
                                 ((singleUser?.user_mode === 'supreme') || (singleUser?.user_mode === 'admin')) && (
                                     <div className="flex flex-col gap-1">
                                         <label className="text-base font-medium" htmlFor="p_partner_id">
-                                            Partner List
+                                            Partner List 
+                                            {/* <span className="text-red-500">*</span> */}
                                         </label>
                                         <Controller
                                             name="p_partner_id"
@@ -1312,10 +1377,10 @@ const GeneralProductCreate = () => {
                             </div>
 
 
-                            {/* Location */}
+                            {/* District */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-base font-medium" htmlFor="location">
-                                    Location
+                                    District
                                 </label>
                                 <Controller
                                     name="location"
@@ -1326,7 +1391,7 @@ const GeneralProductCreate = () => {
                                             options={locationData}
                                             onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
                                             value={locationData.find(option => option.value === field.value)}
-                                            placeholder={isLocationLoading ? "Loading..." : "Select Location"}
+                                            placeholder={isLocationLoading ? "Loading..." : "Select District"}
                                             isDisabled={!selectedCountryId || isLocationLoading}
                                             className="react-select-container"
                                             classNamePrefix="react-select"
@@ -1422,7 +1487,7 @@ const GeneralProductCreate = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {/* image */}
                             <div className="col-span-1 flex flex-col gap-2">
-                                <label className="text-base font-medium">Image</label>
+                                <label className="text-base font-medium">Image <span className="text-red-500">*</span></label>
                                 <Controller
                                     name="image"
                                     control={control}
@@ -1604,8 +1669,22 @@ const GeneralProductCreate = () => {
                                                     {errors.prices?.[index]?.purchase_price && <p className="text-red-500 text-sm">{errors.prices?.[index]?.purchase_price.message}</p>}
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-base font-medium">Regular Price</label>
-                                                    <Controller name={`prices.${index}.regular_price`} control={control} render={({ field }) => <input {...field} type="number" className={`outline-none py-2 px-4 rounded border ${errors.prices?.[index]?.regular_price ? "border-red-500" : "border-gray-300"} focus:border-orange-500 transition`} />} />
+                                                    <label className="text-base font-medium">Regular Price <span className="text-red-500">*</span></label>
+                                                    <Controller
+                                                        name={`prices.${index}.regular_price`}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <input
+                                                                {...field}
+                                                                type="number"
+                                                                onChange={(e) => {
+                                                                    field.onChange(e.target.value);
+                                                                    updateDiscountPrice(index, e.target.value, getValues(`prices.${index}.discount`));
+                                                                }}
+                                                                className={`outline-none py-2 px-4 rounded border ${errors.prices?.[index]?.regular_price ? "border-red-500" : "border-gray-300"} focus:border-orange-500 transition`}
+                                                            />
+                                                        )}
+                                                    />
                                                     {errors.prices?.[index]?.regular_price && <p className="text-red-500 text-sm">{errors.prices?.[index]?.regular_price.message}</p>}
                                                 </div>
                                                 <div className="flex flex-col gap-1">
@@ -1618,8 +1697,15 @@ const GeneralProductCreate = () => {
                                                                 {...field}
                                                                 type="number"
                                                                 onChange={(e) => {
+                                                                    if (e.target.value === "") {
+                                                                        field.onChange("");
+                                                                        updateDiscountPrice(index, getValues(`prices.${index}.regular_price`), "");
+                                                                        return;
+                                                                    }
+
                                                                     const value = Math.max(0, Math.min(100, Number(e.target.value)));
                                                                     field.onChange(value);
+                                                                    updateDiscountPrice(index, getValues(`prices.${index}.regular_price`), value);
                                                                 }}
                                                                 className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition"
                                                             />
@@ -1628,7 +1714,21 @@ const GeneralProductCreate = () => {
                                                 </div>
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-base font-medium">Discount Price</label>
-                                                    <Controller name={`prices.${index}.discount_price`} control={control} render={({ field }) => <input {...field} type="number" className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition" />} />
+                                                    <Controller
+                                                        name={`prices.${index}.discount_price`}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <input
+                                                                {...field}
+                                                                type="number"
+                                                                onChange={(e) => {
+                                                                    field.onChange(e.target.value);
+                                                                    updateDiscountPercentage(index, getValues(`prices.${index}.regular_price`), e.target.value);
+                                                                }}
+                                                                className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition"
+                                                            />
+                                                        )}
+                                                    />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-base font-medium">Asking Price</label>
@@ -1643,7 +1743,7 @@ const GeneralProductCreate = () => {
 
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-base font-medium" htmlFor={`unit_id_${index}`}>
-                                                        Unit
+                                                        Unit <span className="text-red-500">*</span>
                                                     </label>
                                                     <Controller
                                                         name={`prices.${index}.unit_id`}
@@ -1663,7 +1763,7 @@ const GeneralProductCreate = () => {
                                                     {errors.prices?.[index]?.unit_id && <p className="text-red-500 text-sm">{errors.prices?.[index]?.unit_id.message}</p>}
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-base font-medium">Unit Count</label>
+                                                    <label className="text-base font-medium">Unit Count <span className="text-red-500">*</span></label>
                                                     <Controller name={`prices.${index}.unit_count`} control={control} render={({ field }) => <input {...field} type="text" className={`outline-none py-2 px-4 rounded border ${errors.prices?.[index]?.unit_count ? "border-red-500" : "border-gray-300"} focus:border-orange-500 transition`} />} />
                                                     {errors.prices?.[index]?.unit_count && <p className="text-red-500 text-sm">{errors.prices?.[index]?.unit_count.message}</p>}
                                                 </div>

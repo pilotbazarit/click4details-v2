@@ -64,6 +64,11 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
     onSelect(category);
   };
 
+  const handleSelect = (e) => {
+    e.stopPropagation();
+    onSelect(category);
+  };
+
   const handleMouseEnter = async () => {
     if (!isMobile) {
       setIsHovered(true);
@@ -78,8 +83,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
     };
 
     const handleItemClick = async (e) => {
-      e.stopPropagation();
-      await handleClick();
+      handleSelect(e);
     };
 
     return (
@@ -138,7 +142,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
     >
       <div
         className="px-4 py-2 hover:bg-orange-50 cursor-pointer flex items-center justify-between transition-colors duration-150"
-        onClick={handleClick}
+        onClick={handleSelect}
       >
         <span className="text-gray-700 text-sm">{category.name}</span>
         {hasChildren && (
@@ -160,6 +164,69 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
                   onLoadSubcategories={onLoadSubcategories}
                   level={level + 1}
                   isMobile={false}
+                />
+              ))
+            ) : (
+              <div className="px-4 py-2 text-sm text-gray-500">No subcategories</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TopCategoryMenuItem = ({ category, onSelect, onLoadSubcategories }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
+  const hasChildren = category.subcategories !== null && category.subcategories !== undefined;
+
+  const ensureSubcategoriesLoaded = async () => {
+    if (hasChildren && category.subcategories.length === 0 && !isLoadingSubcategories) {
+      setIsLoadingSubcategories(true);
+      await onLoadSubcategories(category.id);
+      setIsLoadingSubcategories(false);
+    }
+  };
+
+  const handleMouseEnter = async () => {
+    setIsOpen(true);
+    await ensureSubcategoriesLoaded();
+  };
+
+  const handleClick = async () => {
+    onSelect(category);
+  };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex h-10 items-center gap-1 rounded-md px-3 text-sm font-medium text-gray-700 transition-colors duration-150 hover:bg-blue-50 hover:text-gray-950"
+      >
+        <span className="whitespace-nowrap">{category.name}</span>
+        {hasChildren && (
+          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        )}
+      </button>
+
+      {hasChildren && isOpen && (
+        <div className="absolute left-0 top-full z-[60] min-w-[250px] rounded-lg border border-gray-200 bg-white shadow-xl">
+          <div className="py-2">
+            {isLoadingSubcategories ? (
+              <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+            ) : category.subcategories.length > 0 ? (
+              category.subcategories.map((subcat) => (
+                <CategoryMenuItem
+                  key={subcat.id}
+                  category={subcat}
+                  onSelect={onSelect}
+                  onLoadSubcategories={onLoadSubcategories}
                 />
               ))
             ) : (
@@ -467,7 +534,9 @@ const NavbarContent = () => {
 
 
   const handleAllCategory = () => {
-    getCategories();
+    if (categories.length === 0) {
+      getCategories();
+    }
     setIsCategoryOpen((prev) => !prev);
   };
 
@@ -503,10 +572,9 @@ const NavbarContent = () => {
 
 
 
-  // useEffect(() => {
-  //   console.log("call useEffect");
-  //   getCategories();
-  // }, []);
+  useEffect(() => {
+    getCategories();
+  }, []);
 
   // Handle category selection
   const handleCategorySelect = (category) => {
@@ -557,7 +625,6 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
-  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -786,19 +853,24 @@ const NavbarContent = () => {
   };
 
 
-
-  useEffect(() => {
+   useEffect(() => {
     if (!parsedUser) return; // Only run if user is logged in
 
-    // const intervalId = setInterval(() => {
-    //   getUnreadNotifications();
-    // }, 5000);
-
-    // return () => clearInterval(intervalId);
-
-    getUnreadNotifications();
-    
+     getUnreadNotifications();
+     
   }, [parsedUser]);
+
+
+
+  // useEffect(() => {
+  //   if (!parsedUser) return; // Only run if user is logged in
+
+  //   const intervalId = setInterval(() => {
+  //     getUnreadNotifications();
+  //   }, 5000);
+
+  //   return () => clearInterval(intervalId);
+  // }, [parsedUser]);
 
   return (
     <>
@@ -964,17 +1036,7 @@ const NavbarContent = () => {
             }
 
 
-             <Link
-              href="/how-to-use"
-              className={`transition duration-300 ${isActiveHowToUse
-                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
-                : 'hover:text-gray-900'
-                }`}
-            >
-               How to use
-            </Link>
 
-         
 
           </div>
         </div>
@@ -1198,6 +1260,22 @@ const NavbarContent = () => {
         <ResetPasswordModal isOpen={isResetPasswordModalOpen} onClose={closeResetPasswordModal} />
         <LoginPromptModal isOpen={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} onLoginClick={() => { setShowLoginPrompt(false); setLoginOpen(true); }} />
       </nav>
+      {categories.length > 0 && (
+        <section className="relative z-40 hidden border-b border-gray-200 bg-white md:block">
+          <div className="px-4 md:px-16 lg:px-32">
+            <div className="flex min-h-11 flex-wrap items-center gap-1 py-1">
+              {categories.map((category) => (
+                <TopCategoryMenuItem
+                  key={category.id}
+                  category={category}
+                  onSelect={handleCategorySelect}
+                  onLoadSubcategories={loadSubcategories}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       {isSearchOpen && (
         <div className="fixed inset-0 bg-[#71abca] bg-opacity-90 z-[9999] flex items-center justify-center">
           <div className="relative bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl border border-gray-700">
@@ -1350,16 +1428,7 @@ const NavbarContent = () => {
                   </button>
                 </li>
 
-                {/* <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
-                  <button
-                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                    onClick={() => router.push("/dashboard")}
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </button>
-                </li> */}
-
+         
                 {/* -------------------- */}
 
                 {
@@ -1430,23 +1499,6 @@ const NavbarContent = () => {
                 {/* ------------------------- */}
 
 
-
-
-
-                {/* <Link
-                  href="/pb-home"
-                  className={`transition duration-300 ${isActivePbHome
-                    ? 'font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  PB Home
-                </Link> */}
-
-
-
-
                 <li className={`${isActiveAboutUs ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
                   <button
                     className="flex items-center gap-2 hover:text-gray-900 transition"
@@ -1483,43 +1535,6 @@ const NavbarContent = () => {
                     Filter Products
                   </button>
                 </li>
-
-                {/* <Link
-                  href="/about-us"
-                  className={`transition duration-300 ${isActiveAboutUs
-                    ? 'font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  About
-                </Link> */}
-                {/* <Link
-                  href="/contact-us"
-                  className={`transition duration-300 ${isActiveContactUs
-                    ? 'font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Contact
-                </Link> */}
-                {/* <button
-                  onClick={() => {
-                    if (!user) {
-                      setShowLoginPrompt(true);
-                    } else {
-                      router.push("/filter-products");
-                    }
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`transition duration-300 ${isActiveFilterProduct
-                    ? 'text-blue-600 font-semibold bg-orange-600/10 border-b-2 border-orange-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                >
-                  Filter Products
-                </button> */}
               </div>
             </div>
 
