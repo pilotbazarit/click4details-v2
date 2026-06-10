@@ -31,7 +31,7 @@ const ShopDropdown = () => {
             <Popover.Portal>
                 <Popover.Content
                     sideOffset={5}
-                    className="rounded bg-white p-2 shadow-lg border border-gray-200 w-56"
+                    className="z-[9999] rounded bg-white p-2 shadow-lg border border-gray-200 w-56"
                 >
                     <div className="flex flex-col gap-1">
                         {shops && shops.length > 0 && shops.map((shop) => (

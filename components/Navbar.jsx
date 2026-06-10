@@ -38,7 +38,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
   const ensureSubcategoriesLoaded = async () => {
     if (hasChildren && category.subcategories.length === 0 && !isLoadingSubcategories) {
       setIsLoadingSubcategories(true);
-      await onLoadSubcategories(category.id);
+      await onLoadSubcategories(category.id, category.type);
       setIsLoadingSubcategories(false);
     }
   };
@@ -60,6 +60,8 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
       setIsHovered((prev) => !prev);
       return;
     }
+
+    console.log("category ----------- 64", category);
 
     onSelect(category);
   };
@@ -184,7 +186,7 @@ const TopCategoryMenuItem = ({ category, onSelect, onLoadSubcategories }) => {
   const ensureSubcategoriesLoaded = async () => {
     if (hasChildren && category.subcategories.length === 0 && !isLoadingSubcategories) {
       setIsLoadingSubcategories(true);
-      await onLoadSubcategories(category.id);
+      await onLoadSubcategories(category.id, category.type);
       setIsLoadingSubcategories(false);
     }
   };
@@ -471,7 +473,7 @@ const NavbarContent = () => {
   const [loading, setLoading] = useState(false);
 
 
-  const getCategories = async (parentId = 0) => {
+  const getCategories = async (parentId = 0, fallbackType = "") => {
     try {
       setLoading(true);
       const response = await CategoryService.Queries.getCategories({
@@ -487,6 +489,7 @@ const NavbarContent = () => {
         const formattedData = rawData.map((item) => ({
           id: item.c_id,
           name: item.c_name,
+          type: item.c_type || fallbackType,
           subcategories: item.c_is_child ? [] : null, // Initialize subcategories as empty array if it has children
         }));
 
@@ -546,8 +549,8 @@ const NavbarContent = () => {
   };
 
   // Load subcategories when hovering over a category
-  const loadSubcategories = async (categoryId) => {
-    await getCategories(categoryId);
+  const loadSubcategories = async (categoryId, parentType = "") => {
+    await getCategories(categoryId, parentType);
   };
 
 
@@ -579,6 +582,19 @@ const NavbarContent = () => {
   // Handle category selection
   const handleCategorySelect = (category) => {
     setIsCategoryOpen(false);
+    const categoryType = String(category?.type || "").toLowerCase();
+
+    if (isActiveMyShop) {
+      const productType = categoryType === "vehicle" ? "vehicle" : "general";
+      router.push(`/my-shop?product_type=${productType}&category_id=${category.id}`);
+      return;
+    }
+
+    if (categoryType === "vehicle") {
+      router.push("/");
+      return;
+    }
+
     // Navigate to general-products page with category ID
     router.push(`/general-products?category_id=${category.id}`);
   };

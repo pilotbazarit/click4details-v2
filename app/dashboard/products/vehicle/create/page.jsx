@@ -13,7 +13,7 @@ import * as yup from "yup";
 import VehicleService from "@/services/VehicleService";
 import ShopService from "@/services/ShopService";
 import constData from "@/lib/constant";
-import { onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { formatPermissions, onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import VehicleModelService from "@/services/VehicleModelService";
@@ -259,6 +259,28 @@ const Vehicle = () => {
 
 
   const router = useRouter();
+
+  const getStoredUser = () => {
+    try {
+      const userData = localStorage.getItem("user");
+      const userInfo = userData && JSON.parse(userData);
+      return typeof userInfo === "string" ? JSON.parse(userInfo) : userInfo;
+    } catch {
+      return null;
+    }
+  };
+
+  const canAllShopView = (targetUser = user) => {
+    if (!targetUser) return false;
+    const targetPermissions = permissionList?.length
+      ? permissionList
+      : formatPermissions(targetUser?.permissions ?? []);
+
+    return (
+      (targetUser?.user_mode !== "pbl" && targetUser?.user_mode !== "admin") ||
+      hasPermission(targetPermissions, 0, "Vehicle", "AllShopView")
+    );
+  };
 
   const {
     register,
@@ -943,10 +965,7 @@ const Vehicle = () => {
   // shop data get from api
   const getShopData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
-
+      const activeUser = user || getStoredUser();
 
       // Build request params conditionally
       const params = {
@@ -954,7 +973,7 @@ const Vehicle = () => {
         orderBy: "md_id",
         _page: 1,
         _perPage: 1000,
-        ...(user?.user_mode !== "admin" && { _user_id: user?.id }),
+        ...(!canAllShopView(activeUser) && activeUser?.id && { _user_id: activeUser.id }),
         // _user_id: user?.id,
         // ...(user.user_mode !== "pbl" && user.user_mode !== "supreme" && { _user_id: user?.id })
       };
@@ -983,11 +1002,6 @@ const Vehicle = () => {
   // getPartnerData
   const getPartnerData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
-
-
       // Build request params conditionally
       const params = {
         order: "desc",
@@ -1560,10 +1574,9 @@ const Vehicle = () => {
 
   useEffect(() => {
 
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
     }
 
     getShopData();

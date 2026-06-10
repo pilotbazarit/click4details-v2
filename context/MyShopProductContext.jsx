@@ -4,7 +4,7 @@
 import VehicleService from '@/services/VehicleService';
 import GeneralProductService from '@/services/GeneralProductService';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from './AppContext';
 
 // Create the context
@@ -19,6 +19,7 @@ export const useMyShopProductContext = () => {
 export const MyShopProductContextProvider = ({ children }) => {
 
   const { selectedShop } = useAppContext();
+  const searchParams = useSearchParams();
 
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
@@ -27,6 +28,7 @@ export const MyShopProductContextProvider = ({ children }) => {
   const [user, setUser] = useState();
   const router = useRouter();
   const [selectedProductType, setSelectedProductType] = useState('vehicle');
+  const [categoryId, setCategoryId] = useState(null);
 
 
   const getAllProduct = async (reset = false) => {
@@ -70,7 +72,7 @@ export const MyShopProductContextProvider = ({ children }) => {
 
   // console.log("Productsss:", products);
 
-  const getAllGeneralProduct = async (reset = false) => {
+  const getAllGeneralProduct = async (reset = false, catId = null) => {
     try {
       if (!selectedShop) return;
       // Reset state if needed
@@ -80,8 +82,9 @@ export const MyShopProductContextProvider = ({ children }) => {
       }
 
       const currentPage = reset ? 1 : page;
+      const finalCatId = catId !== null ? catId : categoryId;
 
-      const res = await GeneralProductService.Queries.getGeneralProducts({
+      const apiParams = {
         // _page: currentPage,
         // _perPage: 25,
         // _shop_id: selectedShop?.s_id,
@@ -90,11 +93,17 @@ export const MyShopProductContextProvider = ({ children }) => {
         // _status: 'active'
         _page: currentPage,
         _perPage: 25,
-        _order: 'ASC',
-        _orderBy: 'v_priority',
+        _order: 'asc',
+        _orderBy: 'p_id',
         _shop_id: selectedShop?.s_id,
         _status: 'active',
-      });
+      };
+
+      if (finalCatId) {
+        apiParams._pCat_id = finalCatId;
+      }
+
+      const res = await GeneralProductService.Queries.getGeneralProducts(apiParams);
 
       if (res.status === "success") {
         const newProducts = res?.data?.data || [];
@@ -118,12 +127,25 @@ export const MyShopProductContextProvider = ({ children }) => {
     const userInfo = userData && JSON.parse(userData);
 
     if (userInfo) {
-      setUser(JSON.parse(userInfo));
+      setUser(userInfo);
     } else {
       router.push("/");
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    const productTypeFromUrl = String(searchParams.get('product_type') || "").toLowerCase();
+    const categoryIdFromUrl = searchParams.get('category_id');
+
+    if (productTypeFromUrl === "general" || productTypeFromUrl === "gproduct") {
+      setSelectedProductType('general');
+    } else if (productTypeFromUrl === "vehicle") {
+      setSelectedProductType('vehicle');
+    }
+
+    setCategoryId(categoryIdFromUrl);
+  }, [searchParams]);
 
   // Only run when user loading is complete
   useEffect(() => {
@@ -131,10 +153,10 @@ export const MyShopProductContextProvider = ({ children }) => {
       if (selectedProductType === 'vehicle') {
         getAllProduct(true);
       } else if (selectedProductType === 'general') {
-        getAllGeneralProduct(true);
+        getAllGeneralProduct(true, categoryId);
       }
     }
-  }, [loading, user, selectedShop, selectedProductType]);
+  }, [loading, user, selectedShop, selectedProductType, categoryId]);
 
   const value = {
     products,
@@ -145,6 +167,7 @@ export const MyShopProductContextProvider = ({ children }) => {
     getAllGeneralProduct,
     selectedProductType,
     setSelectedProductType,
+    categoryId,
   };
 
   return (

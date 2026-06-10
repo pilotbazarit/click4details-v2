@@ -214,6 +214,13 @@ const ProductList = () => {
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "UpdateAvailabilityStatus");
 
+  const canAllShopView = (targetUser = user) => {
+    if (!targetUser) return false;
+    return (
+      (targetUser?.user_mode !== "pbl" && targetUser?.user_mode !== "admin") ||
+      hasPermission(permissionList, 0, "Vehicle", "AllShopView")
+    );
+  };
 
   const updateTopScrollbarMetrics = useCallback(() => {
     const tableElement = tableRef.current;
@@ -1115,7 +1122,7 @@ const ProductList = () => {
     const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
     const params = {
       // _user_id: user?.id,
-      ...(activeUser?.user_mode !== "admin" && activeUser?.user_mode !== "supreme" && activeUser?.id && { _user_id: activeUser.id }),
+      ...(!canAllShopView(activeUser) && activeUser?.id && { _user_id: activeUser.id }),
       _type: type,
       _page: 1,
       _perPage: 1000
@@ -1655,7 +1662,7 @@ const ProductList = () => {
         orderBy: "md_id",
         _page: 1,
         _perPage: 1000,
-        ...(user?.user_mode !== "admin" && { _user_id: user?.id }),
+        ...(!canAllShopView(user) && user?.id && { _user_id: user.id }),
         // _user_id: user?.id,
         // ...(user.user_mode !== "pbl" && user.user_mode !== "supreme" && { _user_id: user?.id })
       };
