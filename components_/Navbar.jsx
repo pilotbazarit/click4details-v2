@@ -11,15 +11,21 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Loading from "@/components/Loading";
 import LoginPromptModal from "@/components/LoginPromptModal";
 import toast from "react-hot-toast";
-import { ChevronDown, House, Info, LayoutDashboard, ListFilterPlus, LogOut, Pencil, PhoneCall, Plus, ShoppingCart, SquareChartGantt, Store, Trash2, User, UserPen } from "lucide-react";
+import { Bell, ChevronDown, GitCompare, House, Info, LayoutDashboard, ListFilterPlus, LogOut, Pencil, PhoneCall, Plus, ShoppingCart, SquareChartGantt, Store, Trash2, User, UserPen } from "lucide-react";
 import LoginService from "@/services/LoginService";
 import { useMyShopProductContext } from "@/context/MyShopProductContext";
 import ShopDropdown from "./ShopDropdown";
 import CompanyShopDropdown from "./CompanyShopDropdown";
 import ForgotPasswordModal from "./modals/ForgotPasswordModal";
 import ResetPasswordModal from "./modals/ResetPasswordModal";
+import NotificationModal from "./modals/NotificationModal";
+import ProductChatModal from "./modals/ProductChatModal";
 import CategoryService from "@/services/CategoryService";
+import NotificationService from "@/services/NotificationService";
 import SearchBar from "@/components/SearchBar";
+import ConversationModal from "./modals/ConversationModal";
+import ConversationService from "@/services/ConversationService";
+import * as Popover from "@radix-ui/react-popover";
 
 
 // Recursive Category Menu Item Component (Desktop & Mobile)
@@ -27,62 +33,59 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
+  const hasChildren = category.subcategories !== null && category.subcategories !== undefined;
+
+  const ensureSubcategoriesLoaded = async () => {
+    if (hasChildren && category.subcategories.length === 0 && !isLoadingSubcategories) {
+      setIsLoadingSubcategories(true);
+      await onLoadSubcategories(category.id, category.type);
+      setIsLoadingSubcategories(false);
+    }
+  };
 
   const handleClick = async () => {
-    if (category.subcategories !== null && category.subcategories !== undefined) {
-      // Mobile: Toggle expansion and load subcategories if needed (কখনো onSelect call করো না)
+    if (hasChildren) {
       if (isMobile) {
-        // যদি expand করতে যাচ্ছি এবং subcategories খালি থাকে, তাহলে load করো
-        if (!isExpanded && category.subcategories.length === 0 && !isLoadingSubcategories) {
-          setIsLoadingSubcategories(true);
-          await onLoadSubcategories(category.id);
-          setIsLoadingSubcategories(false);
-          setIsExpanded(true); // Load হওয়ার পর expand করো
-        } else {
-          setIsExpanded(!isExpanded);
+        if (!isExpanded) {
+          await ensureSubcategoriesLoaded();
         }
+        setIsExpanded((prev) => !prev);
         return;
       }
-      onSelect(category);
-    } else {
-      onSelect(category);
+
+      // Desktop/touch devices: click should also open submenu (hover fallback)
+      if (!isHovered) {
+        await ensureSubcategoriesLoaded();
+      }
+      setIsHovered((prev) => !prev);
+      return;
     }
+
+    console.log("category ----------- 64", category);
+
+    onSelect(category);
+  };
+
+  const handleSelect = (e) => {
+    e.stopPropagation();
+    onSelect(category);
   };
 
   const handleMouseEnter = async () => {
     if (!isMobile) {
       setIsHovered(true);
-
-      // যদি subcategories থাকে কিন্তু empty array হয় (মানে এখনো load হয়নি)
-      // তাহলে API call করে subcategories load করবো
-      if (category.subcategories && category.subcategories.length === 0 && !isLoadingSubcategories) {
-        setIsLoadingSubcategories(true);
-        await onLoadSubcategories(category.id);
-        setIsLoadingSubcategories(false);
-      }
+      await ensureSubcategoriesLoaded();
     }
   };
 
-  // Mobile: Render as accordion
   if (isMobile) {
     const handlePlusClick = async (e) => {
       e.stopPropagation();
-
-      // যদি expand করতে যাচ্ছি এবং subcategories খালি থাকে, তাহলে load করো
-      if (!isExpanded && category.subcategories.length === 0 && !isLoadingSubcategories) {
-        console.log('🌐 Loading subcategories for:', category.name, 'ID:', category.id);
-        setIsLoadingSubcategories(true);
-        await onLoadSubcategories(category.id);
-        setIsLoadingSubcategories(false);
-        setIsExpanded(true);
-      } else {
-        setIsExpanded(!isExpanded);
-      }
+      await handleClick();
     };
 
-    const handleItemClick = (e) => {
-      e.stopPropagation();
-      onSelect(category);
+    const handleItemClick = async (e) => {
+      handleSelect(e);
     };
 
     return (
@@ -98,7 +101,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
           >
             {category.name}
           </span>
-          {category.subcategories && (
+          {hasChildren && (
             <button
               onClick={handlePlusClick}
               className="p-2 hover:bg-gray-200 rounded-full transition-colors duration-150 flex-shrink-0"
@@ -109,8 +112,7 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
           )}
         </div>
 
-        {/* Nested Subcategories - Accordion Style */}
-        {category.subcategories && isExpanded && (
+        {hasChildren && isExpanded && (
           <div className="bg-white">
             {isLoadingSubcategories ? (
               <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
@@ -134,7 +136,6 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
     );
   }
 
-  // Desktop: Render as hover dropdown
   return (
     <div
       className="relative"
@@ -143,16 +144,15 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
     >
       <div
         className="px-4 py-2 hover:bg-orange-50 cursor-pointer flex items-center justify-between transition-colors duration-150"
-        onClick={handleClick}
+        onClick={handleSelect}
       >
         <span className="text-gray-700 text-sm">{category.name}</span>
-        {category.subcategories && (
+        {hasChildren && (
           <ChevronDown className="w-4 h-4 -rotate-90 text-gray-400" />
         )}
       </div>
 
-      {/* Nested Subcategories - Recursive Call */}
-      {category.subcategories && isHovered && (
+      {hasChildren && isHovered && (
         <div className="absolute left-full top-0 bg-white shadow-xl rounded-lg border border-gray-200 min-w-[220px] z-50">
           <div className="py-2">
             {isLoadingSubcategories ? (
@@ -178,10 +178,75 @@ const CategoryMenuItem = ({ category, onSelect, level = 0, onLoadSubcategories, 
   );
 };
 
+const TopCategoryMenuItem = ({ category, onSelect, onLoadSubcategories }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false);
+  const hasChildren = category.subcategories !== null && category.subcategories !== undefined;
+
+  const ensureSubcategoriesLoaded = async () => {
+    if (hasChildren && category.subcategories.length === 0 && !isLoadingSubcategories) {
+      setIsLoadingSubcategories(true);
+      await onLoadSubcategories(category.id, category.type);
+      setIsLoadingSubcategories(false);
+    }
+  };
+
+  const handleMouseEnter = async () => {
+    setIsOpen(true);
+    await ensureSubcategoriesLoaded();
+  };
+
+  const handleClick = async () => {
+    onSelect(category);
+  };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex h-10 items-center gap-1 rounded-md px-3 text-sm font-medium text-gray-700 transition-colors duration-150 hover:bg-blue-50 hover:text-gray-950"
+      >
+        <span className="whitespace-nowrap">{category.name}</span>
+        {hasChildren && (
+          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        )}
+      </button>
+
+      {hasChildren && isOpen && (
+        <div className="absolute left-0 top-full z-[60] min-w-[250px] rounded-lg border border-gray-200 bg-white shadow-xl">
+          <div className="py-2">
+            {isLoadingSubcategories ? (
+              <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+            ) : category.subcategories.length > 0 ? (
+              category.subcategories.map((subcat) => (
+                <CategoryMenuItem
+                  key={subcat.id}
+                  category={subcat}
+                  onSelect={onSelect}
+                  onLoadSubcategories={onLoadSubcategories}
+                />
+              ))
+            ) : (
+              <div className="px-4 py-2 text-sm text-gray-500">No subcategories</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const NavbarContent = () => {
   const [cartItemCount, setCartItemCount] = useState(0);
 
-  const { cartItems, setCartItems, addToCart } = useAppContext();
+  // const { cartItems, setCartItems, addToCart } = useAppContext();
+
+  const { cartItems, setCartItems, addToCart, isSeller, router, user, setUser, shops, selectedShop, setSelectedShop, compareItems } = useAppContext();
 
   // console.log("cartItems Navbar:::", cartItems.length);
 
@@ -192,11 +257,16 @@ const NavbarContent = () => {
   // }, []);
 
 
-  const { isSeller, router, user, setUser, shops, selectedShop, setSelectedShop } = useAppContext();
+
   const [loginOpen, setLoginOpen] = useState(false);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isConversationOpen, setIsConversationOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatProduct, setChatProduct] = useState(null);
+  const [chatConversationId, setChatConversationId] = useState(0);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -207,7 +277,17 @@ const NavbarContent = () => {
   const menuRef = useRef(null);
   const [shopOptions, setShopOptions] = useState([]);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [recentNotifications, setRecentNotifications] = useState([]);
+  const [notificationRefreshTrigger, setNotificationRefreshTrigger] = useState(0);
   const categoryRef = useRef(null);
+
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  // const notifications = [
+  //   { id: 1, title: "New message", description: "You have a new message in chat.", time: "2m ago" },
+  //   { id: 2, title: "Order update", description: "Your order has been shipped.", time: "1h ago" },
+  //   { id: 3, title: "Promo", description: "Check out the latest deals today.", time: "3h ago" },
+  // ];
 
   // Demo category data with unlimited nested structure
   const categoriesOld = [
@@ -393,7 +473,7 @@ const NavbarContent = () => {
   const [loading, setLoading] = useState(false);
 
 
-  const getCategories = async (parentId = 0) => {
+  const getCategories = async (parentId = 0, fallbackType = "") => {
     try {
       setLoading(true);
       const response = await CategoryService.Queries.getCategories({
@@ -409,6 +489,7 @@ const NavbarContent = () => {
         const formattedData = rawData.map((item) => ({
           id: item.c_id,
           name: item.c_name,
+          type: item.c_type || fallbackType,
           subcategories: item.c_is_child ? [] : null, // Initialize subcategories as empty array if it has children
         }));
 
@@ -456,7 +537,9 @@ const NavbarContent = () => {
 
 
   const handleAllCategory = () => {
-    getCategories();
+    if (categories.length === 0) {
+      getCategories();
+    }
     setIsCategoryOpen((prev) => !prev);
   };
 
@@ -466,22 +549,52 @@ const NavbarContent = () => {
   };
 
   // Load subcategories when hovering over a category
-  const loadSubcategories = async (categoryId) => {
-    await getCategories(categoryId);
+  const loadSubcategories = async (categoryId, parentType = "") => {
+    await getCategories(categoryId, parentType);
   };
 
 
 
 
+  const getUnreadNotifications = async () => {
+    try {
+      // const response = await LoginService.Queries.getUnreadNotifications();
 
-  // useEffect(() => {
-  //   console.log("call useEffect");
-  //   getCategories();
-  // }, []);
+      const response = await ConversationService.Queries.getUnreadNotifications();
+      if (response && response.status === "success") {
+        const nextCount = Number(response?.data?.unread_count);
+        setUnreadNotificationCount(nextCount);
+      }
+    } catch (error) {
+      console.log("Error fetching unread notifications:", error);
+    }
+  };
+
+
+  // console.log("unreadNotificationCount", unreadNotificationCount);
+
+
+
+  useEffect(() => {
+    getCategories();
+  }, []);
 
   // Handle category selection
   const handleCategorySelect = (category) => {
     setIsCategoryOpen(false);
+    const categoryType = String(category?.type || "").toLowerCase();
+
+    if (isActiveMyShop) {
+      const productType = categoryType === "vehicle" ? "vehicle" : "general";
+      router.push(`/my-shop?product_type=${productType}&category_id=${category.id}`);
+      return;
+    }
+
+    if (categoryType === "vehicle") {
+      router.push("/");
+      return;
+    }
+
     // Navigate to general-products page with category ID
     router.push(`/general-products?category_id=${category.id}`);
   };
@@ -528,6 +641,7 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
+  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -661,6 +775,51 @@ const NavbarContent = () => {
     };
   }, [isMobileMenuOpen]);
 
+  // Listen for notifications updated (e.g. mark as read on notifications page) so bell count updates immediately
+  useEffect(() => {
+    const onUpdated = () => setNotificationRefreshTrigger((t) => t + 1);
+    window.addEventListener("notificationsUpdated", onUpdated);
+    return () => window.removeEventListener("notificationsUpdated", onUpdated);
+  }, []);
+
+  // Fetch notification count and recent unread when user is logged in or auth_token exists; refresh every 2 minutes and when notificationsUpdated fires
+  const NOTIFICATION_POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+  useEffect(() => {
+    const hasAuth = !!user || (typeof window !== "undefined" && !!localStorage.getItem("auth_token"));
+    if (!hasAuth) {
+      setNotificationCount(0);
+      setRecentNotifications([]);
+      return;
+    }
+    let cancelled = false;
+    const fetchNotifications = async () => {
+      try {
+        const response = await NotificationService.Queries.getNotifications({
+          filter: "unread",
+          page: 1,
+          per_page: 5,
+        });
+        if (cancelled) return;
+        const ok = response?.status === "success" || response?.success;
+        const payload = response?.data ?? response;
+        if (ok && payload) {
+          setNotificationCount(payload.counts?.unread ?? 0);
+          setRecentNotifications(Array.isArray(payload.data) ? payload.data : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setNotificationCount(0);
+          setRecentNotifications([]);
+        }
+      }
+    };
+    fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, NOTIFICATION_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [user, pathname, notificationRefreshTrigger]);
 
   const setLogout = async () => {
     try {
@@ -710,16 +869,37 @@ const NavbarContent = () => {
     setIsResetPasswordModalOpen(false);
   };
 
+
+   useEffect(() => {
+    if (!parsedUser) return; // Only run if user is logged in
+
+     getUnreadNotifications();
+     
+  }, [parsedUser]);
+
+
+
+  // useEffect(() => {
+  //   if (!parsedUser) return; // Only run if user is logged in
+
+  //   const intervalId = setInterval(() => {
+  //     getUnreadNotifications();
+  //   }, 5000);
+
+  //   return () => clearInterval(intervalId);
+  // }, [parsedUser]);
+
   return (
     <>
       <nav className="flex items-center justify-between px-4 md:px-16 lg:px-32 py-1 border-b border-gray-300 text-gray-700">
         <div className="flex space-x-6 items-center">
-          <Image
-            className="cursor-pointer w-20 md:w-20 h-12"
-            onClick={() => router.push("/")}
-            src={assets.pilotBazarLogo}
-            alt="logo"
-          />
+          <Link href="/">
+            <Image
+              className="cursor-pointer w-20 md:w-20 h-12"
+              src={assets.pilotBazarLogo}
+              alt="logo"
+            />
+          </Link>
 
           {/* ALL CATEGORIES FORM MOBILE DEVICE */}
           {/* <div className="block md:hidden">
@@ -873,6 +1053,17 @@ const NavbarContent = () => {
             }
 
 
+            <Link
+              href="/how-to-use"
+              className={`transition duration-300 ${isActiveHowToUse
+                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
+                : 'hover:text-gray-900'
+                }`}
+            >
+              How to Use
+            </Link>
+
+
 
 
           </div>
@@ -909,7 +1100,13 @@ const NavbarContent = () => {
           {user ? (
             <>
               <div className="flex items-center gap-4">
-                {user && <MyHomePopover setLogout={setLogout} />}
+                {user &&
+                  <MyHomePopover
+                    setLogout={setLogout}
+                    setIsNotificationOpen={setIsNotificationOpen}
+                    unreadNotificationCount={unreadNotificationCount}
+                  />
+                }
               </div>
             </>
           ) : (
@@ -921,6 +1118,22 @@ const NavbarContent = () => {
             </button>
           )}
 
+
+          <Link
+            href="/compare"
+            className="flex items-center gap-2 text-lg font-medium hover:text-cyan-600 transition relative"
+            title="Compare products"
+          >
+            <div className="relative">
+              <GitCompare className="h-6 w-6 text-gray-700" />
+              {compareItems.length > 0 && (
+                <span className="absolute -top-3 -right-3 bg-cyan-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {compareItems.length}
+                </span>
+              )}
+            </div>
+          </Link>
+
           <Link
             href="/cart"
             className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative"
@@ -931,9 +1144,103 @@ const NavbarContent = () => {
                 <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {cartItems.length}
                 </span>
-              )}  
+              )}
             </div>
           </Link>
+
+
+
+
+
+          <button
+            type="button"
+            onClick={() => setIsConversationOpen(true)}
+            className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition"
+          >
+            <svg
+              className="h-7 w-7 text-blue-500"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="currentColor"
+            >
+              <path d="M12 2C6.48 2 2 6.11 2 11.2c0 2.9 1.42 5.52 3.74 7.24V22l3.38-1.87c1.02.28 2.11.43 3.24.43 5.52 0 10-4.11 10-9.16S17.52 2 12 2zm.07 12.35l-2.55-2.72-4.87 2.72 5.34-5.68 2.55 2.72 4.87-2.72-5.34 5.68z" />
+            </svg>
+          </button>
+
+
+
+          {/* <button
+            type="button"
+            onClick={() => setIsNotificationOpen(true)}
+            className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition"
+          >
+            <svg
+              className="h-7 w-7 text-blue-500"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="currentColor"
+            >
+              <path d="M12 2C6.48 2 2 6.11 2 11.2c0 2.9 1.42 5.52 3.74 7.24V22l3.38-1.87c1.02.28 2.11.43 3.24.43 5.52 0 10-4.11 10-9.16S17.52 2 12 2zm.07 12.35l-2.55-2.72-4.87 2.72 5.34-5.68 2.55 2.72 4.87-2.72-5.34 5.68z" />
+            </svg>
+          </button> */}
+
+
+          {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative focus:outline-none"
+                  aria-label="Notifications"
+                >
+                  <div className="relative">
+                    <Bell className="w-6 h-6" />
+                    <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                      {notificationCount}
+                    </span>
+                  </div>
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  sideOffset={8}
+                  align="end"
+                  className="rounded-lg bg-white p-0 shadow-lg border border-gray-200 w-80 max-h-96 overflow-hidden z-[9999]"
+                >
+                  <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3">
+                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  </div>
+                  <ul className="overflow-y-auto max-h-72">
+                    {recentNotifications.map((n) => (
+                      <li key={n.id} className="border-b border-gray-100 last:border-b-0">
+                        <Popover.Close asChild>
+                          <Link
+                            href={`/dashboard/notifications?highlight=${n.id}`}
+                            className="block px-4 py-3 hover:bg-gray-50 transition cursor-pointer"
+                          >
+                            <p className="font-medium text-gray-900 text-sm truncate">{n.customer_name ?? "—"}</p>
+                            <p className="text-gray-600 text-xs mt-0.5 truncate" title={n.search_history}>{n.search_history ?? "—"}</p>
+                            <p className="text-gray-400 text-xs mt-1">{n.search_date_time ? new Date(n.search_date_time).toLocaleString() : "—"}</p>
+                          </Link>
+                        </Popover.Close>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-2">
+                    <Popover.Close asChild>
+                      <Link
+                        href="/dashboard/notifications"
+                        className="block text-center text-sm font-medium hover:opacity-90 transition"
+                        style={{ color: 'rgb(1 103 162)' }}
+                      >
+                        View all notifications
+                      </Link>
+                    </Popover.Close>
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          ) : ''}
 
         </ul>
 
@@ -963,6 +1270,15 @@ const NavbarContent = () => {
           }
 
 
+          <Link href="/compare" className="relative focus:outline-none" title="Compare products">
+            <GitCompare className="h-5 w-5 text-gray-700" />
+            {compareItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-cyan-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                {compareItems.length}
+              </span>
+            )}
+          </Link>
+
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="focus:outline-none">
             <Image className="w-6 h-6" src={assets.menu_icon} alt="menu icon" />
           </button>
@@ -972,9 +1288,26 @@ const NavbarContent = () => {
         <ResetPasswordModal isOpen={isResetPasswordModalOpen} onClose={closeResetPasswordModal} />
         <LoginPromptModal isOpen={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} onLoginClick={() => { setShowLoginPrompt(false); setLoginOpen(true); }} />
       </nav>
+      {categories.length > 0 && (
+        <section className="relative z-40 hidden border-b border-gray-200 bg-white md:block">
+          <div className="px-4 md:px-16 lg:px-32">
+            <div className="flex min-h-11 flex-wrap items-center gap-1 py-1">
+              {categories.map((category) => (
+                <TopCategoryMenuItem
+                  key={category.id}
+                  category={category}
+                  onSelect={handleCategorySelect}
+                  onLoadSubcategories={loadSubcategories}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       {isSearchOpen && (
         <div className="fixed inset-0 bg-[#71abca] bg-opacity-90 z-[9999] flex items-center justify-center">
           <div className="relative bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-2xl border border-gray-700">
+
             <button
               onClick={() => setIsSearchOpen(false)}
               className="absolute top-2 right-2 text-gray-300 hover:text-white"
@@ -994,6 +1327,8 @@ const NavbarContent = () => {
                 ></path>
               </svg>
             </button>
+
+
             <SearchBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -1002,6 +1337,41 @@ const NavbarContent = () => {
           </div>
         </div>
       )}
+
+
+      {/* setIsConversationOpen */}
+
+      <ConversationModal
+        isOpen={isConversationOpen}
+        onClose={() => setIsConversationOpen(false)}
+        onOpenChat={(item) => {
+          setChatProduct(item?.product || null);
+          setChatConversationId(item?.conversationId || 0);
+          setIsConversationOpen(false);
+          setChatOpen(true);
+        }}
+      />
+
+
+      <NotificationModal
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onOpenChat={(item) => {
+          setChatProduct(item?.product || null);
+          setChatConversationId(item?.conversationId || 0);
+          setIsNotificationOpen(false);
+          setChatOpen(true);
+        }}
+      />
+
+
+
+      <ProductChatModal
+        open={chatOpen}
+        setOpen={setChatOpen}
+        // product={chatProduct}
+        conversationId={chatConversationId}
+      />
 
       {/* Mobile Drawer Menu */}
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsMobileMenuOpen(false)}>
@@ -1082,20 +1452,11 @@ const NavbarContent = () => {
                     onClick={() => router.push("/pb-home")}
                   >
                     <House className="h-4 w-4" />
-                    Stock
+                    PB Home
                   </button>
                 </li>
 
-                {/* <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
-                  <button
-                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                    onClick={() => router.push("/dashboard")}
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </button>
-                </li> */}
-
+         
                 {/* -------------------- */}
 
                 {
@@ -1166,23 +1527,6 @@ const NavbarContent = () => {
                 {/* ------------------------- */}
 
 
-
-
-
-                {/* <Link
-                  href="/pb-home"
-                  className={`transition duration-300 ${isActivePbHome
-                    ? 'font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Stock
-                </Link> */}
-
-
-
-
                 <li className={`${isActiveAboutUs ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
                   <button
                     className="flex items-center gap-2 hover:text-gray-900 transition"
@@ -1220,42 +1564,16 @@ const NavbarContent = () => {
                   </button>
                 </li>
 
-                {/* <Link
-                  href="/about-us"
-                  className={`transition duration-300 ${isActiveAboutUs
-                    ? 'font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  About
-                </Link> */}
-                {/* <Link
-                  href="/contact-us"
-                  className={`transition duration-300 ${isActiveContactUs
-                    ? 'font-semibold bg-gray-300 border-b-2 border-black-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Contact
-                </Link> */}
-                {/* <button
-                  onClick={() => {
-                    if (!user) {
-                      setShowLoginPrompt(true);
-                    } else {
-                      router.push("/filter-products");
-                    }
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`transition duration-300 ${isActiveFilterProduct
-                    ? 'text-blue-600 font-semibold bg-orange-600/10 border-b-2 border-orange-500 rounded-full px-4 py-1'
-                    : 'hover:text-gray-900'
-                    }`}
-                >
-                  Filter Products
-                </button> */}
+                
+                <li className={`${isActiveHowToUse ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
+                  <button
+                    className="flex items-center gap-2 hover:text-gray-900 transition"
+                    onClick={() => router.push("/how-to-use")}
+                  >
+                    <PhoneCall className="h-4 w-4" />
+                    How to Use
+                  </button>
+                </li>
               </div>
             </div>
 
