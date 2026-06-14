@@ -21,6 +21,13 @@ const HowToUse = () => {
             src: "https://www.youtube.com/embed/7K9Fyhg6_io"
         },
         {
+            id: 23,
+            title: "কিভাবে কোন ইনভেস্টমেন্ট ছাড়া ব্যবসা করব",
+            description: "Click4Details-এ কোন ইনভেস্টমেন্ট ছাড়া ব্যবসা করার সহজ পদ্ধতি জানুন। আপনার গাড়ি বা শোরুমের তথ্য দিয়ে দ্রুত শুরু করুন এবং ব্যবসা পরিচালনা করুন।",
+            videoId: "9n8sXo2l7jA",
+            src: "https://www.youtube.com/embed/UofsXIjvjkc"
+        },
+        {
             id: 1,
             title: "লগইন, রেজিস্ট্রেশন ও পাসওয়ার্ড পরিবর্তনের করুন | Click4Details",
             description: "Click4Details-এ লগইন, রেজিস্ট্রেশন এবং পাসওয়ার্ড পরিবর্তনের সম্পূর্ণ গাইড। আপনার অ্যাকাউন্ট নিরাপদ রাখুন এবং সহজেই পরিচালনা করুন।",
