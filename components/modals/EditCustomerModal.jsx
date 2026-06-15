@@ -60,13 +60,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
   const [activityRecordId, setActivityRecordId] = useState(null);
   const [activityUsers, setActivityUsers] = useState([]);
   const [activityDraft, setActivityDraft] = useState({
-    clientName: "",
-    phoneNumber: "",
     collectById: "",
-    facebookLink: "",
-    messengerLink: "",
-    profileLevel: "",
-    seriousnessLevel: "",
     firstVisitDate: "",
     firstVisitById: "",
     secondVisitDate: "",
@@ -233,13 +227,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
         if (!customer?.id) {
           setActivityRecordId(null);
           setActivityDraft({
-            clientName: "",
-            phoneNumber: "",
             collectById: "",
-            facebookLink: "",
-            messengerLink: "",
-            profileLevel: "",
-            seriousnessLevel: "",
             firstVisitDate: "",
             firstVisitById: "",
             secondVisitDate: "",
@@ -288,13 +276,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
 
         setActivityRecordId(selected.id);
         setActivityDraft({
-          clientName: String(selected?.client_name ?? customer?.name ?? ""),
-          phoneNumber: String(selected?.phone_number ?? customer?.mobile ?? ""),
           collectById: resolveUserId(selected?.data_collect_by ?? selected?.data_collect_by_name),
-          facebookLink: String(selected?.facebook_id_link ?? customer?.facebook_id_link ?? ""),
-          messengerLink: String(selected?.chat_link ?? customer?.facebook_messenger_link ?? ""),
-          profileLevel: String(selected?.profile_level ?? ""),
-          seriousnessLevel: String(selected?.seriousness_level ?? ""),
           firstVisitDate: toDateInputValue(selected?.first_visit_date),
           firstVisitById: resolveUserId(selected?.first_visit_by ?? selected?.first_visit_by_name),
           secondVisitDate: toDateInputValue(selected?.second_visit_date),
@@ -317,7 +299,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
     };
 
     fetchActivityContext();
-  }, [customer?.id, customer?.name, customer?.mobile, customer?.facebook_id_link, customer?.facebook_messenger_link, api]);
+  }, [customer?.id, api]);
 
   const handleSaveCustomer = async () => {
     if (!customerName) {
@@ -361,8 +343,8 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
         data_collect_by: activityDraft.collectById ? Number(activityDraft.collectById) : null,
         facebook_id_link: facebookIdLink.trim() || null,
         chat_link: facebookMessengerLink.trim() || null,
-        profile_level: String(activityDraft.profileLevel || "").trim() || null,
-        seriousness_level: String(activityDraft.seriousnessLevel || "").trim() || null,
+        profile_level: String(clientLevel || "").trim() || null,
+        seriousness_level: String(clientSeriousness || "").trim() || null,
         first_visit_date: activityDraft.firstVisitDate || null,
         first_visit_by: activityDraft.firstVisitById ? Number(activityDraft.firstVisitById) : null,
         second_visit_date: activityDraft.secondVisitDate || null,
@@ -876,25 +858,6 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
                   options={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).filter((o) => o.value && o.label)}
                   value={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).find((o) => o.value === activityDraft.soldById) || null}
                   onChange={(option) => setActivityDraft((p) => ({ ...p, soldById: option?.value || "" }))}
-                  isClearable
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-base font-medium">Profile Level</label>
-                <select className="outline-none py-2 px-3 rounded border border-gray-500/40" value={activityDraft.profileLevel} onChange={(e) => setActivityDraft((p) => ({ ...p, profileLevel: e.target.value }))}>
-                  <option value="">Select profile level</option>
-                  <option value="Low">Low</option>
-                  <option value="High">High</option>
-                  <option value="Confusing">Confusing</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-base font-medium">Seriousness Level</label>
-                <Select
-                  options={clientSeriousnessData.filter((o) => o.value !== "")}
-                  value={clientSeriousnessData.find((o) => String(o.value) === String(activityDraft.seriousnessLevel)) || null}
-                  onChange={(option) => setActivityDraft((p) => ({ ...p, seriousnessLevel: option?.value || "" }))}
-                  placeholder="Select seriousness"
                   isClearable
                 />
               </div>

@@ -431,8 +431,8 @@ const CustomerCareDashboard = () => {
       const parts = [
         row.client_name,
         row.phone_number,
-        row.seriousness_level,
         row.seriousness_level_display,
+        masterDataLabel(row.customer?.client_seriousness),
         row.customer?.name,
         row.customer?.search,
         row.customer_updated_by_name,
@@ -480,30 +480,18 @@ const CustomerCareDashboard = () => {
   };
 
   /**
-   * Fallback when API has no seriousness_level_display: numeric master-data ids were wrongly shown as "12345%".
-   * Prefer backend-resolved label (master_data.md_title) when present.
+   * Seriousness label from customers.client_seriousness (via API nested customer or seriousness_level_display).
    */
-  const formatSeriousnessPercent = (raw) => {
-    if (raw == null || String(raw).trim() === "") {
-      return "—";
-    }
-    const s = String(raw).trim();
-    if (s.includes("%")) {
-      return s;
-    }
-    const num = Number(s);
-    if (!Number.isNaN(num) && s !== "") {
-      return `${num}%`;
-    }
-    return s;
-  };
-
   const displayActivitySeriousness = (row) => {
+    const fromCustomer = masterDataLabel(row?.customer?.client_seriousness);
+    if (fromCustomer !== "—") {
+      return fromCustomer;
+    }
     const resolved = row?.seriousness_level_display;
     if (resolved != null && String(resolved).trim() !== "") {
       return String(resolved).trim();
     }
-    return formatSeriousnessPercent(row?.seriousness_level);
+    return "—";
   };
 
   const getInitials = (name) => {
@@ -558,7 +546,11 @@ const CustomerCareDashboard = () => {
     }
   };
 
-  const masterDataLabel = (field) => {
+  const masterDataLabel = (field, relationAlt) => {
+    const rel = relationAlt ?? (typeof field === "object" && field !== null ? field : null);
+    if (rel != null && typeof rel === "object" && rel.md_title != null && String(rel.md_title).trim() !== "") {
+      return String(rel.md_title);
+    }
     if (field == null || field === "") {
       return "—";
     }
@@ -568,7 +560,25 @@ const CustomerCareDashboard = () => {
     return String(field);
   };
 
+  const displayClientLevel = (customer) => {
+    if (!customer) return "—";
+    const fromDisplay = customer.client_level_display;
+    if (fromDisplay != null && String(fromDisplay).trim() !== "") {
+      return String(fromDisplay).trim();
+    }
+    return masterDataLabel(customer.client_level, customer.clientLevel);
+  };
+
   const displayOrDash = (v) => (v != null && String(v).trim() !== "" ? String(v).trim() : "—");
+
+  const formatVisitSummary = (dateValue, nameValue) => {
+    const datePart = formatDetailDateOnly(dateValue);
+    const namePart = displayOrDash(nameValue);
+    if (datePart === "—" && namePart === "—") {
+      return "—";
+    }
+    return `${datePart} · ${namePart}`;
+  };
 
   const formatYesNo = (v) => (v ? "Yes" : "No");
 
@@ -1288,14 +1298,10 @@ const CustomerCareDashboard = () => {
                         </h4>
                         <DetailDl>
                           <DetailField label="Collect by" value={displayOrDash(selectedActivity.data_collect_by_name)} />
-                          <DetailField label="Profile level" value={displayOrDash(selectedActivity.profile_level)} />
-                          <DetailField label="Seriousness" value={displayActivitySeriousness(selectedActivity)} />
-                          <DetailField label="Facebook link" fullWidth value={maybeLink(selectedActivity.facebook_id_link, "Open")} />
-                          <DetailField label="Messenger / chat link" fullWidth value={maybeLink(selectedActivity.chat_link, "Open")} />
-                          <DetailField label="Visit 1" value={`${formatDetailDateOnly(selectedActivity.first_visit_date)} · ${displayOrDash(selectedActivity.first_visit_by_name)}`} />
-                          <DetailField label="Visit 2" value={`${formatDetailDateOnly(selectedActivity.second_visit_date)} · ${displayOrDash(selectedActivity.second_visit_by_name)}`} />
-                          <DetailField label="Visit 3" value={`${formatDetailDateOnly(selectedActivity.third_visit_date)} · ${displayOrDash(selectedActivity.third_visit_by_name)}`} />
-                          <DetailField label="Sold" value={`${formatDetailDateOnly(selectedActivity.sold_date)} · ${displayOrDash(selectedActivity.sold_by_name)}`} />
+                          <DetailField label="Visit 1" value={formatVisitSummary(selectedActivity.first_visit_date, selectedActivity.first_visit_by_name)} />
+                          <DetailField label="Visit 2" value={formatVisitSummary(selectedActivity.second_visit_date, selectedActivity.second_visit_by_name)} />
+                          <DetailField label="Visit 3" value={formatVisitSummary(selectedActivity.third_visit_date, selectedActivity.third_visit_by_name)} />
+                          <DetailField label="Sold" value={formatVisitSummary(selectedActivity.sold_date, selectedActivity.sold_by_name)} />
                           <DetailField label="Follow-ups linked" value={selectedActivity.followups_count != null ? String(selectedActivity.followups_count) : "—"} />
                           <DetailField label="Bot message" value={formatYesNo(selectedActivity.bot_message)} />
                           <DetailField
@@ -1309,7 +1315,6 @@ const CustomerCareDashboard = () => {
                             }
                           />
                           <DetailField label="Sale done" value={formatYesNo(selectedActivity.sale_done)} />
-                          <DetailField label="Activity ID" value={String(selectedActivity.id)} />
                         </DetailDl>
                       </section>
 
@@ -1350,8 +1355,14 @@ const CustomerCareDashboard = () => {
                                 fullWidth
                                 value={maybeLink(detailPanelCustomer.facebook_messenger_link, displayOrDash(detailPanelCustomer.facebook_messenger_link))}
                               />
-                              <DetailField label="Client level" value={masterDataLabel(detailPanelCustomer.client_level)} />
-                              <DetailField label="Client seriousness" value={masterDataLabel(detailPanelCustomer.client_seriousness)} />
+                              <DetailField label="Client level" value={displayClientLevel(detailPanelCustomer)} />
+                              <DetailField
+                                label="Client seriousness"
+                                value={masterDataLabel(
+                                  detailPanelCustomer.client_seriousness_display ?? detailPanelCustomer.client_seriousness,
+                                  detailPanelCustomer.clientSeriousness
+                                )}
+                              />
                               <DetailField
                                 label="Car exchange category / year"
                                 value={masterDataLabel(detailPanelCustomer.car_exchange_category_per_year)}

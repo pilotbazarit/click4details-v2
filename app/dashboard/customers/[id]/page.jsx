@@ -1,4 +1,5 @@
 "use client";
+import CustomerFoundDetailsSection from "@/components/advance-filter/CustomerFoundDetailsSection";
 import FollowupsSection from "@/components/CustomerCare/FollowupsSection";
 import SearchHistorySection from "@/components/CustomerCare/SearchHistorySection";
 import DateRangePicker from "@/components/DateRangePicker";
@@ -18,9 +19,9 @@ import SearchHistoryService from "@/services/SearchHistoryService";
 import ShopService from "@/services/ShopService";
 import UserService from "@/services/UserService";
 import dayjs from "dayjs";
-import { ArrowLeft, ExternalLink, Eye, History, MessageSquare } from "lucide-react";
+import { ArrowLeft, Eye, History, MessageSquare } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
 import FollowupModal from "../../../../components/modals/FollowupModal";
@@ -952,167 +953,6 @@ const SearchHistoryEditModal = ({ isOpen, onClose, onSave, historyItem, customer
   );
 };
 
-const CustomerInfoSection = ({ customer, latestActivity, formatDate, searchHistories, clientAttitudeData, onEdit, onActivityUpdate }) => {
-  const { user } = useAppContext();
-  const parsedUser = typeof user === "string" ? JSON.parse(user) : user;
-  const createdById = customer?.created_by?.id ?? customer?.created_by;
-  const canModify =
-    Number(parsedUser?.id) === Number(createdById) ||
-    parsedUser?.user_mode === "Admin" ||
-    parsedUser?.user_mode === "supreme";
-
-  const formatLabel = (key) => {
-    if (key === "updated_by") return "Collect By";
-    return key
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
-
-  const getCustomerInfoValue = (field) => {
-    const customerValue = customer?.[field];
-    if (customerValue !== null && customerValue !== undefined && String(customerValue).trim() !== "") {
-      return customerValue;
-    }
-
-    if (!latestActivity) {
-      return customerValue;
-    }
-
-    const activityFallbackByField = {
-      name: latestActivity?.client_name,
-      mobile: latestActivity?.phone_number,
-      facebook_id_link: latestActivity?.facebook_id_link,
-      facebook_messenger_link: latestActivity?.chat_link,
-      client_level: latestActivity?.profile_level,
-      client_seriousness: latestActivity?.seriousness_level,
-      updated_by: latestActivity?.data_collect_by_name,
-    };
-
-    return activityFallbackByField[field] ?? customerValue;
-  };
-
-  const InfoField = ({ label, value, fieldName }) => {
-    let displayValue = value;
-
-    if (value === null || value === undefined || value === "") {
-      displayValue = "N/A";
-    } else {
-      // Check for specific fields that should display master data titles
-      const masterDataFields = [
-        "bank_loan_amount",
-        "car_available",
-        "client_attitude",
-        "client_profession",
-        "client_income_per_month",
-        "client_level",
-        "client_seriousness",
-        "car_exchange_category_per_year",
-        "purchase_reason",
-        "updated_by",
-        "client_company_transaction",
-      ];
-
-      if (masterDataFields.includes(fieldName)) {
-        if (fieldName === "client_attitude" && Array.isArray(clientAttitudeData) && value) {
-          const selectedAttitudes = String(value).split(",").map(Number);
-          const attitudeTitles = selectedAttitudes.map((id) => {
-            const option = clientAttitudeData.find((opt) => opt.value === id);
-            return option ? option.label : String(id); // Fallback to ID if not found
-          });
-          displayValue = attitudeTitles.join(", ");
-        } else if (typeof value === "object" && value !== null && value.md_title) {
-          displayValue = value.md_title;
-        } else if (typeof value === "object" && value !== null && value.name) {
-          displayValue = value.name;
-        } else {
-          displayValue = value;
-        }
-      }
-
-      if (fieldName === "facebook_id_link" || fieldName === "facebook_messenger_link") {
-        let formattedValue = value;
-        if (value && !value.startsWith("http://") && !value.startsWith("https://")) {
-          formattedValue = `https://${value}`;
-        }
-        return (
-          <div className="flex flex-col">
-            <span className="text-sm text-gray-500">{label}</span>
-            <a href={formattedValue} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-              {value.length > 25 ? `${value.substring(0, 25)}...` : value} <ExternalLink className="ml-1 w-4 h-4" />
-            </a>
-          </div>
-        );
-      }
-    }
-
-    return (
-      <div className="flex flex-col">
-        <span className="text-sm text-gray-500">{label}</span>
-        <span className="text-gray-900">{String(displayValue)}</span>
-      </div>
-    );
-  };
-
-  const fields = [
-    "name",
-    "mobile",
-    "email",
-    "address",
-    "date_of_birth",
-    "anniversary_date",
-    "facebook_id_link",
-    "facebook_messenger_link",
-    "purchase_reason",
-    "ready_budget",
-    "interested_for_loan",
-    "bank_loan_amount",
-    "car_available",
-    "client_attitude",
-    "client_profession",
-    "client_income_per_month",
-    "client_company_transaction",
-    "client_level",
-    "client_seriousness",
-    "car_exchange_category_per_year",
-    "client_last_purchase_date",
-    "updated_by",
-  ];
-
-  return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Customer Information</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {fields.map((field) => (
-            <InfoField key={field} label={formatLabel(field)} value={getCustomerInfoValue(field)} fieldName={field} />
-          ))}
-          <InfoField label="Created At" value={customer?.created_at ? formatDate(customer.created_at) : null} />
-          <InfoField label="Last Updated" value={customer?.updated_at ? formatDate(customer.updated_at) : null} />
-          <InfoField label="Last Search" value={searchHistories.length > 0 ? formatDate(searchHistories[0].created_at) : null} />
-        </div>
-        {customer?.description && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <InfoField label="Description" value={customer.description} />
-          </div>
-        )}
-        <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end gap-2">
-          <button onClick={onActivityUpdate} className="bg-emerald-500 text-white px-4 py-2 rounded-md hover:bg-emerald-600">
-            Activity Update
-          </button>
-          {canModify && (
-            <button onClick={onEdit} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-              Edit Customer
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const CustomerDetailPage = () => {
   const params = useParams();
   const router = useRouter();
@@ -1160,6 +1000,7 @@ const CustomerDetailPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [activities, setActivities] = useState([]);
+  const [salesActivitiesLoading, setSalesActivitiesLoading] = useState(false);
   const [usersDirectory, setUsersDirectory] = useState([]);
   const [selectedActivityId, setSelectedActivityId] = useState("");
   const [activityDraft, setActivityDraft] = useState({
@@ -1186,6 +1027,16 @@ const CustomerDetailPage = () => {
 
   const customerId = params.id;
   const api = createApiRequest(API_URL);
+
+  const canModifyCustomer = useMemo(() => {
+    if (!customer) return false;
+    const createdById = customer?.created_by?.id ?? customer?.created_by;
+    return (
+      Number(normalizedUser?.id) === Number(createdById) ||
+      normalizedUser?.user_mode === "Admin" ||
+      normalizedUser?.user_mode === "supreme"
+    );
+  }, [customer, normalizedUser]);
 
   const getClientAttitude = async () => {
     try {
@@ -1314,6 +1165,7 @@ const CustomerDetailPage = () => {
   };
 
   const fetchActivities = async () => {
+    setSalesActivitiesLoading(true);
     try {
       const response = await api.get(`api/sales-team-activities?customer_id=${customerId}`);
       const list = Array.isArray(response?.data)
@@ -1326,6 +1178,8 @@ const CustomerDetailPage = () => {
     } catch {
       setActivities([]);
       return [];
+    } finally {
+      setSalesActivitiesLoading(false);
     }
   };
 
@@ -1390,9 +1244,12 @@ const CustomerDetailPage = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch customer
+      // Fetch customer (interceptor returns { status, message, data })
       const customerResponse = await api.get(`api/customers/${customerId}`);
-      const customerData = customerResponse.data;
+      const customerData =
+        customerResponse?.status === "success" && customerResponse?.data
+          ? customerResponse.data
+          : customerResponse?.data ?? customerResponse;
       setCustomer(customerData);
 
       // Fetch search history by customer ID (new endpoint)
@@ -1442,18 +1299,7 @@ const CustomerDetailPage = () => {
         setMessages([]);
       }
 
-      const latestActivities = await fetchActivities();
-      const preferredActivity = pickBestActivityForUpdateModal(latestActivities);
-      if (preferredActivity) {
-        setCustomer((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            client_level: prev.client_level || preferredActivity.profile_level || null,
-            client_seriousness: prev.client_seriousness || preferredActivity.seriousness_level || null,
-          };
-        });
-      }
+      await fetchActivities();
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || "Failed to fetch customer details";
       setError(errorMessage);
@@ -1725,8 +1571,6 @@ const CustomerDetailPage = () => {
 
   if (loading) return <LoadingSpinner message="Loading customer details..." />;
 
-  const latestActivityForInfo = pickBestActivityForUpdateModal(activities);
-
   if (error) {
     return (
       <div className="w-full p-6">
@@ -1844,16 +1688,31 @@ const CustomerDetailPage = () => {
           </button>
         </div>
 
-        {/* Customer Information */}
-        <CustomerInfoSection
-          customer={customer}
-          latestActivity={latestActivityForInfo}
-          formatDate={formatDate}
-          searchHistories={searchHistories}
-          clientAttitudeData={clientAttitudeData}
-          onEdit={openEditModal}
-          onActivityUpdate={openActivityModal}
-        />
+        {/* Customer information + sales team activity (same layout as Filter Products) */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="p-4 sm:p-6">
+            {canModifyCustomer && (
+              <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded border border-orange-500 text-orange-600 bg-white hover:bg-orange-50"
+                  onClick={openEditModal}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Edit Customer
+                </button>
+              </div>
+            )}
+            <CustomerFoundDetailsSection
+              customer={customer}
+              activities={activities}
+              activitiesLoading={salesActivitiesLoading}
+            />
+          </div>
+        </div>
 
         {/* Search History */}
         <SearchHistorySection

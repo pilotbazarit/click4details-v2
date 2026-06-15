@@ -16,6 +16,15 @@ const mdTitle = (rel) => {
   return fmt(rel);
 };
 
+/** Prefer API-resolved master-data title; avoid showing raw md_id on customer detail / filter views. */
+const masterDataFieldLabel = (customer, displayKey, snakeKey, camelKey) => {
+  const display = customer?.[displayKey];
+  if (display != null && String(display).trim() !== "") {
+    return String(display).trim();
+  }
+  return mdTitle(customer?.[snakeKey] ?? customer?.[camelKey]);
+};
+
 const formatDt = (v) => {
   if (!v) return EMPTY;
   const d = dayjs(v);
@@ -27,6 +36,26 @@ const formatDateOnly = (v) => {
   const d = dayjs(v);
   return d.isValid() ? d.format("YYYY-MM-DD") : String(v);
 };
+
+const LINK_DISPLAY_MAX = 35;
+
+function formatExternalLink(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") return EMPTY;
+  const rawStr = String(raw).trim();
+  const href = /^https?:\/\//i.test(rawStr) ? rawStr : `https://${rawStr}`;
+  const display = rawStr.length > LINK_DISPLAY_MAX ? `${rawStr.slice(0, LINK_DISPLAY_MAX)}…` : rawStr;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:underline break-all"
+      title={rawStr}
+    >
+      {display}
+    </a>
+  );
+}
 
 /** Resolve API shapes: nested user object on created_by / relation aliases — never pass raw objects to fmt(). */
 const formatActorName = (customer, { userKeys, rawKey }) => {
@@ -134,8 +163,8 @@ export default function CustomerFoundDetailsSection({ customer, activities = [],
   ];
 
   const socialRows = [
-    { label: "Facebook link", value: fmt(c.facebook_id_link) },
-    { label: "Messenger link", value: fmt(c.facebook_messenger_link) },
+    { label: "Facebook link", value: formatExternalLink(c.facebook_id_link) },
+    { label: "Messenger link", value: formatExternalLink(c.facebook_messenger_link) },
   ];
 
   const purchaseRows = [
@@ -147,8 +176,8 @@ export default function CustomerFoundDetailsSection({ customer, activities = [],
   ];
 
   const profileRows = [
-    { label: "Client level", value: mdTitle(c.client_level ?? c.clientLevel) },
-    { label: "Client seriousness", value: mdTitle(c.client_seriousness ?? c.clientSeriousness) },
+    { label: "Client level", value: masterDataFieldLabel(c, "client_level_display", "client_level", "clientLevel") },
+    { label: "Client seriousness", value: masterDataFieldLabel(c, "client_seriousness_display", "client_seriousness", "clientSeriousness") },
     { label: "Client profession", value: mdTitle(c.client_profession ?? c.clientProfession) },
     { label: "Income / month", value: mdTitle(c.client_income_per_month ?? c.clientIncomePerMonth) },
     { label: "Company transaction", value: mdTitle(c.client_company_transaction ?? c.clientCompanyTransaction) },

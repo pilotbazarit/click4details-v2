@@ -5,15 +5,21 @@ import * as Collapsible from '@radix-ui/react-collapsible';
 import { ChevronDown, Check, ChevronsUpDown, Plug, LogOut, Store } from 'lucide-react';
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import ShopModal from './modals/ShopModal';
 import ManageShopModal from './modals/ManageShopModal';
 
 const ShopDropdown = () => {
     const { shops, selectedShop, setSelectedShop } = useAppContext();
+    const searchParams = useSearchParams();
     const [isOpen, setIsOpen] = useState(false);
     const [isOpenManageModal, setIsOpenManageModal] = useState(false);
     const [isOpenNewShopModal, setIsOpenNewShopModal] = useState(false);
     const [openCollapsible, setOpenCollapsible] = useState(null);
+    const productType = String(searchParams.get('product_type') || '').toLowerCase();
+    const uploadProductHref = productType === 'general'
+        ? '/dashboard/products/general-product/create/'
+        : '/dashboard/products/vehicle/create';
 
     const handleSelect = (shop) => {
         setSelectedShop(shop);
@@ -70,7 +76,7 @@ const ShopDropdown = () => {
                                                 </button>
                                             </li>
                                             <li className="hover:bg-gray-200 rounded p-1">
-                                                <Link href={`/dashboard/products/vehicle/create`} className="block">Product Upload</Link>
+                                                <Link href={uploadProductHref} className="block">Product Upload</Link>
                                             </li>
                                         </ul>
                                     </div>
