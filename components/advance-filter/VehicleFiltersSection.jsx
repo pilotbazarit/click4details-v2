@@ -126,7 +126,7 @@ const VehicleFiltersSection = ({
                   index === 0 ? "rounded-l-md" : ""
                 } ${index === 1 ? "rounded-r-md" : "-ml-px"} ${
                   searchType === type.value
-                    ? "bg-orange-500 text-white border-orange-500 z-10"
+                    ? "bg-orange-500 text-white border-orange-500"
                     : "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
                 }`}
               >

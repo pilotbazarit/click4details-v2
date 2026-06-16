@@ -17,6 +17,8 @@ import FollowupModal from "@/components/modals/FollowupModal";
 import PasswordModal from "@/components/modals/PasswordModal";
 import { Button } from "@/components/ui/button";
 import { AdvanceFilterProductContextProvider, useAdvanceFilterProductContext } from "@/context/AdvanceFilterProductContextProvider";
+import { GeneralProductFilterContextProvider, useGeneralProductFilterContext } from "@/context/GeneralProductFilterContextProvider";
+import CardViewGeneralProducts from "@/components/advance-filter/CardViewGeneralProducts";
 import { useAppContext } from "@/context/AppContext";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
@@ -27,13 +29,22 @@ import SearchHistoryService from "@/services/SearchHistoryService";
 import dayjs from "dayjs";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import GeneralProductFiltersSection from "@/components/advance-filter/GeneralProductFiltersSection";
 import "rc-slider/assets/index.css";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
+import AsyncSelect from "react-select/async";
+
+const formatCustomerOptionLabel = (customer) => {
+  const name = String(customer?.name ?? "").trim() || "No Name";
+  const mobile = String(customer?.mobile ?? "").trim() || "N/A";
+  return `${name} (${mobile})`;
+};
 
 const FilterProducts = () => {
   const { getAllProduct, total, loading } = useAdvanceFilterProductContext();
+  const { getAllGeneralProduct, total: generalTotal } = useGeneralProductFilterContext();
   const { user } = useAppContext();
   const hasInitializedRef = useRef(false);
   
@@ -91,6 +102,8 @@ const FilterProducts = () => {
   const [categoryData, setCategories] = useState([]);
   const [isCategoryLoading, setIsCategoryLoading] = useState(false);
   const [subcategoryData, setSubcategories] = useState([]);
+  const [isSubcategoryLoading, setIsSubcategoryLoading] = useState(false);
+  const [childCategoryData, setChildCategories] = useState([]);
   const [brandData, setBrands] = useState([]);
   const [modelData, setModels] = useState([]);
   const [colorData, setColors] = useState([]);
@@ -111,8 +124,7 @@ const FilterProducts = () => {
 
   const [customerName, setCustomerName] = useState("");
   const [customerMobile, setCustomerMobile] = useState("");
-  const [customerSearchMobile, setCustomerSearchMobile] = useState("");
-  const [customerSearchName, setCustomerSearchName] = useState("");
+  const [selectedCustomerOption, setSelectedCustomerOption] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -134,17 +146,18 @@ const FilterProducts = () => {
   const [facebookMessengerLink, setFacebookMessengerLink] = useState("");
   const [clientLevel, setClientLevel] = useState("");
   const [clientSeriousness, setClientSeriousness] = useState("");
-  const [clientSeriousnessData, setClientSeriousnessData] = useState([]);
   const [clientIncomeData, setClientIncomeData] = useState([]);
   const [clientAttitude, setClientAttitude] = useState([]);
   const [clientAttitudeData, setClientAttitudeData] = useState([]);
   const [clientProfession, setClientProfession] = useState("");
   const [clientProfessionData, setClientProfessionData] = useState([]);
-  const [clientLevelData, setClientLevelData] = useState([]);
   const [carExchangeCategory, setCarExchangeCategory] = useState("");
   const [carExchangeCategoryData, setCarExchangeCategoryData] = useState([]);
 
   const [description, setDescription] = useState("");
+
+  // General product filter fields (used when non-vehicle category is selected)
+  const [generalFilterFields, setGeneralFilterFields] = useState({});
 
   const [searchHistory, setSearchHistory] = useState([]);
   const [visitingCardImage, setVisitingCardImage] = useState(null);
@@ -164,6 +177,8 @@ const FilterProducts = () => {
   const [salesActivitiesLoading, setSalesActivitiesLoading] = useState(false);
   const [customerDetailsNonce, setCustomerDetailsNonce] = useState(0);
   const apiClient = useMemo(() => createApiRequest(API_URL), []);
+  const customerSearchDebounceRef = useRef(null);
+  const CUSTOMER_SEARCH_MIN_LENGTH = 2;
 
   useEffect(() => {
     if (!foundCustomer?.id) {
@@ -278,8 +293,10 @@ const FilterProducts = () => {
     setCustomerId(customerData.id || null);
     setCustomerName(customerData.name || "");
     setCustomerMobile(customerData.mobile || mobileFallback || "");
-    setCustomerSearchName(customerData.name || "");
-    setCustomerSearchMobile(customerData.mobile || mobileFallback || "");
+    setSelectedCustomerOption({
+      value: customerData.id,
+      label: formatCustomerOptionLabel(customerData),
+    });
     setCustomerEmail(customerData.email || "");
     setCustomerAddress(customerData.address || "");
     setDateOfBirth(customerData.date_of_birth || "");
@@ -327,6 +344,7 @@ const FilterProducts = () => {
       const apiRes = await CustomerService.Queries.getCustomerById(customerId);
       if (apiRes?.status !== "success" || !apiRes?.data) {
         setFoundCustomer(null);
+        setSelectedCustomerOption(null);
         setCustomerNotFound(true);
         setSelectedCustomerId(null);
         setSearchHistory([]);
@@ -349,6 +367,7 @@ const FilterProducts = () => {
     } catch (error) {
       console.error("Failed to fetch customer details:", error);
       setFoundCustomer(null);
+      setSelectedCustomerOption(null);
       setCustomerNotFound(true);
       setSelectedCustomerId(null);
       setSearchHistory([]);
@@ -356,6 +375,49 @@ const FilterProducts = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadCustomerOptions = useCallback((inputValue) => {
+    return new Promise((resolve) => {
+      const q = String(inputValue ?? "").trim();
+      if (q.length < CUSTOMER_SEARCH_MIN_LENGTH) {
+        resolve([]);
+        return;
+      }
+
+      if (customerSearchDebounceRef.current) {
+        clearTimeout(customerSearchDebounceRef.current);
+      }
+
+      customerSearchDebounceRef.current = setTimeout(async () => {
+        try {
+          const res = await SearchHistoryService.Queries.searchCustomersForSelect(q);
+          const items = Array.isArray(res?.data) ? res.data : [];
+          resolve(
+            items.map((customer) => ({
+              value: customer.id,
+              label: formatCustomerOptionLabel(customer),
+            }))
+          );
+        } catch {
+          resolve([]);
+        }
+      }, 400);
+    });
+  }, []);
+
+  const handleCustomerSelectChange = async (option) => {
+    setSelectedCustomerOption(option);
+    setCustomerNotFound(false);
+
+    if (!option?.value) {
+      setFoundCustomer(null);
+      setSelectedCustomerId(null);
+      setSearchHistory([]);
+      return;
+    }
+
+    await fetchCustomerDetailsByCustomerId(option.value);
   };
 
   const fetchCustomerDetailsBasedOnMobile = async (mobile) => {
@@ -367,6 +429,7 @@ const FilterProducts = () => {
         applyCustomerDetailsFromPayload(customerResponse.data, mobile);
       } else {
         setFoundCustomer(null);
+        setSelectedCustomerOption(null);
         setCustomerNotFound(true);
         setSelectedCustomerId(null);
         setSearchHistory([]);
@@ -387,67 +450,11 @@ const FilterProducts = () => {
     } catch (error) {
       console.error("Failed to fetch customer by mobile:", error);
       setFoundCustomer(null);
+      setSelectedCustomerOption(null);
       setCustomerNotFound(true);
       setSelectedCustomerId(null);
       setSearchHistory([]);
       toast.error(error?.response?.data?.message || error?.message || "Could not search customer.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFindExistingCustomer = async () => {
-    const trimmedMobile = customerSearchMobile.trim();
-    const trimmedName = customerSearchName.trim();
-
-    if (!trimmedMobile && !trimmedName) {
-      toast.error("Please enter mobile number or customer name to find customer.");
-      return;
-    }
-
-    setFoundCustomer(null);
-    setCustomerNotFound(false);
-
-    if (trimmedMobile) {
-      await fetchCustomerDetailsBasedOnMobile(trimmedMobile);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const customerResponse = await SearchHistoryService.Queries.searchCustomer({
-        mobile: "",
-        name: trimmedName,
-      });
-
-      if (!isCustomerLookupSuccess(customerResponse)) {
-        setFoundCustomer(null);
-        setCustomerNotFound(true);
-        setSearchHistory([]);
-        toast.error(customerResponse?.message || "No customer found with this mobile number or name.");
-        return;
-      }
-
-      const matchedCustomer = customerResponse.data;
-      setCustomerSearchMobile(matchedCustomer.mobile || "");
-      setCustomerSearchName(matchedCustomer.name || "");
-      // If the customer has no mobile, look up by ID to avoid "mobile required" validation error.
-      if (matchedCustomer.mobile?.trim()) {
-        await fetchCustomerDetailsBasedOnMobile(matchedCustomer.mobile.trim());
-      } else if (matchedCustomer.id) {
-        await fetchCustomerDetailsByCustomerId(matchedCustomer.id);
-      } else {
-        setFoundCustomer(null);
-        setCustomerNotFound(true);
-        setSearchHistory([]);
-        toast.error("Customer found but could not load details (no mobile or ID).");
-      }
-    } catch (error) {
-      console.error("Failed to find customer:", error);
-      setFoundCustomer(null);
-      setCustomerNotFound(true);
-      setSearchHistory([]);
-      toast.error(error?.response?.data?.message || error?.message || "Failed to find customer.");
     } finally {
       setIsLoading(false);
     }
@@ -530,6 +537,7 @@ const FilterProducts = () => {
     package: [],
     location: [],
     subcategory: "",
+    child_category: "",
   });
 
   // category data get from api
@@ -538,7 +546,13 @@ const FilterProducts = () => {
   };
 
   const getSubcategories = async (parentCategoryId) => {
+    setIsSubcategoryLoading(true);
     await FilterProductService.Actions.loadSubcategoryOptions({ parentCategoryId, setSubcategories });
+    setIsSubcategoryLoading(false);
+  };
+
+  const getChildCategories = async (parentCategoryId) => {
+    await FilterProductService.Actions.loadSubcategoryOptions({ parentCategoryId, setSubcategories: setChildCategories });
   };
 
   // brand data get from api
@@ -612,14 +626,6 @@ const FilterProducts = () => {
     await FilterProductService.Actions.loadClientProfessionOptions({ setClientProfessionData, toast });
   };
 
-  const getClientLevel = async () => {
-    await FilterProductService.Actions.loadClientLevelOptions({ setClientLevelData, toast });
-  };
-
-  const getClientSeriousness = async () => {
-    await FilterProductService.Actions.loadClientSeriousnessOptions({ setClientSeriousnessData, toast });
-  };
-
   const getCarExchangeCategory = async () => {
     await FilterProductService.Actions.loadCarExchangeCategoryOptions({ setCarExchangeCategoryData, toast });
   };
@@ -683,8 +689,6 @@ const FilterProducts = () => {
         getCarAvailable(),
         getClientAttitude(),
         getClientProfession(),
-        getClientLevel(),
-        getClientSeriousness(),
         getCarExchangeCategory(),
         getLocations(),
       ]);
@@ -726,7 +730,6 @@ const FilterProducts = () => {
         fetchInitialData(formattedParsedData);
         setOperationType(parsedData.operation_type || "new_search");
         setCustomerMobile(parsedData.customerMobile || "");
-        setCustomerSearchMobile(parsedData.customerMobile || "");
         if (canSeeCustomerInfo && parsedData.customerMobile) {
           fetchCustomerDetailsBasedOnMobile(parsedData.customerMobile);
         }
@@ -771,6 +774,14 @@ const FilterProducts = () => {
     }
   }, [filterFields?.category]);
 
+  useEffect(() => {
+    if (filterFields?.subcategory) {
+      getChildCategories(filterFields.subcategory);
+    } else {
+      setChildCategories([]);
+    }
+  }, [filterFields?.subcategory]);
+
   // Fetch shops when user is loaded
   useEffect(() => {
     if (normalizedUser?.id) {
@@ -783,6 +794,23 @@ const FilterProducts = () => {
     Array.isArray(b) && b.length === 2 && Number(b[0]) === 0 && Number(b[1]) === 500000000;
 
   const executeSearch = async (e) => {
+    // Non-vehicle category: search general products inline
+    if (!showVehicleFilters) {
+      const params = { _status: 'active' };
+      if (filterFields.child_category)           params._category_id      = filterFields.child_category;
+      else if (filterFields.subcategory)         params._pCat_id          = filterFields.subcategory;
+      else if (filterFields.category)            params._pCat_id          = filterFields.category;
+      if (generalFilterFields._title)            params._title            = generalFilterFields._title;
+      if (generalFilterFields._price_min)        params._price_min        = generalFilterFields._price_min;
+      if (generalFilterFields._price_max)        params._price_max        = generalFilterFields._price_max;
+      if (generalFilterFields._brand_id)         params._brand_id         = generalFilterFields._brand_id;
+      if (generalFilterFields._condition_id)     params._condition_id     = generalFilterFields._condition_id;
+      if (generalFilterFields._availability_id)  params._availability_id  = generalFilterFields._availability_id;
+      if (generalFilterFields._location_id)      params._location_id      = generalFilterFields._location_id;
+      getAllGeneralProduct(params, true);
+      return;
+    }
+
     const formattedFilterFields = {
       ...filterFields,
       search_type: searchType,
@@ -1018,51 +1046,44 @@ const FilterProducts = () => {
                 {showCustomerInfo && (
                   <>
                     {/* Search bar */}
-                    <div className="mt-4 p-4 rounded-lg border border-orange-200 bg-orange-50/40">
-                      <p className="text-base font-semibold text-orange-700 mb-3">Find Existing Customer</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-sm font-medium" htmlFor="find-customer-mobile">Mobile Number</label>
-                          <input
-                            id="find-customer-mobile"
-                            type="tel"
-                            placeholder="Enter mobile number"
-                            className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                            value={customerSearchMobile}
-                            onChange={(e) => setCustomerSearchMobile(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleFindExistingCustomer(); } }}
+                    <div className="mt-4 p-4 rounded-lg border border-orange-200 bg-orange-50/40 w-fit max-w-full">
+                      <div className="flex flex-row flex-wrap items-center gap-3">
+                        <label className="text-sm font-medium whitespace-nowrap shrink-0" htmlFor="find-customer-select">
+                          Search Customer
+                        </label>
+                        <div className="w-64 sm:w-80">
+                          <AsyncSelect
+                            inputId="find-customer-select"
+                            cacheOptions={false}
+                            defaultOptions={false}
+                            loadOptions={loadCustomerOptions}
+                            value={selectedCustomerOption}
+                            onChange={handleCustomerSelectChange}
+                            placeholder="Search name or mobile..."
+                            isClearable
+                            openMenuOnClick={false}
+                            openMenuOnFocus={false}
+                            filterOption={null}
+                            className="react-select-container"
+                            classNamePrefix="react-select"
+                            noOptionsMessage={({ inputValue }) => {
+                              const q = String(inputValue ?? "").trim();
+                              if (q.length < CUSTOMER_SEARCH_MIN_LENGTH) {
+                                return null;
+                              }
+                              return "No customers found";
+                            }}
+                            loadingMessage={() => "Searching..."}
                           />
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-sm font-medium" htmlFor="find-customer-name">Customer Name</label>
-                          <input
-                            id="find-customer-name"
-                            type="text"
-                            placeholder="Enter customer name"
-                            className="outline-none py-2 px-3 rounded border border-gray-500/40"
-                            value={customerSearchName}
-                            onChange={(e) => setCustomerSearchName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleFindExistingCustomer(); } }}
-                          />
-                        </div>
-                        <div className="flex flex-wrap items-end gap-2 justify-start">
-                          <button
-                            type="button"
-                            className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center disabled:opacity-60"
-                            onClick={handleFindExistingCustomer}
-                            disabled={isLoading}
-                          >
-                            {isLoading ? "Searching..." : "Search Customer"}
-                          </button>
-                          <button
-                            type="button"
-                            className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center gap-1.5"
-                            onClick={() => setIsAddCustomerModalOpen(true)}
-                          >
-                            <Plus className="h-4 w-4 shrink-0" />
-                            New Customer
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center gap-1.5"
+                          onClick={() => setIsAddCustomerModalOpen(true)}
+                        >
+                          <Plus className="h-4 w-4 shrink-0" />
+                          New Customer
+                        </button>
                       </div>
                     </div>
 
@@ -1347,36 +1368,6 @@ const FilterProducts = () => {
 
                         {/* Performance Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-4 gap-6 mt-8">
-                          {/* Client Level */}
-                          <div className="flex flex-col gap-1">
-                            <label className="text-base font-medium" htmlFor="client-level">
-                              Client Level
-                            </label>
-                            <Select
-                              id="client-level"
-                              options={clientLevelData}
-                              value={clientLevelData.find((opt) => opt.value === clientLevel) || null}
-                              onChange={(option) => setClientLevel(option ? option.value : "")}
-                              className="react-select-container"
-                              classNamePrefix="react-select"
-                              placeholder="Select level"
-                            />
-                          </div>
-                          {/* Client Seriousness */}
-                          <div className="flex flex-col gap-1">
-                            <label className="text-base font-medium" htmlFor="client-seriousness">
-                              Client Seriousness
-                            </label>
-                            <Select
-                              id="client-seriousness"
-                              options={clientSeriousnessData}
-                              value={clientSeriousnessData.find((opt) => opt.value === clientSeriousness) || null}
-                              onChange={(option) => setClientSeriousness(option ? option.value : "")}
-                              className="react-select-container"
-                              classNamePrefix="react-select"
-                              placeholder="Select seriousness"
-                            />
-                          </div>
                           {/* Car Exchange Category */}
                           <div className="flex flex-col gap-1">
                             <label className="text-base font-medium" htmlFor="car-exchange-category">
@@ -1493,10 +1484,23 @@ const FilterProducts = () => {
                   <CategorySubcategorySection
                     categoryData={categoryData}
                     subcategoryData={subcategoryData}
+                    childCategoryData={childCategoryData}
                     filterFields={filterFields}
                     setFilterFields={setFilterFields}
                     isCategoryLoading={isCategoryLoading}
+                    isSubcategoryLoading={isSubcategoryLoading}
                   />
+
+                  {!showVehicleFilters && isCategorySelected && (
+                    <GeneralProductFiltersSection
+                      filterFields={generalFilterFields}
+                      setFilterFields={setGeneralFilterFields}
+                      brandData={brandData}
+                      conditionData={conditionData}
+                      availabilityData={availabilityData}
+                      locationData={locationData}
+                    />
+                  )}
 
                   {showVehicleFilters && (
                     <VehicleFiltersSection
@@ -1551,6 +1555,7 @@ const FilterProducts = () => {
                   readyBudget: [0, 50000000],
                   category: "",
                   subcategory: "",
+                  child_category: "",
                   availability: [],
                   transmission: [],
                   registration_year: [],
@@ -1584,7 +1589,7 @@ const FilterProducts = () => {
                   <p className="text-lg font-semibold text-gray-800">Filter Result</p>
                   {!loading && (
                     <span className="ml-3 inline-flex items-center px-3 py-1 text-sm font-medium text-orange-800 bg-orange-100 rounded-full">
-                      {total} products found
+                      {showVehicleFilters ? total : generalTotal} products found
                     </span>
                   )}
                 </div>
@@ -1627,7 +1632,10 @@ const FilterProducts = () => {
                   </div>
 
                   {/* Products */}
-                  <CardViewFilteredProducts filterFields={filterFields} />
+                  {showVehicleFilters
+                    ? <CardViewFilteredProducts filterFields={filterFields} />
+                    : <CardViewGeneralProducts filterFields={generalFilterFields} />
+                  }
                 </div>
               )}
             </div>
@@ -1688,7 +1696,9 @@ const FilterProducts = () => {
 export default function Page() {
   return (
     <AdvanceFilterProductContextProvider>
-      <FilterProducts />
+      <GeneralProductFilterContextProvider>
+        <FilterProducts />
+      </GeneralProductFilterContextProvider>
     </AdvanceFilterProductContextProvider>
   );
 }

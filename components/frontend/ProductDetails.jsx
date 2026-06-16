@@ -924,7 +924,7 @@ const ProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'click4Details Limited'} </p>
                                     </div>
                                 </div>
                             </div>

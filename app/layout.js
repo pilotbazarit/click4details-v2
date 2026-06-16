@@ -10,8 +10,8 @@ import "./globals.css";
 const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500"] });
 
 export const metadata = {
-  title: "Pilot Bazar",
-  description: "Pilot Bazar - Your one-stop shop for everything",
+  title: "click4Details - Your one-stop shop for everything",
+  description: "click4Details - Your one-stop shop for everything",
   icons: {
     icon: [
       { url: '/favicon.ico' },
