@@ -246,7 +246,7 @@ export const dashboardMenuItems = [
         name: "Archived Products",
         path: "/dashboard/archive-product-list/",
         icon: PackageSearch,
-        allowedModes: ADMIN_AND_SUPREME,
+         allowedModes: [ADMIN, SUPREME, PBL],
         requiredPermission: {
           section: "Vehicle",
           action: "ArchivedProductsMenuShow",
@@ -466,7 +466,7 @@ export const dashboardMenuItems = [
         },
       },
       {
-        name: "Preset Queestion & Answer",
+        name: "Preset Question & Answer",
         path: "/dashboard/settings/preset-question-answer/",
         icon: Box,
         allowedModes: [ADMIN, SUPREME, PBL],
@@ -509,6 +509,18 @@ export const dashboardMenuItems = [
         requiredPermission: {
           section: "Settings",
           action: "CategoriesMenuShow",
+          appliesToModes: [PBL, ADMIN],
+          pblShopId: 0,
+        },
+      },
+      {
+        name: "SEO Metadata",
+        path: "/dashboard/seo-metadata/",
+        icon: Box,
+        allowedModes: [ADMIN, SUPREME, PBL],
+        requiredPermission: {
+          section: "Settings",
+          action: "SEOMetadataMenuShow",
           appliesToModes: [PBL, ADMIN],
           pblShopId: 0,
         },
