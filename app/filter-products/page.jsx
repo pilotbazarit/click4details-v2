@@ -84,7 +84,7 @@ const FilterProducts = () => {
 
   // Memoize canSeeCustomerInfo to prevent unnecessary recalculations
   const canSeeCustomerInfo = useMemo(() => {
-    return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme";
+    return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme" || normalizedUser?.user_mode === "admin";
   }, [normalizedUser?.user_mode]);
 
   // Log when values change (user is now available on first render, so this will only log once per actual change)
@@ -1440,11 +1440,11 @@ const FilterProducts = () => {
             {/* Filter Section  */}
             <div className="w-full mt-5 mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
               <div className="flex items-center justify-between select-none">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center cursor-pointer" onClick={() => setShowFilterSection((prev) => !prev)}>
-                    <p className="text-lg font-semibold text-orange-700">Apply Filter</p>
-                  </div>
+                <div className="flex items-center cursor-pointer" onClick={() => setShowFilterSection((prev) => !prev)}>
+                  <p className="text-lg font-semibold text-orange-700">Apply Filter</p>
+                </div>
 
+                <div className="flex items-center gap-4">
                   {showFilterSection && (
                     <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setIsConsolidatedView(!isConsolidatedView)}>
                       <span className="text-sm font-medium text-orange-700">Consolidated</span>
@@ -1461,88 +1461,82 @@ const FilterProducts = () => {
                       </div>
                     </div>
                   )}
-                </div>
-
-                <div className="cursor-pointer" onClick={() => setShowFilterSection((prev) => !prev)}>
-                  <span className="text-orange-600">
-                    {showFilterSection ? (
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-                      </svg>
-                    )}
-                  </span>
+                  <div className="cursor-pointer" onClick={() => setShowFilterSection((prev) => !prev)}>
+                    <span className="text-orange-600">
+                      {showFilterSection ? (
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                          <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                          <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                        </svg>
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {showFilterSection && (
                 <>
-                  {/* Product Name and Code Filter Section */}
-                  <CategorySubcategorySection
-                    categoryData={categoryData}
-                    subcategoryData={subcategoryData}
-                    childCategoryData={childCategoryData}
+                {/* Category row — full width */}
+                <CategorySubcategorySection
+                  categoryData={categoryData}
+                  subcategoryData={subcategoryData}
+                  childCategoryData={childCategoryData}
+                  filterFields={filterFields}
+                  setFilterFields={setFilterFields}
+                  isCategoryLoading={isCategoryLoading}
+                  isSubcategoryLoading={isSubcategoryLoading}
+                />
+
+                {!showVehicleFilters && isCategorySelected && (
+                  <GeneralProductFiltersSection
+                    filterFields={generalFilterFields}
+                    setFilterFields={setGeneralFilterFields}
+                  />
+                )}
+
+                {showVehicleFilters && (
+                  <VehicleFiltersSection
+                    canSeeUserModes={canSeeUserModes}
+                    selectedUserModes={selectedUserModes}
+                    setSelectedUserModes={setSelectedUserModes}
+                    shopsData={shopsData}
+                    selectedShops={selectedShops}
+                    setSelectedShops={setSelectedShops}
+                    shopsLoading={shopsLoading}
+                    searchType={searchType}
+                    setSearchType={setSearchType}
+                    strictSortOrder={strictSortOrder}
+                    setStrictSortOrder={setStrictSortOrder}
                     filterFields={filterFields}
                     setFilterFields={setFilterFields}
-                    isCategoryLoading={isCategoryLoading}
-                    isSubcategoryLoading={isSubcategoryLoading}
+                    brandData={brandData}
+                    modelData={modelData}
+                    packageData={packageData}
+                    colorData={colorData}
+                    conditionData={conditionData}
+                    fuelData={fuelData}
+                    seatData={seatData}
+                    skeletonData={skeletonData}
+                    gradeData={gradeData}
+                    exteriorGradeData={exteriorGradeData}
+                    interiorGradeData={interiorGradeData}
+                    budgetInputInFocus={budgetInputInFocus}
+                    setBudgetInputInFocus={setBudgetInputInFocus}
+                    mileageInputInFocus={mileageInputInFocus}
+                    setMileageInputInFocus={setMileageInputInFocus}
+                    yearOptions={yearOptions}
+                    userRoleName={userRoleName}
+                    capacityInputInFocus={capacityInputInFocus}
+                    setCapacityInputInFocus={setCapacityInputInFocus}
+                    transmissionData={transmissionData}
+                    availabilityData={availabilityData}
+                    canAccessToChasisNo={canAccessToChasisNo}
+                    locationData={locationData}
                   />
-
-                  {!showVehicleFilters && isCategorySelected && (
-                    <GeneralProductFiltersSection
-                      filterFields={generalFilterFields}
-                      setFilterFields={setGeneralFilterFields}
-                      brandData={brandData}
-                      conditionData={conditionData}
-                      availabilityData={availabilityData}
-                      locationData={locationData}
-                    />
-                  )}
-
-                  {showVehicleFilters && (
-                    <VehicleFiltersSection
-                      canSeeUserModes={canSeeUserModes}
-                      selectedUserModes={selectedUserModes}
-                      setSelectedUserModes={setSelectedUserModes}
-                      shopsData={shopsData}
-                      selectedShops={selectedShops}
-                      setSelectedShops={setSelectedShops}
-                      shopsLoading={shopsLoading}
-                      searchType={searchType}
-                      setSearchType={setSearchType}
-                      strictSortOrder={strictSortOrder}
-                      setStrictSortOrder={setStrictSortOrder}
-                      filterFields={filterFields}
-                      setFilterFields={setFilterFields}
-                      brandData={brandData}
-                      modelData={modelData}
-                      packageData={packageData}
-                      colorData={colorData}
-                      conditionData={conditionData}
-                      fuelData={fuelData}
-                      seatData={seatData}
-                      skeletonData={skeletonData}
-                      gradeData={gradeData}
-                      exteriorGradeData={exteriorGradeData}
-                      interiorGradeData={interiorGradeData}
-                      budgetInputInFocus={budgetInputInFocus}
-                      setBudgetInputInFocus={setBudgetInputInFocus}
-                      mileageInputInFocus={mileageInputInFocus}
-                      setMileageInputInFocus={setMileageInputInFocus}
-                      yearOptions={yearOptions}
-                      userRoleName={userRoleName}
-                      capacityInputInFocus={capacityInputInFocus}
-                      setCapacityInputInFocus={setCapacityInputInFocus}
-                      transmissionData={transmissionData}
-                      availabilityData={availabilityData}
-                      canAccessToChasisNo={canAccessToChasisNo}
-                      locationData={locationData}
-                    />
-                  )}
-
+                )}
                 </>
               )}
             </div>

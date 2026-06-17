@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Footer from "@/components/dashboard/Footer";
 import Pagination from "@/components/Pagination";
 import TableFilter from "@/components/TableFilter";
@@ -108,19 +108,21 @@ const SeoMetaData = () => {
     const trimmedEntityType = String(nextEntityType || "").trim();
     const trimmedEntityId = String(nextEntityId || "").trim();
 
-    if (!trimmedEntityType || !trimmedEntityId) {
-      toast.error("Entity type and entity ID are required");
-      return;
-    }
-
     try {
       setLoading(true);
       setHasFetched(true);
 
-      const response = await SeoMetadataService.Queries.getSeoMetadata(
-        trimmedEntityType,
-        trimmedEntityId
-      );
+      const params = {};
+
+      if (trimmedEntityType) {
+        params._entity_type = trimmedEntityType;
+      }
+
+      if (trimmedEntityId) {
+        params._entity_id = trimmedEntityId;
+      }
+
+      const response = await SeoMetadataService.Queries.getSeoMetadata(params);
 
       if (typeof response?.status === "string" && response.status !== "success") {
         setSeoMetadata([]);
@@ -170,6 +172,11 @@ const SeoMetaData = () => {
     }
   };
 
+  useEffect(() => {
+    getSeoMetadata("", "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchSearchResults = (value = query) => {
     setCurrentPage(1);
     setSearchQuery(String(value || "").trim());
@@ -211,7 +218,7 @@ const SeoMetaData = () => {
 
   const emptyStateText = hasFetched
     ? "No SEO metadata found."
-    : "Load SEO metadata by entity type and entity ID.";
+    : "Load SEO metadata.";
 
   return (
     <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
@@ -219,9 +226,10 @@ const SeoMetaData = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h2 className="text-xl text-gray-800">All SEO Metadata</h2>
-            {activeEntity.type && activeEntity.id && (
+            {activeEntity.type && (
               <p className="text-sm text-gray-500 mt-1">
-                Entity: {activeEntity.type} / {activeEntity.id}
+                Entity Type: {activeEntity.type}
+                {activeEntity.id ? ` / Entity ID: ${activeEntity.id}` : ""}
               </p>
             )}
           </div>
@@ -242,7 +250,7 @@ const SeoMetaData = () => {
           className="grid grid-cols-1 md:grid-cols-[minmax(180px,240px)_minmax(160px,1fr)_auto] items-end gap-3 mb-5"
         >
           <div className="flex flex-col gap-1">
-            <Label htmlFor="seo_entity_type">Entity Type</Label>
+            <Label htmlFor="seo_entity_type">Entity Type (optional)</Label>
             <select
               id="seo_entity_type"
               value={entityType}
@@ -260,7 +268,7 @@ const SeoMetaData = () => {
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="seo_entity_id">Entity ID</Label>
+            <Label htmlFor="seo_entity_id">Entity ID (optional)</Label>
             <Input
               id="seo_entity_id"
               value={entityId}
@@ -273,7 +281,7 @@ const SeoMetaData = () => {
           <Button
             type="submit"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={loading || !entityType.trim() || !entityId.trim()}
+            disabled={loading}
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -306,8 +314,8 @@ const SeoMetaData = () => {
                 <TableHead className="border-r border-gray-300">Meta Description</TableHead>
                 <TableHead className="border-r border-gray-300">Keywords</TableHead>
                 <TableHead className="border-r border-gray-300">Tags</TableHead>
-                <TableHead className="border-r border-gray-300">Canonical URL</TableHead>
-                <TableHead className="border-r border-gray-300">Updated At</TableHead>
+                {/* <TableHead className="border-r border-gray-300">Canonical URL</TableHead>
+                <TableHead className="border-r border-gray-300">Updated At</TableHead> */}
                 <TableHead className="text-right w-[80px]">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -400,7 +408,7 @@ const SeoMetaData = () => {
                           ]))}
                         </span>
                       </TableCell>
-                      <TableCell className="border-r border-gray-200 font-medium min-w-[220px] max-w-[320px]">
+                      {/* <TableCell className="border-r border-gray-200 font-medium min-w-[220px] max-w-[320px]">
                         <span className="block whitespace-normal break-all">
                           {formatValue(getValue(item, [
                             "sm_canonical_url",
@@ -411,10 +419,10 @@ const SeoMetaData = () => {
                             "metadata.canonical_url",
                           ]))}
                         </span>
-                      </TableCell>
-                      <TableCell className="border-r border-gray-200 font-medium whitespace-nowrap">
+                      </TableCell> */}
+                      {/* <TableCell className="border-r border-gray-200 font-medium whitespace-nowrap">
                         {updatedAt ? formatDate(updatedAt, "DD MMM, YYYY h:mm A") : "-"}
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell className="font-medium">
                         <div className="flex justify-end">
                           <button

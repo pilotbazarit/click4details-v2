@@ -20,9 +20,7 @@ const PageHeaderSection = () => {
                     Filter Products
                 </h1>
                 <div className="w-24 h-1 bg-gradient-to-r from-orange-500 to-orange-300 rounded-full mt-3 z-10"></div>
-                <p className="mt-4 text-gray-600 text-center max-w-2xl z-10">
-                    {total > 0 ? `${total} products found` : ""}
-                </p>
+                
             </div>
         </>
     );

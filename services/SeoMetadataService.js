@@ -25,7 +25,10 @@ const Commands = {
 };
 
 const Queries = {
-    getSeoMetadata: (entityType, entityId, params = {}) =>
+    getSeoMetadata: (params = {}) =>
+        commandApi.get("/api/seo-metadata", { params }),
+
+    getSeoMetadataByEntity: (entityType, entityId, params = {}) =>
         commandApi.get(
             `/api/seo-metadata/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`,
             { params }

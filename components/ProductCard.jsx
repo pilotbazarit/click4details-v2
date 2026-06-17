@@ -2143,7 +2143,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 <button
                   // onClick={() => setChatOpen(true)}
                   onClick={() => handleChatOpen()}
-                  title="Offer Price"
+                  title="ইম্পোর্টারের সাথে সরাসরি চ্যাট করুন"
                   className="
                   px-3
                   lg:px-4
@@ -3744,18 +3744,18 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       <Dialog open={chatConfirmOpen} onOpenChange={setChatConfirmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-center mb-2">Terms & Conditions</DialogTitle><hr />
+            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — Click4Details এর মাধ্যমে</DialogTitle><hr />
           </DialogHeader>
           <div className="text-sm text-gray-600 space-y-4 leading-relaxed max-h-[60vh] overflow-y-auto pr-4">
 
             <p>
-              <strong>সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন — PilotBazar এর মাধ্যমে</strong>
+              <strong> Terms & Conditions</strong>
             </p>
 
             <p>
-              <strong>১।</strong> Wow! PilotBazar নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
-              যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
-              ঝামেলা ছাড়া, সময় নষ্ট না করে।
+              <strong>১।</strong> Wow! Click4Details নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
+              যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
+              ঝামেলা ছাড়া, সময় নষ্ট না করে।
             </p>
 
             <p>
@@ -3782,7 +3782,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>প্রতিদিন প্রতি গাড়িতে হাজারের বেশি অফার আসে</li>
                 <li>সাধারণত ৭২ ঘণ্টার মধ্যে উত্তর পাওয়া যায়</li>
-                <li>অথবা PilotBazar এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
+                <li>অথবা Click4Details এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
               </ul>
             </div>
 
@@ -3930,7 +3930,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <div>
-              <strong>১৪। কেন ইমপোর্টাররা PilotBazar পছন্দ করে?</strong>
+              <strong>১৪। কেন ইমপোর্টাররা Click4Details পছন্দ করে?</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>অযথা দরদাম, লম্বা কথা, হোয়াটসঅ্যাপ স্প্যাম বন্ধ</li>
                 <li>টু-দা-পয়েন্ট Fixed Price Deal</li>
@@ -3943,9 +3943,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div>
               <strong>১৫। ট্রান্সপারেন্সি ও কমিটমেন্ট</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>PilotBazar কোনো পক্ষপাতমূলক দরদাম করে না</li>
+                <li>Click4Details কোনো পক্ষপাতমূলক দরদাম করে না</li>
                 <li>
-                  ডিল সফল হলে PilotBazar শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
+                  ডিল সফল হলে Click4Details শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
                 </li>
                 <li>
                   <strong>I Agree</strong> বাটনে ক্লিক মানে—
@@ -3957,7 +3957,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <p className="font-semibold text-gray-800">
-              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন PilotBazar এর মাধ্যমে।”
+              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন Click4Details এর মাধ্যমে।”
             </p>
 
           </div>

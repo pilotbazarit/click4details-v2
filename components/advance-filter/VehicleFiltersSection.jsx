@@ -43,118 +43,40 @@ const VehicleFiltersSection = ({
 }) => {
   return (
     <section className="mt-4 mb-4 p-4 border border-orange-200 rounded-lg bg-orange-50/30">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-        {canSeeUserModes && (
-          <div className="flex flex-col gap-2 min-w-[220px]">
-            <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
-            <div className="inline-flex rounded-md shadow-sm">
-              {["Partner", "Member", "User"].map((mode, index) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => {
-                    const newSelectedUserModes = selectedUserModes.includes(mode)
-                      ? selectedUserModes.filter((item) => item !== mode)
-                      : [...selectedUserModes, mode];
-                    setSelectedUserModes(newSelectedUserModes);
-                  }}
-                  className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
-                    index === 0 ? "rounded-l-md" : ""
-                  } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
-                    selectedUserModes.includes(mode)
-                      ? "bg-orange-500 text-white border-orange-500 z-10"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
-                  {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
-                  {mode === "User" && <User className="w-4 h-4 mr-2" />}
-                  {mode}
-                </button>
-              ))}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Left — 9/12: all filter fields */}
+        <div className="col-span-12 lg:col-span-9 flex flex-col gap-4">
+          {canSeeUserModes && (
+            <div className="flex flex-col gap-2">
+              <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
+              <div className="inline-flex rounded-md shadow-sm">
+                {["Partner", "Member", "User"].map((mode, index) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      const newSelectedUserModes = selectedUserModes.includes(mode)
+                        ? selectedUserModes.filter((item) => item !== mode)
+                        : [...selectedUserModes, mode];
+                      setSelectedUserModes(newSelectedUserModes);
+                    }}
+                    className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
+                      index === 0 ? "rounded-l-md" : ""
+                    } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
+                      selectedUserModes.includes(mode)
+                        ? "bg-orange-500 text-white border-orange-500 z-10"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
+                    {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
+                    {mode === "User" && <User className="w-4 h-4 mr-2" />}
+                    {mode}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2 min-w-[200px]">
-          <label className="text-base font-medium text-gray-700 mb-2">Filter by Shops</label>
-          <Select
-            isMulti
-            options={shopsData}
-            value={selectedShops}
-            onChange={(selected) => {
-              const selectedArray = selected || [];
-              const hasAllShops = selectedArray.some((shop) => shop.value === "all");
-              const hadAllShops = selectedShops.some((shop) => shop.value === "all");
-
-              if (hasAllShops && !hadAllShops) {
-                setSelectedShops([{ value: "all", label: "All Shops" }]);
-              } else if (!hasAllShops && hadAllShops) {
-                setSelectedShops(selectedArray);
-              } else if (hasAllShops && selectedArray.length > 1) {
-                setSelectedShops(selectedArray.filter((shop) => shop.value !== "all"));
-              } else {
-                setSelectedShops(selectedArray);
-              }
-            }}
-            placeholder={shopsLoading ? "Loading shops..." : "Select shops..."}
-            isLoading={shopsLoading}
-            isDisabled={shopsLoading}
-            loadingMessage={() => "Loading shops..."}
-            className="text-sm"
-            classNamePrefix="react-select"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-medium text-gray-700 mb-2">Search Type</label>
-          <div className="inline-flex rounded-md shadow-sm">
-            {[
-              { value: "wide", label: "Wide Search" },
-              { value: "strict", label: "Strict Search" },
-            ].map((type, index) => (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => {
-                  setSearchType(type.value);
-                  if (type.value !== "strict") {
-                    setStrictSortOrder("");
-                  }
-                }}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium transition-colors border border-gray-300 ${
-                  index === 0 ? "rounded-l-md" : ""
-                } ${index === 1 ? "rounded-r-md" : "-ml-px"} ${
-                  searchType === type.value
-                    ? "bg-orange-500 text-white border-orange-500"
-                    : "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
-                }`}
-              >
-                {type.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 min-w-[220px]">
-          <label className="text-base font-medium text-gray-700 mb-2">Sort (Low to High Budget)</label>
-          <select
-            value={strictSortOrder}
-            onChange={(e) => {
-              const selectedSort = e.target.value;
-              setStrictSortOrder(selectedSort);
-              if (selectedSort) {
-                setSearchType("strict");
-              }
-            }}
-            className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition bg-white"
-          >
-            <option value="">Select Sort</option>
-            <option value="low_to_high">Low to High</option>
-            <option value="high_to_low">High to Low</option>
-          </select>
-        </div>
-      </div>
+          )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="flex flex-col gap-1">
@@ -525,50 +447,6 @@ const VehicleFiltersSection = ({
           </div>
         )}
 
-        <div className="flex flex-col gap-1 pr-4">
-          <label className="text-base font-medium" htmlFor="capacity-range">
-            Capacity (CC)
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="capacity-min"
-              type="text"
-              value={capacityInputInFocus === "min" ? filterFields.capacity?.[0] : (filterFields.capacity?.[0] || 0).toLocaleString()}
-              onFocus={() => setCapacityInputInFocus("min")}
-              onBlur={() => setCapacityInputInFocus(null)}
-              onChange={(e) => {
-                const value = e.target.value.replace(/,/g, "");
-                if (!isNaN(value)) {
-                  setFilterFields((prev) => ({ ...prev, capacity: [Number(value), prev.capacity?.[1] || 50000] }));
-                }
-              }}
-              className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-            />
-            <span className="self-center">to</span>
-            <input
-              id="capacity-max"
-              type="text"
-              value={capacityInputInFocus === "max" ? filterFields.capacity?.[1] : (filterFields.capacity?.[1] || 50000).toLocaleString()}
-              onFocus={() => setCapacityInputInFocus("max")}
-              onBlur={() => setCapacityInputInFocus(null)}
-              onChange={(e) => {
-                const value = e.target.value.replace(/,/g, "");
-                if (!isNaN(value)) {
-                  setFilterFields((prev) => ({ ...prev, capacity: [prev.capacity?.[0] || 0, Number(value)] }));
-                }
-              }}
-              className="outline-none py-2 px-3 rounded border border-gray-500/40 w-1/2"
-            />
-          </div>
-          <div className="mt-2 px-6">
-            <RangeSlider
-              budget={filterFields?.capacity || [0, 50000]}
-              setBudget={(newCapacity) => setFilterFields((prev) => ({ ...prev, capacity: newCapacity }))}
-              step={100}
-              maxValue={50000}
-            />
-          </div>
-        </div>
 
         <div className="flex flex-col gap-1">
           <label className="text-base font-medium" htmlFor="transmission">
@@ -712,6 +590,85 @@ const VehicleFiltersSection = ({
             />
           </div>
         )}
+      </div>
+        </div>
+
+        {/* Filter by Shops + Search Type + Sort — 3/12 */}
+        <div className="col-span-12 lg:col-span-3 flex flex-col gap-4 lg:border-l lg:border-orange-200 lg:pl-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-base font-medium text-gray-700 mb-2">Filter by Shops</label>
+            <Select
+              isMulti
+              options={shopsData}
+              value={selectedShops}
+              onChange={(selected) => {
+                const selectedArray = selected || [];
+                const hasAllShops = selectedArray.some((shop) => shop.value === "all");
+                const hadAllShops = selectedShops.some((shop) => shop.value === "all");
+                if (hasAllShops && !hadAllShops) {
+                  setSelectedShops([{ value: "all", label: "All Shops" }]);
+                } else if (!hasAllShops && hadAllShops) {
+                  setSelectedShops(selectedArray);
+                } else if (hasAllShops && selectedArray.length > 1) {
+                  setSelectedShops(selectedArray.filter((shop) => shop.value !== "all"));
+                } else {
+                  setSelectedShops(selectedArray);
+                }
+              }}
+              placeholder={shopsLoading ? "Loading shops..." : "Select shops..."}
+              isLoading={shopsLoading}
+              isDisabled={shopsLoading}
+              loadingMessage={() => "Loading shops..."}
+              className="text-sm"
+              classNamePrefix="react-select"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-base font-medium text-gray-700 mb-2">Search Type</label>
+            <div className="inline-flex rounded-md shadow-sm">
+              {[
+                { value: "wide", label: "Wide Search" },
+                { value: "strict", label: "Strict Search" },
+              ].map((type, index) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => {
+                    setSearchType(type.value);
+                    if (type.value !== "strict") setStrictSortOrder("");
+                  }}
+                  className={`relative inline-flex items-center px-4 py-2 text-sm font-medium transition-colors border border-gray-300 ${
+                    index === 0 ? "rounded-l-md" : ""
+                  } ${index === 1 ? "rounded-r-md" : "-ml-px"} ${
+                    searchType === type.value
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-base font-medium text-gray-700 mb-2">Sort (Low to High Budget)</label>
+            <select
+              value={strictSortOrder}
+              onChange={(e) => {
+                const selectedSort = e.target.value;
+                setStrictSortOrder(selectedSort);
+                if (selectedSort) setSearchType("strict");
+              }}
+              className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition bg-white"
+            >
+              <option value="">Select Sort</option>
+              <option value="low_to_high">Low to High</option>
+              <option value="high_to_low">High to Low</option>
+            </select>
+          </div>
+        </div>
       </div>
     </section>
   );

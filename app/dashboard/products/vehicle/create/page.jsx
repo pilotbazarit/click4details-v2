@@ -691,13 +691,11 @@ const Vehicle = () => {
       appendFormValue(formData, "vp_user_variable_price", data.vp_user_variable_price ? data.vp_user_variable_price : '');
       appendFormValue(formData, "vp_pbl_additional_amount", data.vp_pbl_additional_amount ? data.vp_pbl_additional_amount : '');
       // formData.append('v_user_mode', data.v_user_mode ? data.v_user_mode : '');
-      appendFormValue(formData, "vp_pbl_price_status", data.vp_pbl_price_status ? 1 : 0);
-      appendFormValue(formData, "vp_pbl_hs_price_status", data.vp_pbl_hs_price_status ? 1 : 0);
+      appendFormValue(formData, "vp_pbl_price_status", data.vp_pbl_price_status || '');
       appendFormValue(formData, "v_int_grade_id", data.v_int_grade_id ? data.v_int_grade_id : '');
       appendFormValue(formData, "v_ext_grade_id", data.v_ext_grade_id ? data.v_ext_grade_id : '');
       appendFormValue(formData, "v_condition_id", data.v_condition_id ? data.v_condition_id : '');
       appendFormValue(formData, "v_transmission_id", data.v_transmission_id ? data.v_transmission_id : '');
-      appendFormValue(formData, "v_fuel_id", data.v_fuel_id ? data.v_fuel_id : '');
       appendFormValue(formData, "v_grade_id", data.v_grade_id ? data.v_grade_id : '');
       appendFormValue(formData, "v_skeleton_id", data.v_skeleton_id ? data.v_skeleton_id : '');
       appendFormValue(formData, "v_color_id", data.v_color_id ? data.v_color_id : '');
@@ -759,33 +757,6 @@ const Vehicle = () => {
         }
       } else {
         setLoading(true);
-
-        appendFormValue(formData, "v_int_grade_id", data?.v_int_grade_id || '');
-        appendFormValue(formData, "v_ext_grade_id", data.v_ext_grade_id || '');
-        appendFormValue(formData, "v_condition_id", data.v_condition_id || '');
-        appendFormValue(formData, "v_transmission_id", data.v_transmission_id || '');
-        appendFormValue(formData, "v_fuel_id", data.v_fuel_id || '');
-        appendFormValue(formData, "v_grade_id", data.v_grade_id || '');
-        appendFormValue(formData, "v_skeleton_id", data.v_skeleton_id || '');
-        appendFormValue(formData, "v_color_id", data.v_color_id || '');
-        appendFormValue(formData, "v_edition_id", data.v_edition_id || '');
-
-        appendFormValue(formData, "v_availability_id", data.v_availability_id || '');
-        appendFormValue(formData, "v_capacity", data.v_capacity || '');
-        appendFormValue(formData, "v_mileage", data.v_mileage || '');
-        appendFormValue(formData, "v_registration", data.v_registration || '');
-        appendFormValue(formData, "v_mod_year", data.v_mod_year || '');
-
-        appendFormValue(formData, "v_seat_id", data.v_seat_id || '');
-        appendFormValue(formData, "vp_user_purchase_price", data.vp_user_purchase_price || '');
-        appendFormValue(formData, "vp_user_to_pbl_price", data.vp_user_to_pbl_price || '');
-        appendFormValue(formData, "vp_user_fixed_price", data.vp_user_fixed_price || '');
-        appendFormValue(formData, "vp_user_asking_price", data.vp_user_asking_price || '');
-        appendFormValue(formData, "vp_user_variable_price", data.vp_user_variable_price || '');
-        appendFormValue(formData, "vp_pbl_additional_amount", data.vp_pbl_additional_amount || '');
-        appendFormValue(formData, "vp_pbl_price_status", data.vp_pbl_price_status ? 1 : 0);
-        appendFormValue(formData, "vp_pbl_hs_price_status", data.vp_pbl_hs_price_status ? 1 : 0);
-
 
         selectedFsId.forEach((fsId) => {
           formData.append("v_fs[]", fsId);
@@ -2455,7 +2426,7 @@ const Vehicle = () => {
                                   PBL Price Negotiation
                                 </label>
                                 <Controller
-                                  name="vp_pbl_hs_price_status"
+                                  name="vp_pbl_price_status"
                                   control={control}
                                   render={({ field }) => (
                                     <Select

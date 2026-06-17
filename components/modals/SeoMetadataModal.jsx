@@ -336,18 +336,13 @@ const SeoMetadataModal = ({ open, setOpen, onSaved, initialEntityType = "", init
             let savedEntityId = data.sm_entity_id;
 
             if (isEditMode) {
-                savedEntityType = getMetadataValue(initialData, "entityType") || data.sm_entity_type;
-                savedEntityId = getMetadataValue(initialData, "entityId") || data.sm_entity_id;
-                const payloadData = {
-                    ...data,
-                    sm_entity_type: savedEntityType,
-                    sm_entity_id: savedEntityId,
-                };
+                const originalEntityType = getMetadataValue(initialData, "entityType") || data.sm_entity_type;
+                const originalEntityId = getMetadataValue(initialData, "entityId") || data.sm_entity_id;
 
                 await SeoMetadataService.Commands.updateSeoMetadata(
-                    savedEntityType,
-                    savedEntityId,
-                    buildSeoMetadataJsonPayload(payloadData)
+                    originalEntityType,
+                    originalEntityId,
+                    buildSeoMetadataJsonPayload(data)
                 );
                 toast.success("SEO metadata updated successfully!");
             } else {
@@ -387,37 +382,24 @@ const SeoMetadataModal = ({ open, setOpen, onSaved, initialEntityType = "", init
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1 w-full">
                                 <Label htmlFor="sm_entity_type">Entity Type</Label>
-                                {isEditMode ? (
-                                    <>
-                                        <Input
-                                            id="sm_entity_type"
-                                            className="border-gray-400"
-                                            value={selectedEntityType || ""}
-                                            disabled
-                                            readOnly
-                                        />
-                                        <input type="hidden" {...register("sm_entity_type")} />
-                                    </>
-                                ) : (
-                                    <select
-                                        id="sm_entity_type"
-                                        className="outline-none py-2 px-3 rounded border border-gray-400 w-full"
-                                        disabled={isSubmitting}
-                                        {...register("sm_entity_type", {
-                                            onChange: () => {
-                                                setValue("sm_entity_id", "");
-                                                setSelectedEntityOption(null);
-                                            },
-                                        })}
-                                    >
-                                        <option value="">Select Entity Type</option>
-                                        {ENTITY_TYPE_OPTIONS.map((option) => (
-                                            <option key={option} value={option}>
-                                                {option}
-                                            </option>
-                                        ))}
-                                    </select>
-                                )}
+                                <select
+                                    id="sm_entity_type"
+                                    className="outline-none py-2 px-3 rounded border border-gray-400 w-full"
+                                    disabled={isSubmitting}
+                                    {...register("sm_entity_type", {
+                                        onChange: () => {
+                                            setValue("sm_entity_id", "");
+                                            setSelectedEntityOption(null);
+                                        },
+                                    })}
+                                >
+                                    <option value="">Select Entity Type</option>
+                                    {ENTITY_TYPE_OPTIONS.map((option) => (
+                                        <option key={option} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
                                 {errors.sm_entity_type && (
                                     <p className="text-red-600 text-sm">{errors.sm_entity_type.message}</p>
                                 )}
@@ -425,61 +407,48 @@ const SeoMetadataModal = ({ open, setOpen, onSaved, initialEntityType = "", init
 
                             <div className="flex flex-col gap-1 w-full">
                                 <Label htmlFor="sm_entity_id">Entity ID</Label>
-                                {isEditMode ? (
-                                    <>
-                                        <Input
-                                            id="sm_entity_id"
-                                            className="border-gray-400"
-                                            value={selectedEntityOption?.label || String(watch("sm_entity_id") || "")}
-                                            disabled
-                                            readOnly
+                                <Controller
+                                    control={control}
+                                    name="sm_entity_id"
+                                    render={({ field }) => (
+                                        <AsyncSelect
+                                            key={selectedEntityType || "empty-entity-type"}
+                                            inputId="sm_entity_id"
+                                            cacheOptions
+                                            defaultOptions
+                                            isClearable
+                                            isSearchable
+                                            loadOptions={loadEntityOptions}
+                                            value={
+                                                selectedEntityOption ||
+                                                (field.value
+                                                    ? { value: String(field.value), label: String(field.value) }
+                                                    : null)
+                                            }
+                                            onBlur={field.onBlur}
+                                            onChange={(option) => {
+                                                field.onChange(option?.value || "");
+                                                setSelectedEntityOption(option || null);
+                                            }}
+                                            placeholder={
+                                                selectedEntityType
+                                                    ? "Search and select entity"
+                                                    : "Select entity type first"
+                                            }
+                                            noOptionsMessage={({ inputValue }) =>
+                                                selectedEntityType
+                                                    ? inputValue
+                                                        ? "No matching entity found"
+                                                        : "No entity found"
+                                                    : "Select entity type first"
+                                            }
+                                            loadingMessage={() => "Loading entities..."}
+                                            classNamePrefix="react-select"
+                                            className="react-select-container"
+                                            isDisabled={isSubmitting || !selectedEntityType}
                                         />
-                                        <input type="hidden" {...register("sm_entity_id")} />
-                                    </>
-                                ) : (
-                                    <Controller
-                                        control={control}
-                                        name="sm_entity_id"
-                                        render={({ field }) => (
-                                            <AsyncSelect
-                                                key={selectedEntityType || "empty-entity-type"}
-                                                inputId="sm_entity_id"
-                                                cacheOptions
-                                                defaultOptions
-                                                isClearable
-                                                isSearchable
-                                                loadOptions={loadEntityOptions}
-                                                value={
-                                                    selectedEntityOption ||
-                                                    (field.value
-                                                        ? { value: String(field.value), label: String(field.value) }
-                                                        : null)
-                                                }
-                                                onBlur={field.onBlur}
-                                                onChange={(option) => {
-                                                    field.onChange(option?.value || "");
-                                                    setSelectedEntityOption(option || null);
-                                                }}
-                                                placeholder={
-                                                    selectedEntityType
-                                                        ? "Search and select entity"
-                                                        : "Select entity type first"
-                                                }
-                                                noOptionsMessage={({ inputValue }) =>
-                                                    selectedEntityType
-                                                        ? inputValue
-                                                            ? "No matching entity found"
-                                                            : "No entity found"
-                                                        : "Select entity type first"
-                                                }
-                                                loadingMessage={() => "Loading entities..."}
-                                                classNamePrefix="react-select"
-                                                className="react-select-container"
-                                                isDisabled={isSubmitting || !selectedEntityType}
-                                            />
-                                        )}
-                                    />
-                                )}
+                                    )}
+                                />
                                 {errors.sm_entity_id && (
                                     <p className="text-red-600 text-sm">{errors.sm_entity_id.message}</p>
                                 )}
