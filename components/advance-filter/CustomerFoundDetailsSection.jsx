@@ -57,6 +57,26 @@ function formatExternalLink(raw) {
   );
 }
 
+function formatTel(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") return EMPTY;
+  const num = String(raw).trim();
+  return (
+    <a href={`tel:${num}`} className="text-blue-600 hover:underline">
+      {num}
+    </a>
+  );
+}
+
+function formatEmail(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") return EMPTY;
+  const email = String(raw).trim();
+  return (
+    <a href={`mailto:${email}`} className="text-blue-600 hover:underline">
+      {email}
+    </a>
+  );
+}
+
 /** Resolve API shapes: nested user object on created_by / relation aliases — never pass raw objects to fmt(). */
 const formatActorName = (customer, { userKeys, rawKey }) => {
   for (const key of userKeys) {
@@ -155,8 +175,8 @@ export default function CustomerFoundDetailsSection({ customer, activities = [],
 
   const basicRows = [
     { label: "Name", value: fmt(c.name) },
-    { label: "Mobile", value: fmt(c.mobile) },
-    { label: "Email", value: fmt(c.email) },
+    { label: "Mobile", value: formatTel(c.mobile) },
+    { label: "Email", value: formatEmail(c.email) },
     { label: "Address", value: fmt(c.address) },
     { label: "Date of birth", value: formatDateOnly(c.date_of_birth) },
     { label: "Anniversary", value: formatDateOnly(c.anniversary_date) },

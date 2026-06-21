@@ -87,6 +87,12 @@ const FilterProducts = () => {
     return normalizedUser?.user_mode === "pbl" || normalizedUser?.user_mode === "supreme" || normalizedUser?.user_mode === "admin";
   }, [normalizedUser?.user_mode]);
 
+  // user_mode="user" can also save history when a customer is auto-matched to their account
+  const canSaveHistory = useMemo(() => {
+    if (canSeeCustomerInfo) return true;
+    return normalizedUser?.user_mode === "user";
+  }, [canSeeCustomerInfo, normalizedUser?.user_mode]);
+
   // Log when values change (user is now available on first render, so this will only log once per actual change)
   useEffect(() => {
     console.log('canSeeUserModes', canSeeUserModes);
@@ -789,6 +795,48 @@ const FilterProducts = () => {
     }
   }, [normalizedUser?.id]);
 
+  // Auto-lookup customer when logged-in user has user_mode = "user"
+  useEffect(() => {
+    if (normalizedUser?.user_mode !== "user") return;
+
+    const autoLookup = async () => {
+      const phone = (normalizedUser?.phone || "").trim();
+      const email = (normalizedUser?.email || "").trim();
+
+      if (phone) {
+        const res = await SearchHistoryService.Queries.getCustomerByMobile(phone);
+        if (res?.status === "success" && res?.data?.id) {
+          applyCustomerDetailsFromPayload(res.data, phone);
+          try {
+            const histRes = await SearchHistoryService.Queries.getSearchHistory(phone);
+            if (histRes?.status === "success" && histRes.data != null) {
+              setSearchHistory(Array.isArray(histRes.data) ? histRes.data : []);
+            }
+          } catch {}
+          return;
+        }
+      }
+
+      if (email) {
+        const res = await SearchHistoryService.Queries.getCustomerByEmail(email);
+        if (res?.status === "success" && res?.data?.id) {
+          applyCustomerDetailsFromPayload(res.data, res.data.mobile || "");
+          try {
+            const mobile = (res.data.mobile || "").trim();
+            const histRes = mobile
+              ? await SearchHistoryService.Queries.getSearchHistory(mobile)
+              : await SearchHistoryService.Queries.getSearchHistoryByCustomerId(res.data.id);
+            if (histRes?.status === "success" && histRes.data != null) {
+              setSearchHistory(Array.isArray(histRes.data) ? histRes.data : []);
+            }
+          } catch {}
+        }
+      }
+    };
+
+    autoLookup();
+  }, [normalizedUser?.user_mode, normalizedUser?.phone, normalizedUser?.email]);
+
   // Default budget 0–500000000: omit from request so backend doesn't filter by it
   const isDefaultBudget = (b) =>
     Array.isArray(b) && b.length === 2 && Number(b[0]) === 0 && Number(b[1]) === 500000000;
@@ -834,7 +882,7 @@ const FilterProducts = () => {
 
     const resolvedCustomerId = selectedCustomerId || customerId || foundCustomer?.id;
     const hasMobileForHistory = !!(customerMobile && String(customerMobile).trim());
-    if (canSeeCustomerInfo && (hasMobileForHistory || resolvedCustomerId)) {
+    if (canSaveHistory && (hasMobileForHistory || resolvedCustomerId)) {
       const customerInfo = {
         customer_name: customerName,
         customer_email: customerEmail,
@@ -993,7 +1041,7 @@ const FilterProducts = () => {
               <div className="w-full mt-6 mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <button type="button" className="mr-2 text-orange-600" onClick={() => setIsPasswordModalOpen(true)}>
+                    <button type="button" className="mr-2 text-blue-600" onClick={() => showAdditionalInfo ? setShowAdditionalInfo(false) : setIsPasswordModalOpen(true)}>
                       {showAdditionalInfo ? (
                         <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
                           <path
@@ -1017,7 +1065,7 @@ const FilterProducts = () => {
                         </svg>
                       )}
                     </button>
-                    <p className="text-lg font-semibold text-orange-700">Customer Information</p>
+                    <p className="text-lg font-semibold text-blue-700">Customer Information</p>
                     {selectedCustomerId && customerName && (
                       <Link
                         href={`/dashboard/customers/${selectedCustomerId}`}
@@ -1029,7 +1077,7 @@ const FilterProducts = () => {
                     )}
                   </div>
                   <div className="cursor-pointer select-none" onClick={() => setShowCustomerInfo((prev) => !prev)}>
-                    <span className="text-orange-600">
+                    <span className="text-blue-600">
                       {showCustomerInfo ? (
                         <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
                           <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
@@ -1043,10 +1091,10 @@ const FilterProducts = () => {
                   </div>
                 </div>
 
-                {showCustomerInfo && (
+                {showCustomerInfo && showAdditionalInfo && (
                   <>
                     {/* Search bar */}
-                    <div className="mt-4 p-4 rounded-lg border border-orange-200 bg-orange-50/40 w-fit max-w-full">
+                    <div className="mt-4 p-4 rounded-lg border border-blue-200 bg-blue-50/40 w-fit max-w-full">
                       <div className="flex flex-row flex-wrap items-center gap-3">
                         <label className="text-sm font-medium whitespace-nowrap shrink-0" htmlFor="find-customer-select">
                           Search Customer
@@ -1078,7 +1126,7 @@ const FilterProducts = () => {
                         </div>
                         <button
                           type="button"
-                          className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center gap-1.5"
+                          className="shrink-0 w-auto max-w-[10.5rem] whitespace-nowrap bg-[#0469a3] hover:bg-[#035a8a] text-white text-xs font-medium min-h-[42px] py-2.5 px-3 rounded inline-flex items-center justify-center gap-1.5"
                           onClick={() => setIsAddCustomerModalOpen(true)}
                         >
                           <Plus className="h-4 w-4 shrink-0" />
@@ -1100,7 +1148,7 @@ const FilterProducts = () => {
                         <div className="flex items-center justify-end mb-4">
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded border border-orange-500 text-orange-600 bg-white hover:bg-orange-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded border border-blue-500 text-blue-600 bg-white hover:bg-blue-50"
                             onClick={() => setIsEditCustomerModalOpen(true)}
                           >
                             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1118,7 +1166,7 @@ const FilterProducts = () => {
                       </div>
                     )}
 
-                    {foundCustomer && showAdditionalInfo && (
+                    {foundCustomer && (
                       <>
                         {/* Budget and Ready Budget Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-4 gap-6 mt-4">
@@ -1441,28 +1489,12 @@ const FilterProducts = () => {
             <div className="w-full mt-5 mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
               <div className="flex items-center justify-between select-none">
                 <div className="flex items-center cursor-pointer" onClick={() => setShowFilterSection((prev) => !prev)}>
-                  <p className="text-lg font-semibold text-orange-700">Apply Filter</p>
+                  <p className="text-lg font-semibold text-blue-700">Apply Filter</p>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {showFilterSection && (
-                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setIsConsolidatedView(!isConsolidatedView)}>
-                      <span className="text-sm font-medium text-orange-700">Consolidated</span>
-                      <div
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 ${
-                          isConsolidatedView ? "bg-orange-500" : "bg-gray-300"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            isConsolidatedView ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  )}
                   <div className="cursor-pointer" onClick={() => setShowFilterSection((prev) => !prev)}>
-                    <span className="text-orange-600">
+                    <span className="text-blue-600">
                       {showFilterSection ? (
                         <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
                           <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
@@ -1535,6 +1567,8 @@ const FilterProducts = () => {
                     availabilityData={availabilityData}
                     canAccessToChasisNo={canAccessToChasisNo}
                     locationData={locationData}
+                    isConsolidatedView={isConsolidatedView}
+                    setIsConsolidatedView={setIsConsolidatedView}
                   />
                 )}
                 </>
@@ -1582,7 +1616,7 @@ const FilterProducts = () => {
                 <div className="flex items-center">
                   <p className="text-lg font-semibold text-gray-800">Filter Result</p>
                   {!loading && (
-                    <span className="ml-3 inline-flex items-center px-3 py-1 text-sm font-medium text-orange-800 bg-orange-100 rounded-full">
+                    <span className="ml-3 inline-flex items-center px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">
                       {showVehicleFilters ? total : generalTotal} products found
                     </span>
                   )}
@@ -1602,27 +1636,9 @@ const FilterProducts = () => {
               {showFilterResult && (
                 <div className="mt-0">
                   {/* View Switcher as Button Group */}
-                  <div className="flex items-center gap-0 mb-4">
-                    {/* Grid Layout  */}
-                    <button
-                      type="button"
-                      className={`px-4 py-2 rounded-l border border-r-0 ${
-                        viewMode === "grid" ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
-                      }`}
-                    >
-                      Grid
-                    </button>
-
-                    {/* List Layout */}
-                    <button
-                      type="button"
-                      className={`px-4 py-2 rounded-r border ${
-                        viewMode === "list" ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
-                      }`}
-                      onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
-                    >
-                      List
-                    </button>
+                  <div className="hidden">
+                    <button type="button" onClick={() => setViewMode("grid")}>Grid</button>
+                    <button type="button" onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}>List</button>
                   </div>
 
                   {/* Products */}

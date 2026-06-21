@@ -827,13 +827,13 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
             entry?.customer_contact?.cci_id ||
             null,
           customerName:
-            entry?.p_cus_name ||
+            entry?.customer_contact_info?.cci_name ||
             entry?.customer_name ||
             entry?.customer?.name ||
             entry?.cus_name ||
             null,
           customerPhone:
-            entry?.p_cus_phone ||
+            entry?.customer_contact_info?.cci_phone ||
             entry?.customer_phone ||
             entry?.customer?.phone ||
             entry?.customer?.mobile ||
@@ -1676,6 +1676,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                               Payment Method
                             </th>
                             <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
+                              Customer Information
+                            </th>
+                            <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
                               Payment Status
                             </th>
                             <th className="border-r border-[#d7dee8] px-4 py-3 text-base font-semibold leading-snug text-slate-500">
@@ -1713,6 +1716,11 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                               >
                                 <td className="border-r border-[#e4eaf2] px-5 py-5 text-lg font-semibold text-slate-700">
                                   {formatClientPaymentText(historyItem.method)}
+                                </td>
+
+                                <td className="border-r border-[#e4eaf2] px-5 py-5 text-md font-semibold text-slate-700">
+                                 
+                                  { historyItem?.customerName } - { historyItem?.customerPhone }
                                 </td>
 
                                 <td className="border-r border-[#e4eaf2] px-5 py-5">

@@ -16,7 +16,7 @@ const FilterActionButtons = ({ onClear, isCategorySelected }) => {
         disabled={!isCategorySelected}
         title={!isCategorySelected ? "Please select a category first" : "Search products"}
         className={`px-5 py-2.5 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2 ${
-          !isCategorySelected ? "bg-orange-300 cursor-not-allowed" : "bg-orange-600 hover:bg-orange-700"
+          !isCategorySelected ? "bg-[#0469a3]/40 cursor-not-allowed" : "bg-[#0469a3] hover:bg-[#035a8a]"
         }`}
       >
         <Search className="w-5 h-5" />

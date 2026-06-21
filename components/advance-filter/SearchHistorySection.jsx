@@ -36,8 +36,8 @@ const SearchHistorySection = ({
   return (
     <div className="w-full mt-6 mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => setShowSearchHistory((prev) => !prev)}>
-        <p className="text-lg font-semibold text-orange-700">Search History</p>
-        <span className="text-orange-600">
+        <p className="text-lg font-semibold text-blue-700">Search History</p>
+        <span className="text-blue-600">
           {showSearchHistory ? (
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
               <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />

@@ -27,11 +27,19 @@ const SearchHistoryService = {
       const response = await get(`search-customer-by-mobile?customer_mobile=${mobile}`);
       return response;
     },
+    getCustomerByEmail: async (email) => {
+      const response = await get(`search-customer-by-email?customer_email=${encodeURIComponent(email)}`);
+      return response;
+    },
     searchCustomer: async ({ mobile, name }) => {
       const query = new URLSearchParams();
       if (mobile) query.append("customer_mobile", mobile);
       if (name) query.append("customer_name", name);
       const response = await get(`search-customer?${query.toString()}`);
+      return response;
+    },
+    searchCustomersForSelect: async (q) => {
+      const response = await commandApi.get("/api/search-customers-select", { params: { q } });
       return response;
     },
     getSearchHistory: async (mobile) => {

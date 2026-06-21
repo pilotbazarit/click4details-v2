@@ -40,44 +40,14 @@ const VehicleFiltersSection = ({
   availabilityData,
   canAccessToChasisNo,
   locationData,
+  isConsolidatedView,
+  setIsConsolidatedView,
 }) => {
   return (
-    <section className="mt-4 mb-4 p-4 border border-orange-200 rounded-lg bg-orange-50/30">
+    <section className="mt-4 mb-4 p-4 border border-blue-200 rounded-lg bg-blue-50/30">
       <div className="grid grid-cols-12 gap-6">
         {/* Left — 9/12: all filter fields */}
         <div className="col-span-12 lg:col-span-9 flex flex-col gap-4">
-          {canSeeUserModes && (
-            <div className="flex flex-col gap-2">
-              <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
-              <div className="inline-flex rounded-md shadow-sm">
-                {["Partner", "Member", "User"].map((mode, index) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => {
-                      const newSelectedUserModes = selectedUserModes.includes(mode)
-                        ? selectedUserModes.filter((item) => item !== mode)
-                        : [...selectedUserModes, mode];
-                      setSelectedUserModes(newSelectedUserModes);
-                    }}
-                    className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
-                      index === 0 ? "rounded-l-md" : ""
-                    } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
-                      selectedUserModes.includes(mode)
-                        ? "bg-orange-500 text-white border-orange-500 z-10"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
-                    {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
-                    {mode === "User" && <User className="w-4 h-4 mr-2" />}
-                    {mode}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="flex flex-col gap-1">
           <label className="text-base font-medium" htmlFor="product-name">
@@ -87,7 +57,7 @@ const VehicleFiltersSection = ({
             id="product-name"
             type="text"
             placeholder="Search by product name"
-            className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition"
+            className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-blue-500 transition"
             onChange={(e) => setFilterFields((prev) => ({ ...prev, title: e.target.value }))}
             value={filterFields?.title}
           />
@@ -101,7 +71,7 @@ const VehicleFiltersSection = ({
             id="product-code"
             type="text"
             placeholder="Search by product code"
-            className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition"
+            className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-blue-500 transition"
             onChange={(e) => setFilterFields((prev) => ({ ...prev, code: e.target.value }))}
             value={filterFields?.code}
           />
@@ -594,7 +564,39 @@ const VehicleFiltersSection = ({
         </div>
 
         {/* Filter by Shops + Search Type + Sort — 3/12 */}
-        <div className="col-span-12 lg:col-span-3 flex flex-col gap-4 lg:border-l lg:border-orange-200 lg:pl-4">
+        <div className="col-span-12 lg:col-span-3 flex flex-col gap-4 lg:border-l lg:border-blue-200 lg:pl-4">
+          {canSeeUserModes && (
+            <div className="flex flex-col gap-2">
+              <label className="text-base font-medium text-gray-700 mb-2">User Mode</label>
+              <div className="inline-flex rounded-md shadow-sm">
+                {["Partner", "Member", "User"].map((mode, index) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      const newSelectedUserModes = selectedUserModes.includes(mode)
+                        ? selectedUserModes.filter((item) => item !== mode)
+                        : [...selectedUserModes, mode];
+                      setSelectedUserModes(newSelectedUserModes);
+                    }}
+                    className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium transition-colors border border-gray-300 ${
+                      index === 0 ? "rounded-l-md" : ""
+                    } ${index === 2 ? "rounded-r-md" : "-ml-px"} ${
+                      selectedUserModes.includes(mode)
+                        ? "bg-[#0469a3] text-white border-[#0469a3] z-10"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    {mode === "Partner" && <Users className="w-4 h-4 mr-2" />}
+                    {mode === "Member" && <Star className="w-4 h-4 mr-2" />}
+                    {mode === "User" && <User className="w-4 h-4 mr-2" />}
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             <label className="text-base font-medium text-gray-700 mb-2">Filter by Shops</label>
             <Select
@@ -626,10 +628,10 @@ const VehicleFiltersSection = ({
 
           <div className="flex flex-col gap-2">
             <label className="text-base font-medium text-gray-700 mb-2">Search Type</label>
-            <div className="inline-flex rounded-md shadow-sm">
+            <div className="inline-flex rounded-md">
               {[
-                { value: "wide", label: "Wide Search" },
-                { value: "strict", label: "Strict Search" },
+                { value: "wide", label: "Wide" },
+                { value: "strict", label: "Strict" },
               ].map((type, index) => (
                 <button
                   key={type.value}
@@ -642,8 +644,8 @@ const VehicleFiltersSection = ({
                     index === 0 ? "rounded-l-md" : ""
                   } ${index === 1 ? "rounded-r-md" : "-ml-px"} ${
                     searchType === type.value
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "bg-orange-500/20 text-orange-700 hover:bg-orange-500/30"
+                      ? "bg-white text-gray-800 border-gray-400 shadow-sm"
+                      : "bg-gray-300 text-gray-600 hover:bg-gray-400"
                   }`}
                 >
                   {type.label}
@@ -661,12 +663,30 @@ const VehicleFiltersSection = ({
                 setStrictSortOrder(selectedSort);
                 if (selectedSort) setSearchType("strict");
               }}
-              className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-orange-500 transition bg-white"
+              className="outline-none py-2 px-4 rounded border border-gray-300 focus:border-blue-500 transition bg-white"
             >
               <option value="">Select Sort</option>
               <option value="low_to_high">Low to High</option>
               <option value="high_to_low">High to Low</option>
             </select>
+          </div>
+
+          <div
+            className="flex items-center space-x-2 cursor-pointer"
+            onClick={() => setIsConsolidatedView(!isConsolidatedView)}
+          >
+            <span className="text-sm font-medium text-gray-700">Consolidated</span>
+            <div
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                isConsolidatedView ? "bg-[#0469a3]" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isConsolidatedView ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </div>
           </div>
         </div>
       </div>

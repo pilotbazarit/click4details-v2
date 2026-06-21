@@ -13,12 +13,12 @@ export default function RangeSlider({budget, setBudget, step = 10000, maxValue =
         value={budget}
         onChange={setBudget}
         allowCross={false}
-        trackStyle={[{ backgroundColor: "#fb923c" }]}
+        trackStyle={[{ backgroundColor: "#0469a3" }]}
         handleStyle={[
-          { borderColor: "#fb923c", backgroundColor: "#fff" },
-          { borderColor: "#fb923c", backgroundColor: "#fff" }
+          { borderColor: "#0469a3", backgroundColor: "#fff" },
+          { borderColor: "#0469a3", backgroundColor: "#fff" }
         ]}
-        railStyle={{ backgroundColor: "rgb(251 146 60 / 64%)" }}
+        railStyle={{ backgroundColor: "rgb(4 105 163 / 30%)" }}
       />
     </>
   );
