@@ -186,3 +186,29 @@
   z-index: 99999 !important;
   pointer-events: auto !important;
 }
+
+/* Tailwind preflight makes type="button" backgrounds transparent; keep SweetAlert2 actions styled. */
+.swal2-container .swal2-styled {
+  margin: 0.3125em;
+  padding: 0.625em 1.1em;
+  border: 0;
+  font-weight: 500;
+}
+
+.swal2-container .swal2-styled.swal2-confirm {
+  border-radius: var(--swal2-confirm-button-border-radius, 0.25em);
+  background-color: var(--swal2-confirm-button-background-color, #7066e0);
+  color: var(--swal2-confirm-button-color, #fff);
+}
+
+.swal2-container .swal2-styled.swal2-cancel {
+  border-radius: var(--swal2-cancel-button-border-radius, 0.25em);
+  background-color: var(--swal2-cancel-button-background-color, #6e7881);
+  color: var(--swal2-cancel-button-color, #fff);
+}
+
+.swal2-container .swal2-styled.swal2-deny {
+  border-radius: var(--swal2-deny-button-border-radius, 0.25em);
+  background-color: var(--swal2-deny-button-background-color, #dc3741);
+  color: var(--swal2-deny-button-color, #fff);
+}

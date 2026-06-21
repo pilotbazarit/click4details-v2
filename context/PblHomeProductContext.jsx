@@ -2,7 +2,7 @@
 
 'use client'
 import VehicleService from '@/services/VehicleService';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRouter } from "next/navigation";
 
 // Create the context
@@ -13,30 +13,51 @@ export const usePblHomeProductContext = () => {
   return useContext(PblHomeProductContext)
 }
 
+const getStoredUser = () => {
+  const userData = localStorage.getItem("user");
+  if (!userData) return null;
+
+  try {
+    const parsedUser = JSON.parse(userData);
+    return typeof parsedUser === "string" ? JSON.parse(parsedUser) : parsedUser;
+  } catch (error) {
+    console.log("Failed to parse stored user", error);
+    return null;
+  }
+};
+
 // Context provider component
 export const PblHomeProductContextProvider = ({ children }) => {
 
   // const { user } = useAppContext();
 
   const [products, setProducts] = useState([]);
-  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState();
   const router = useRouter();
+  const pageRef = useRef(1);
+  const isFetchingRef = useRef(false);
+  const hasLoadedInitialProductsRef = useRef(false);
 
 
 
 
-  const getAllProduct = async (reset = false) => {
+  const getAllProduct = useCallback(async (reset = false) => {
+    if (isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+    setLoading(true);
+
     try {
       // Reset state if needed
       if (reset) {
         setProducts([]);
-        setPage(1);
+        setHasMore(true);
+        pageRef.current = 1;
       }
 
-      const currentPage = reset ? 1 : page;
+      const currentPage = reset ? 1 : pageRef.current;
       // Fetch products without login
       // const res = await VehicleService.Queries.getVehiclesWithLogin({
       //   _page: currentPage,
@@ -60,35 +81,33 @@ export const PblHomeProductContextProvider = ({ children }) => {
         setProducts(prev => reset ? newProducts : [...prev, ...newProducts]);
 
         if (newProducts.length > 0) {
-          setPage(prev => reset ? 2 : prev + 1);
+          pageRef.current = currentPage + 1;
         }
 
         setHasMore(newProducts.length === 25);
       }
     } catch (error) {
       console.log("get product error", error);
+    } finally {
+      isFetchingRef.current = false;
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    setLoading(true);
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = getStoredUser();
 
     if (userInfo) {
-      setUser(JSON.parse(userInfo));
+      setUser(userInfo);
     } else {
       router.push("/");
     }
-    setLoading(false);
-  }, []);
 
-  // Only run when user loading is complete
-  useEffect(() => {
-    if (!loading) {
+    if (!hasLoadedInitialProductsRef.current) {
+      hasLoadedInitialProductsRef.current = true;
       getAllProduct(true);
     }
-  }, [loading, user]);
+  }, [getAllProduct, router]);
 
   const value = {
     products,

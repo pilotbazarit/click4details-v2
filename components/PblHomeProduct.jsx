@@ -62,10 +62,10 @@ const PblHomeProduct = ({ user }) => {
           return <ProductCard key={index} product={product} parsedUser={user} />;
         })}
 
-        {/* {loading &&
-          Array.from({ length: 4 }).map((_, i) => (
+        {loading && products.length === 0 &&
+          Array.from({ length: 10 }).map((_, i) => (
             <ProductCardSkeleton key={`skeleton-${i}`} />
-          ))} */}
+          ))}
       </div>
       {/* Footer section with loading indicator */}
       <div className="w-full flex justify-center pb-10 min-h-[50px]">
