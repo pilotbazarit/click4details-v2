@@ -39,8 +39,8 @@ export default function ProductDetailsSlider({ images = [] }) {
 
     if (!images.length) {
         return (
-            <div className="flex h-[320px] w-full items-center justify-center rounded-lg bg-slate-100 text-sm font-medium text-slate-500 md:h-[560px]">
-                No image available
+            <div className="flex h-[360px] w-full flex-col items-center justify-center rounded-lg bg-slate-950 text-center text-sm font-bold text-slate-300 shadow-sm sm:h-[460px] md:h-[540px] xl:h-[580px]">
+                Front Styling View
             </div>
         );
     }
@@ -60,7 +60,7 @@ export default function ProductDetailsSlider({ images = [] }) {
                 navigation={true}
                 modules={[Autoplay, Pagination, Navigation]}
                 onAutoplayTimeLeft={onAutoplayTimeLeft}
-                className="mySwiper rounded-lg bg-slate-100"
+                className="pb-product-slider mySwiper overflow-hidden rounded-lg bg-slate-950 shadow-sm"
             >
                 {images.map((src, index) => (
                     <SwiperSlide key={index}>
@@ -69,15 +69,15 @@ export default function ProductDetailsSlider({ images = [] }) {
                             alt={`Image ${index}`}
                             onClick={() => handleImageClick(index)}
                             className="
-                                h-[320px]
+                                h-[360px]
                                 w-full
                                 cursor-pointer
                                 rounded-lg
-                                bg-slate-100
+                                bg-slate-950
                                 object-contain
-                                sm:h-[420px]
-                                md:h-[560px]
-                                lg:h-[640px]"
+                                sm:h-[460px]
+                                md:h-[540px]
+                                xl:h-[580px]"
                         />
                     </SwiperSlide>
                 ))}

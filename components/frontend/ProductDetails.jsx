@@ -874,7 +874,7 @@ const ProductDetails = ({ productDetails }) => {
                             className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
                         >
                             <Copy className="h-4 w-4" />
-                            <span>Copy All Features & Specific Features</span>
+                            <span>Copy All</span>
                         </button>
                     </div>
 
@@ -924,7 +924,7 @@ const ProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'click4Details Limited'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -933,14 +933,14 @@ const ProductDetails = ({ productDetails }) => {
                 </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-2 mb-6">
-                <div className="md:col-span-3">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-2 mb-6 md:h-[calc(100vh-140px)] md:min-h-0 md:overflow-hidden">
+                <div className="md:col-span-3 md:h-full md:min-h-0 md:overflow-y-scroll md:pr-2 md:overscroll-contain">
                     <div>
                         <ProductDetailsSlider images={sliderImage} />
                     </div>
 
                     <div className="mt-4">
-                        <div className="w-full border bg-green-50 border-green-200 rounded-lg shadow p-4 lg:p-6 space-y-4">
+                        <div className="w-full border bg-blue-50 border-blue-100 rounded-lg shadow p-4 lg:p-6 space-y-4">
                             <div className="flex justify-between">
                                 <div className="space-y-2">
                                     <div>
@@ -1174,9 +1174,9 @@ const ProductDetails = ({ productDetails }) => {
                 </div>
 
 
-                <div className="md:col-span-2 md:col-start-4">
+                <div className="md:col-span-2 md:col-start-4 md:h-full md:min-h-0 md:overflow-y-scroll md:pl-2 md:overscroll-contain">
                     <div className="border rounded shadow-sm p-4">
-                        <div className=" mb-4 border-b pb-2 flex items-center justify-between">
+                        <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
                             <h2 className="text-lg font-medium text-blue-600">Features</h2>
                             {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
                             <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleCopyClick}>
@@ -1324,7 +1324,7 @@ const ProductDetails = ({ productDetails }) => {
 
                     <div className="border rounded shadow-sm p-4 mt-4">
 
-                        <div className=" mb-4 border-b pb-2 flex items-center justify-between">
+                        <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
                             <h2 className="text-lg font-medium text-blue-600">Specific Features</h2>
                             {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
                             <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleFeatureCopyClick}>
@@ -1376,7 +1376,7 @@ const ProductDetails = ({ productDetails }) => {
 
             {!user && (
                 <div className="mt-4 inline md:hidden">
-                    <ProductDetailsDescription productDetails={productDetails} />
+                    <ProductDetailsDescription productDetails={productDetails} basePath={basePath} />
                 </div>
             )}
 
