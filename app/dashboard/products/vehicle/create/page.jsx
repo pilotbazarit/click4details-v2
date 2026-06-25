@@ -275,10 +275,14 @@ const Vehicle = () => {
     const targetPermissions = permissionList?.length
       ? permissionList
       : formatPermissions(targetUser?.permissions ?? []);
+    const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
 
     return (
-      (targetUser?.user_mode !== "pbl" && targetUser?.user_mode !== "admin") ||
-      hasPermission(targetPermissions, 0, "Vehicle", "AllShopView")
+      userMode === "supreme" ||
+      (
+        (userMode === "pbl" || userMode === "admin") &&
+        hasPermission(targetPermissions, 0, "Vehicle", "AllShopView")
+      )
     );
   };
 
@@ -937,6 +941,8 @@ const Vehicle = () => {
   const getShopData = async () => {
     try {
       const activeUser = user || getStoredUser();
+
+
 
       // Build request params conditionally
       const params = {
