@@ -1,103 +1,108 @@
-// MyShopProductContext.jsx
+"use client";
 
-'use client'
-import VehicleService from '@/services/VehicleService';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { useAppContext } from "@/context/AppContext";
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
-// Create the context
-export const UserShopProductContext = createContext();
+const normalizeUserData = (rawUser) => parseStoredUser(rawUser);
 
+const getStoredUser = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
 
-export const useUserShopProductContext = () => {
-  return useContext(UserShopProductContext)
-}
-
-// Context provider component
-export const UserShopProductContextProvider = ({ children }) => {
-
-  // const { user } = useAppContext();
-
-  const [products, setProducts] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState();
-  const router = useRouter();
-
-
-
-  const getAllProduct = async (reset = false) => {
-    try {
-      // Reset state if needed
-      if (reset) {
-        setProducts([]);
-        setPage(1);
-      }
-
-      const currentPage = reset ? 1 : page;
-
-
-      const res = await VehicleService.Queries.getUserPartnerVehicle({
-        _page: currentPage,
-        _perPage: 25,
-        // _shop_id: user?.user_shop_id,
-        _order: 'ASC',
-        _orderBy: 'v_priority',
-        _user_model: 'user',
-        _status: 'active'
-      });
-
-
-      if (res.status === "success") {
-        const newProducts = res?.data?.data || [];
-
-        setProducts(prev => reset ? newProducts : [...prev, ...newProducts]);
-
-        if (newProducts.length > 0) {
-          setPage(prev => reset ? 2 : prev + 1);
-        }
-
-        setHasMore(newProducts.length === 25);
-      }
-    } catch (error) {
-      console.log("get product error", error);
-    }
-  };
-
-  useEffect(() => {
-    setLoading(true);
-    const userInfo = parseStoredUser(localStorage.getItem("user"));
-
-    if (userInfo) {
-      setUser(userInfo);
-    } else {
-      router.push("/");
-    }
-    setLoading(false);
-  }, [router]);
-
-  // Only run when user loading is complete
-  useEffect(() => {
-    if (!loading) {
-      getAllProduct(true);
-    }
-  }, [loading, user]);
-
-  const value = {
-    products,
-    setProducts,
-    loading,
-    hasMore,
-    getAllProduct,
-    user,
-    setUser
-  };
-
-  return (
-    <UserShopProductContext.Provider value={value}>
-      {children}
-    </UserShopProductContext.Provider>
-  );
+  try {
+    const storedUser = localStorage.getItem("user");
+    return normalizeUserData(storedUser);
+  } catch (error) {
+    console.error("Failed to read stored user data:", error);
+    return null;
+  }
 };
+
+export const hasAllowedUserMode = (user, allowedModes = []) => {
+  const modes = Array.isArray(allowedModes)
+    ? allowedModes
+    : [allowedModes];
+
+  if (!user?.user_mode || modes.length === 0) {
+    return false;
+  }
+
+  return modes.some((mode) => String(mode) === String(user.user_mode));
+};
+
+const useUserModeGuard = (allowedModes = [], options = {}) => {
+  const router = useRouter();
+  const { user: appUser, loading: appUserLoading } = useAppContext();
+  const accessHandledRef = useRef(false);
+  const [resolvedUser, setResolvedUser] = useState(null);
+  const [isHydratingUser, setIsHydratingUser] = useState(true);
+
+  const normalizedAppUser = useMemo(() => normalizeUserData(appUser), [appUser]);
+  const normalizedAllowedModes = useMemo(
+    () =>
+      (Array.isArray(allowedModes) ? allowedModes : [allowedModes]).filter(
+        Boolean
+      ),
+    [allowedModes]
+  );
+
+  const redirectTo = options.redirectTo || "/dashboard";
+  const errorMessage =
+    options.errorMessage || "You are not allowed to access this page.";
+  const showToast = options.showToast !== false;
+
+  useEffect(() => {
+    const nextUser = normalizedAppUser || getStoredUser();
+    setResolvedUser(nextUser);
+
+    if (!appUserLoading) {
+      setIsHydratingUser(false);
+    }
+  }, [normalizedAppUser, appUserLoading]);
+
+  const hasAccess = hasAllowedUserMode(resolvedUser, normalizedAllowedModes);
+  const isCheckingAccess = appUserLoading || isHydratingUser;
+
+  useEffect(() => {
+    if (isCheckingAccess || accessHandledRef.current) {
+      return;
+    }
+
+    if (!hasAccess) {
+      accessHandledRef.current = true;
+
+      if (showToast) {
+        toast.error(errorMessage);
+      }
+
+      router.replace(redirectTo);
+    }
+  }, [
+    errorMessage,
+    hasAccess,
+    isCheckingAccess,
+    redirectTo,
+    router,
+    showToast,
+  ]);
+
+  useEffect(() => {
+    if (hasAccess) {
+      accessHandledRef.current = false;
+    }
+  }, [hasAccess]);
+
+  return {
+    user: resolvedUser,
+    hasAccess,
+    isCheckingAccess,
+    isRedirecting: !isCheckingAccess && !hasAccess,
+    allowedModes: normalizedAllowedModes,
+  };
+};
+
+export default useUserModeGuard;
