@@ -73,7 +73,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
           // console.log("res----------------", res?.data);
 
         localStorage.setItem("user", JSON.stringify(response.data));
-        setUser(JSON.stringify(response.data));
+        setUser(response.data);
 
         onClose(); // close modal
         reset(); // clear form
@@ -99,7 +99,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
             <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
               <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Sign in to our account
+                  Sign in to Our Pilot Bazar
                 </h3>
                 <button
                   type="button"
@@ -308,7 +308,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
                     </h4>
                     <p className="text-xs  mb-3">
                       <span className="text-gray-700 dark:text-gray-300">সহায়তার জন্য কল করুন</span> 
-                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400"> +8809638660077</span>
+                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400"> +8801969944400</span>
                     </p>
                     <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2">
                       

@@ -16,6 +16,7 @@ import ShopSelectModal from "@/components/modals/ShopSelectModal";
 import { useAppContext } from "@/context/AppContext";
 import { getSessionId, hasPermission } from "@/lib/utils";
 import ModalSlider from "./ModalSlider";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 dayjs.extend(relativeTime);
 
@@ -149,20 +150,8 @@ const ProductDetails = ({ productDetails }) => {
     }, [productDetails, canShowAdditionalDocument, additionalDocumentImages]);
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        if (!userData) {
-            setUser(null);
-            return;
-        }
-
-        try {
-            const userInfo = JSON.parse(userData);
-            const normalizedUser = typeof userInfo === "string" ? JSON.parse(userInfo) : userInfo;
-            setUser(normalizedUser);
-        } catch (error) {
-            console.error("Failed to parse user info:", error);
-            setUser(null);
-        }
+        const storedUser = parseStoredUser(localStorage.getItem("user"));
+        setUser(storedUser);
     }, []);
 
 

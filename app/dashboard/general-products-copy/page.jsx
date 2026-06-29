@@ -31,6 +31,8 @@ import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
 import GeneralProductService from "@/services/GeneralProductService";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("")
@@ -107,9 +109,7 @@ const ProductList = () => {
     const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery) => {
         try {
 
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
 
 
             console.log("user mode:::", user);

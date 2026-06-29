@@ -13,6 +13,7 @@ import OutletService from '@/services/OutletService';
 import { usePathname, useRouter } from "next/navigation";
 import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
+import { parseStoredUser as parseStoredUserValue } from "@/lib/parseStoredUser";
 
 const cleanValue = (value) => {
     if (value === null || value === undefined) return "";
@@ -25,17 +26,7 @@ const cleanValue = (value) => {
 
 const parseStoredUser = () => {
     if (typeof window === "undefined") return null;
-
-    const rawUser = localStorage.getItem("user");
-    if (!rawUser) return null;
-
-    try {
-        const parsedUser = JSON.parse(rawUser);
-        return typeof parsedUser === "string" ? JSON.parse(parsedUser) : parsedUser;
-    } catch (error) {
-        console.error("Failed to parse stored user:", error);
-        return null;
-    }
+    return parseStoredUserValue(localStorage.getItem("user"));
 };
 
 const normalizeOutlet = (outlet) => ({

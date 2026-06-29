@@ -984,7 +984,7 @@ const WelcomeHero = () => {
   const isSupremeUser = parsedContextUser?.user_mode === 'supreme';
 
 
-  console.log("parsedContextUser=============", parsedContextUser);
+  // console.log("parsedContextUser=============", parsedContextUser);
 
 
   const visibleTabs = tabs;
@@ -1377,7 +1377,7 @@ const WelcomeHero = () => {
     <section className="w-full bg-transparent px-3 py-4 sm:px-4 lg:px-5">
       <div className="w-full">
         <div className="mb-4">
-          <p className="text-sm font-semibold text-sky-700">Click4Details</p>
+          <p className="text-sm font-semibold text-sky-700">Pilot Bazar</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-950 sm:text-3xl">
             Account Dashboard
           </h1>

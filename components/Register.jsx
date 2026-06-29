@@ -244,7 +244,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
         <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
           <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Register in to Click4Details
+              Register in to Pilotbazar Ltd
             </h3>
             <button
               type="button"
@@ -499,17 +499,8 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
                   disabled={isOtpSending}
                   className="w-full bg-blue-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700"
                 >
-                  {isOtpSending ? "Sending OTP..." : "Create Your Account"}
+                  {isOtpSending ? "Sending OTP..." : "Create your account"}
                 </button>
-                <p className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                  📞 কোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন:{" "}
-                  <a
-                    href="tel:+8809638660077"
-                    className="font-semibold text-blue-700 hover:underline dark:text-blue-400"
-                  >
-                    +8809638660077
-                  </a>
-                </p>
               </form>
             ) : (
               <form className="space-y-4" onSubmit={handleVerifyOtp}>

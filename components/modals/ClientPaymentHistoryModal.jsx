@@ -37,6 +37,7 @@ import { API_URL } from "@/helpers/apiUrl";
 import ContactCustomerModal from "@/components/modals/ContactCustomerModal";
 import ContactCustomerService from "@/services/ContactCustomerService";
 import VehicleService from "@/services/VehicleService";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const getPaymentHistoryFilterValue = (values = []) => {
   for (const value of values) {
@@ -343,10 +344,8 @@ const getStoredAuthToken = () => {
   }
 
   try {
-    const userString = localStorage.getItem("user");
-    if (!userString) return "";
-
-    const user = JSON.parse(userString);
+    const user = parseStoredUser(localStorage.getItem("user"));
+    if (!user) return "";
     return user?.token || "";
   } catch (error) {
     console.error("Failed to parse user from localStorage:", error);

@@ -641,7 +641,6 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
-  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -1051,17 +1050,6 @@ const NavbarContent = () => {
                   </button>
                 )
             }
-
-
-            <Link
-              href="/how-to-use"
-              className={`transition duration-300 ${isActiveHowToUse
-                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
-                : 'hover:text-gray-900'
-                }`}
-            >
-              How to Use
-            </Link>
 
 
 
@@ -1561,17 +1549,6 @@ const NavbarContent = () => {
                   >
                     <ListFilterPlus className="h-4 w-4" />
                     Filter Products
-                  </button>
-                </li>
-
-                
-                <li className={`${isActiveHowToUse ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
-                  <button
-                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                    onClick={() => router.push("/how-to-use")}
-                  >
-                    <PhoneCall className="h-4 w-4" />
-                    How to Use
                   </button>
                 </li>
               </div>

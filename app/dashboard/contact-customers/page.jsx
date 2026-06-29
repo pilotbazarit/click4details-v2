@@ -21,23 +21,9 @@ import {
 import ContactCustomerService from "@/services/ContactCustomerService";
 import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
-const normalizeUserData = (rawUser) => {
-  if (!rawUser) {
-    return null;
-  }
-
-  if (typeof rawUser === "string") {
-    try {
-      return JSON.parse(rawUser);
-    } catch (error) {
-      console.error("Failed to parse user data:", error);
-      return null;
-    }
-  }
-
-  return rawUser;
-};
+const normalizeUserData = (rawUser) => parseStoredUser(rawUser);
 
 const getStoredUser = () => {
   if (typeof window === "undefined") {

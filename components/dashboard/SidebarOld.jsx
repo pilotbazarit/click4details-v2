@@ -254,7 +254,7 @@ const SideBar = () => {
           icon: Database,
         },
         {
-          name: "Preset Queestion & Answer",
+          name: "Preset Question & Answer",
           path: "/dashboard/settings/preset-question-answer/",
           icon: Box,
         },

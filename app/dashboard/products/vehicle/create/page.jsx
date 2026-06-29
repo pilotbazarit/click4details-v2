@@ -30,6 +30,8 @@ import VehiclePricingSection from "@/components/pricing/VehiclePricingSection";
 import CategoryService from "@/services/CategoryService";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 // Yup Validation Schema
 const schema = yup.object().shape({
   v_product_type_id: yup.string().required("Product Type is Required"),
@@ -262,9 +264,7 @@ const Vehicle = () => {
 
   const getStoredUser = () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      return typeof userInfo === "string" ? JSON.parse(userInfo) : userInfo;
+      return parseStoredUser(localStorage.getItem("user"));
     } catch {
       return null;
     }
@@ -942,7 +942,7 @@ const Vehicle = () => {
     try {
       const activeUser = user || getStoredUser();
 
-
+      
 
       // Build request params conditionally
       const params = {

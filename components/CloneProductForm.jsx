@@ -20,6 +20,8 @@ import ProductFeatureSpecificationModal from "./modals/ProductFeatureSpecificati
 import dynamic from 'next/dynamic';
 import OutletService from "@/services/OutletService";
 import LocationService from "@/services/LocationService";
+
+import { parseStoredUser } from "@/lib/parseStoredUser";
 const Select = dynamic(() => import('react-select'), { ssr: false });
 
 // Yup Validation Schema
@@ -212,10 +214,9 @@ const CloneProductForm = ({ productId }) => {
 
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
+        const userInfo = parseStoredUser(localStorage.getItem("user"));
         if (userInfo) {
-            setUser(JSON.parse(userInfo));
+            setUser(userInfo);
         }
     }, []);
 
@@ -355,9 +356,7 @@ const CloneProductForm = ({ productId }) => {
 
     const getShopData = async () => {
         try {
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
 
             // console.log("user", user?.user_mode);
 

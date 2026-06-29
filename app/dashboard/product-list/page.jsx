@@ -40,6 +40,8 @@ import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
 import ShopService from "@/services/ShopService";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
@@ -986,9 +988,7 @@ const ProductList = () => {
   ) => {
     try {
 
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
       setLoading(true);
       const params = {
@@ -1100,9 +1100,7 @@ const ProductList = () => {
 
   const getStoredUser = () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      return typeof userInfo === "string" ? JSON.parse(userInfo) : userInfo;
+      return parseStoredUser(localStorage.getItem("user"));
     } catch {
       return null;
     }
@@ -1651,9 +1649,7 @@ const ProductList = () => {
   // shop data get from api
   const getShopData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
 
       // Build request params conditionally

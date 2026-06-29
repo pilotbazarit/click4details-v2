@@ -24,6 +24,8 @@ import LocationService from "@/services/LocationService";
 import VehiclePricingSection from "@/components/pricing/VehiclePricingSection";
 import CategoryService from "@/services/CategoryService";
 import { ChevronDown, ChevronRight } from "lucide-react";
+
+import { parseStoredUser } from "@/lib/parseStoredUser";
 const Select = dynamic(() => import('react-select'), { ssr: false });
 
 // Yup Validation Schema
@@ -424,10 +426,9 @@ const UpdateProductForm = ({ productId }) => {
 
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
+        const userInfo = parseStoredUser(localStorage.getItem("user"));
         if (userInfo) {
-            setUser(JSON.parse(userInfo));
+            setUser(userInfo);
         }
     }, []);
 
@@ -744,9 +745,7 @@ const UpdateProductForm = ({ productId }) => {
 
     const getShopData = async () => {
         try {
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
 
             // console.log("user", user?.user_mode);
 

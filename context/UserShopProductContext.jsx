@@ -4,6 +4,7 @@
 import VehicleService from '@/services/VehicleService';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 // Create the context
 export const UserShopProductContext = createContext();
@@ -67,16 +68,15 @@ export const UserShopProductContextProvider = ({ children }) => {
 
   useEffect(() => {
     setLoading(true);
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(localStorage.getItem("user"));
 
     if (userInfo) {
-      setUser(JSON.parse(userInfo));
+      setUser(userInfo);
     } else {
       router.push("/");
     }
     setLoading(false);
-  }, []);
+  }, [router]);
 
   // Only run when user loading is complete
   useEffect(() => {

@@ -25,7 +25,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
         setErrorMsg("Failed to send password reset link. Please try again.");
       }
     } catch (error) {
-      setErrorMsg(error.message || "An error occurred. Please try again.");
+      setErrorMsg("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

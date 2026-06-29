@@ -34,6 +34,8 @@ import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
 import ShopService from "@/services/ShopService";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
@@ -147,9 +149,7 @@ const ProductList = () => {
   const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery, newPriorityQuery = priorityQuery, newOwnerQuery = ownerQuery, searchQuery = query) => {
     try {
 
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
 
       // console.log("user mode:::", user);
@@ -328,9 +328,7 @@ const ProductList = () => {
   // shop data get from api
   const getShopData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
 
       // Build request params conditionally
@@ -365,10 +363,9 @@ const ProductList = () => {
 
   useEffect(() => {
 
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(localStorage.getItem("user"));
     if (userInfo) {
-      setUser(JSON.parse(userInfo));
+      setUser(userInfo);
     }
 
     // getShopData();

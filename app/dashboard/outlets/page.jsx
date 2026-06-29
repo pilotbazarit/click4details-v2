@@ -14,6 +14,8 @@ import ShopService from "@/services/ShopService";
 import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const Model = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
@@ -42,9 +44,7 @@ const Model = () => {
     try {
       setLoading(true);
 
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
       const params = {
         _page: 1,
@@ -113,9 +113,7 @@ const Model = () => {
 
   const getShopData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
       const response = await ShopService.Queries.getShops(
         {

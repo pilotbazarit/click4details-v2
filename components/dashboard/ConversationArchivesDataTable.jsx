@@ -7,17 +7,15 @@ import JoditEditor from "../ui/JoditEditor";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const getAuthToken = () => {
   let access_token = localStorage.getItem("auth_token");
   if (!access_token) {
     try {
-      const userString = localStorage.getItem("user");
-      if (userString) {
-        const user = JSON.parse(userString);
-        if (user && user.token) {
-          access_token = user.token;
-        }
+      const user = parseStoredUser(localStorage.getItem("user"));
+      if (user?.token) {
+        access_token = user.token;
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage:", error);

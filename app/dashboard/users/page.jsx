@@ -349,7 +349,7 @@ const User = () => {
       const response = await UserService.Queries.getUserById(res?.data?.id || item.id);
 
       localStorage.setItem("user", JSON.stringify(response.data));
-      setUser(JSON.stringify(response.data));
+      setUser(response.data);
 
       toast.success("Signed in successfully.", { id: "master-login" });
       router.push("/my-shop");

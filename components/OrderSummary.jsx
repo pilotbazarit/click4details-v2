@@ -1,133 +1,76 @@
-import { addressDummyData } from "@/assets/assets";
+'use client';
+
 import { useAppContext } from "@/context/AppContext";
-import { formatPrice } from "@/helpers/functions";
-import React, { useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, ReceiptText, Truck } from "lucide-react";
+import React from "react";
+
+const money = (amount, currency = "TK.") => {
+  const numericAmount = Number(amount) || 0;
+  const currencyLabel = !currency || currency === "BDT" ? "TK." : currency;
+
+  return `${currencyLabel} ${numericAmount.toLocaleString("en-BD", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 const OrderSummary = () => {
-
-  const { currency, router, getCartCount, getCartAmount } = useAppContext()
-  const [selectedAddress, setSelectedAddress] = useState(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const [userAddresses, setUserAddresses] = useState([]);
-
-  const fetchUserAddresses = async () => {
-    setUserAddresses(addressDummyData);
-  }
-
-  const handleAddressSelect = (address) => {
-    setSelectedAddress(address);
-    setIsDropdownOpen(false);
-  };
-
-  useEffect(() => {
-    fetchUserAddresses();
-  }, [])
+  const { currency, router, getCartCount, getCartAmount } = useAppContext();
+  const itemCount = getCartCount();
+  const subtotal = Number(getCartAmount()) || 0;
+  const taxAmount = 0;
+  const total = subtotal + taxAmount;
 
   return (
-    <div className="w-full md:w-96 bg-gray-500/5 p-5">
-      <h2 className="text-xl md:text-2xl font-medium text-gray-700">
-        Order Summary
-      </h2>
-      <hr className="border-gray-500/30 my-5" />
-      <div className="space-y-6">
-        {/* <div>
-          <label className="text-base font-medium uppercase text-gray-600 block mb-2">
-            Select Address
-          </label>
-          <div className="relative inline-block w-full text-sm border">
-            <button
-              className="peer w-full text-left px-4 pr-2 py-2 bg-white text-gray-700 focus:outline-none"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            >
-              <span>
-                {selectedAddress
-                  ? `${selectedAddress.fullName}, ${selectedAddress.area}, ${selectedAddress.city}, ${selectedAddress.state}`
-                  : "Select Address"}
-              </span>
-              <svg className={`w-5 h-5 inline float-right transition-transform duration-200 ${isDropdownOpen ? "rotate-0" : "-rotate-90"}`}
-                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#6B7280"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {isDropdownOpen && (
-              <ul className="absolute w-full bg-white border shadow-md mt-1 z-10 py-1.5">
-                {userAddresses.map((address, index) => (
-                  <li
-                    key={index}
-                    className="px-4 py-2 hover:bg-gray-500/10 cursor-pointer"
-                    onClick={() => handleAddressSelect(address)}
-                  >
-                    {address.fullName}, {address.area}, {address.city}, {address.state}
-                  </li>
-                ))}
-                <li
-                  onClick={() => router.push("/add-address")}
-                  className="px-4 py-2 hover:bg-gray-500/10 cursor-pointer text-center"
-                >
-                  + Add New Address
-                </li>
-              </ul>
-            )}
-          </div>
-        </div> */}
-
-        {/* <div>
-          <label className="text-base font-medium uppercase text-gray-600 block mb-2">
-            Promo Code
-          </label>
-          <div className="flex flex-col items-start gap-3">
-            <input
-              type="text"
-              placeholder="Enter promo code"
-              className="flex-grow w-full outline-none p-2.5 text-gray-600 border"
-            />
-            <button className="bg-blue-600 text-white px-9 py-2 hover:bg-orange-700">
-              Apply
-            </button>
-          </div>
-        </div> */}
-
-        <hr className="border-gray-500/30 my-5" />
-
-        <div className="space-y-4">
-          <div className="flex justify-between text-base font-medium">
-            <p className="uppercase text-gray-600">Items {getCartCount()}</p>
-            <p className="text-gray-800">{currency}
-              {
-                formatPrice(getCartAmount())
-              }
-            </p>
-          </div>
-          <div className="flex justify-between">
-            <p className="text-gray-600">Shipping Fee</p>
-            <p className="font-medium text-gray-800">Free</p>
-          </div>
-          <div className="flex justify-between">
-            <p className="text-gray-600">Tax (0%)</p>
-            <p className="font-medium text-gray-800">{currency}{Math.floor(getCartAmount() * 0.00)}</p>
-          </div>
-          <div className="flex justify-between text-lg md:text-xl font-medium border-t pt-3">
-            <p>Total</p>
-            <p>{currency}
-              {
-                formatPrice(getCartAmount() + Math.floor(getCartAmount() * 0.00))
-              }
-              {/* {getCartAmount() + Math.floor(getCartAmount() * 0.00)} */}
-              </p>
-          </div>
+    <aside className="self-start rounded-lg border border-gray-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-gray-950 text-white">
+          <ReceiptText className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-950">Order Summary</h2>
+          <p className="text-sm text-gray-500">{itemCount} item{itemCount === 1 ? "" : "s"}</p>
         </div>
       </div>
 
+      <div className="mt-6 space-y-4 border-y border-gray-100 py-5">
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-gray-500">Subtotal</span>
+          <span className="font-semibold text-gray-950">{money(subtotal, currency)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-gray-500">Shipping</span>
+          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700">
+            <Truck className="h-4 w-4" />
+            Free
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-gray-500">Tax</span>
+          <span className="font-semibold text-gray-950">{money(taxAmount, currency)}</span>
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between gap-4">
+        <span className="text-base font-semibold text-gray-700">Total</span>
+        <span className="text-2xl font-semibold text-gray-950">{money(total, currency)}</span>
+      </div>
+
       <button
-        onClick={() => router.push('/checkout')}
-        className="w-full bg-blue-600 text-white py-3 mt-5 hover:bg-orange-700"
+        type="button"
+        disabled={itemCount === 0}
+        onClick={() => router.push("/checkout")}
+        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
       >
-        Place Order
+        Checkout
+        <ArrowRight className="h-4 w-4" />
       </button>
-    </div>
+
+      <div className="mt-4 flex items-start gap-2 rounded-md bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none" />
+        <span>Checkout details are protected.</span>
+      </div>
+    </aside>
   );
 };
 

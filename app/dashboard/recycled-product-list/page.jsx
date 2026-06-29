@@ -30,6 +30,8 @@ import PackageService from "@/services/PackageService";
 import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("")
@@ -119,9 +121,7 @@ const ProductList = () => {
     ) => {
         try {
 
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
 
 
             // console.log("user mode:::", user);
@@ -738,6 +738,16 @@ const ProductList = () => {
                                                 aria-label={`Edit shop ${item.s_title}`}
                                             >
                                                 <Pencil size={18} />
+                                            </button>
+
+
+                                            <button
+                                                // Add delete handler here
+                                                onClick={() => handleDelete(item?.v_id)}
+                                                className="text-green-600 hover:text-green-800"
+                                                aria-label={`Restock ${item.s_title}`}
+                                                >
+                                                <ShieldMinus size={18} />
                                             </button>
 
                                             {/* <button

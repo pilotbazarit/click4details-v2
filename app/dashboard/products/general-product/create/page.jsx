@@ -520,39 +520,51 @@ const SearchableSelect = ({
   );
 };
 
-const FileDrop = ({ label, multiple = false, value, onChange, accept = "image/*", error, existingCount = 0, previewUrl = "" }) => {
+const FileDrop = ({ label, multiple = false, value, onChange, accept = "image/*", error, existingCount = 0, previewUrl = "", onClear }) => {
   const count = Array.isArray(value) ? value.length : value ? 1 : 0;
   const displayCount = count || existingCount;
+  const showPreview = previewUrl && !count;
 
   return (
-    <label className="block">
+    <div>
       <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
-      <div
-        className={`flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed bg-white px-4 py-5 text-center ${
-          error ? "border-red-400" : "border-slate-300"
-        }`}
-      >
-        {previewUrl && !count ? (
-          <img src={previewUrl} alt="" className="mb-2 h-14 w-14 rounded-md object-cover" />
-        ) : (
-          <ImagePlus className="mb-2 h-6 w-6 text-slate-500" />
+      <div className="relative">
+        <label
+          className={`flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed bg-white px-4 py-5 text-center ${
+            error ? "border-red-400" : "border-slate-300"
+          }`}
+        >
+          {showPreview ? (
+            <img src={previewUrl} alt="" className="mb-2 h-14 w-14 rounded-md object-cover" />
+          ) : (
+            <ImagePlus className="mb-2 h-6 w-6 text-slate-500" />
+          )}
+          <span className="text-sm font-medium text-slate-700">
+            {displayCount ? `${displayCount} ${count ? "selected" : "existing"}` : "Upload"}
+          </span>
+          <input
+            type="file"
+            accept={accept}
+            multiple={multiple}
+            className="hidden"
+            onChange={(event) => {
+              const files = Array.from(event.target.files || []);
+              onChange(multiple ? files : files[0] || null);
+            }}
+          />
+        </label>
+        {showPreview && onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+          >
+            <X className="h-3 w-3" />
+          </button>
         )}
-        <span className="text-sm font-medium text-slate-700">
-          {displayCount ? `${displayCount} ${count ? "selected" : "existing"}` : "Upload"}
-        </span>
       </div>
-      <input
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        className="hidden"
-        onChange={(event) => {
-          const files = Array.from(event.target.files || []);
-          onChange(multiple ? files : files[0] || null);
-        }}
-      />
       <FieldError message={error} />
-    </label>
+    </div>
   );
 };
 
@@ -1545,15 +1557,50 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                       error={errors.featuredImage}
                       existingCount={existingFeaturedImage ? 1 : 0}
                       previewUrl={existingFeaturedImage}
+                      onClear={() => setExistingFeaturedImage("")}
                     />
-                    <FileDrop
-                      label="Gallery Images"
-                      multiple
-                      value={galleryImages}
-                      onChange={setGalleryImages}
-                      existingCount={existingGalleryImages.length}
-                      previewUrl={existingGalleryImages[0]}
-                    />
+                    <div>
+                      <span className="mb-1 block text-sm font-medium text-slate-700">Gallery Images</span>
+                      <div className="flex flex-wrap gap-2 rounded-md border border-dashed border-slate-300 bg-white p-3">
+                        {existingGalleryImages.map((url, i) => (
+                          <div key={url} className="relative">
+                            <img src={url} alt="" className="h-16 w-16 rounded-md object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setExistingGalleryImages((imgs) => imgs.filter((_, j) => j !== i))}
+                              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {galleryImages.map((file, i) => (
+                          <div key={i} className="relative">
+                            <img src={URL.createObjectURL(file)} alt="" className="h-16 w-16 rounded-md object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setGalleryImages((files) => files.filter((_, j) => j !== i))}
+                              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 hover:bg-slate-50">
+                          <ImagePlus className="h-5 w-5" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              setGalleryImages((prev) => [...prev, ...files]);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
                     {canApprovePblSale && (
                       <div className="md:col-span-2 rounded-md border border-slate-200 bg-slate-50 p-4">
                         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
@@ -1566,6 +1613,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                           onChange={setPblImage}
                           existingCount={existingPblImage ? 1 : 0}
                           previewUrl={existingPblImage}
+                          onClear={() => setExistingPblImage("")}
                         />
                       </div>
                     )}
@@ -1582,22 +1630,39 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                             <div key={variant.id} className="grid gap-4 px-4 py-4 md:grid-cols-[1fr_180px_180px] md:items-center">
                               <span className="text-sm font-medium text-slate-800">{variant.name}</span>
                               <div className="grid gap-1">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="text-sm"
-                                  onChange={(event) =>
-                                    setVariantMedia((current) => ({
-                                      ...current,
-                                      [variant.id]: {
-                                        ...media,
-                                        primaryImage: event.target.files?.[0] || null,
-                                      },
-                                    }))
-                                  }
-                                />
-                                {media.existingPrimaryImage && !media.primaryImage && (
-                                  <span className="text-xs text-slate-500">Current image ready</span>
+                                {media.existingPrimaryImage && !media.primaryImage ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                      <img src={media.existingPrimaryImage} alt="" className="h-12 w-12 rounded-md object-cover" />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setVariantMedia((current) => ({
+                                            ...current,
+                                            [variant.id]: { ...media, existingPrimaryImage: "" },
+                                          }))
+                                        }
+                                        className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                                      >
+                                        <X className="h-2.5 w-2.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="text-sm"
+                                    onChange={(event) =>
+                                      setVariantMedia((current) => ({
+                                        ...current,
+                                        [variant.id]: {
+                                          ...media,
+                                          primaryImage: event.target.files?.[0] || null,
+                                        },
+                                      }))
+                                    }
+                                  />
                                 )}
                               </div>
                               <div className="grid gap-1">

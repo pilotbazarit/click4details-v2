@@ -10,6 +10,7 @@ import Link from 'next/link';
 import ProductShareModal from "./modals/ProductShareModal";
 import ShopSelectModal from "./modals/ShopSelectModal";
 import ProductChatModal from "./modals/ProductChatModal";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import PricePreviewModal from "./modals/PricePreviewModal";
 import ClientPaymentHistoryModal from "./modals/ClientPaymentHistoryModal";
 import ContactCustomerModal from "@/components/modals/ContactCustomerModal";
@@ -55,6 +56,9 @@ const getProductCardFilterValue = (values = []) => {
 };
 
 const getProductCardCustomerListFromResponse = (response) => {
+  if (Array.isArray(response?.data?.data?.data)) return response.data.data.data;
+  if (Array.isArray(response?.data?.items)) return response.data.items;
+  if (Array.isArray(response?.data?.list)) return response.data.list;
   if (Array.isArray(response?.data?.data)) return response.data.data;
   if (Array.isArray(response?.data)) return response.data;
   if (Array.isArray(response?.items)) return response.items;
@@ -63,38 +67,75 @@ const getProductCardCustomerListFromResponse = (response) => {
   return [];
 };
 
+const getProductCardFirstValue = (...values) => {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+
+    const normalized = String(value).trim();
+    if (normalized && normalized.toLowerCase() !== "null") return normalized;
+  }
+
+  return "";
+};
+
 const normalizeProductCardCustomer = (customer = {}) => {
-  const id =
-    customer?.cci_id ??
-    customer?.id ??
-    customer?.contact_info_id ??
-    customer?.customer_contact_info_id ??
-    "";
-  const name = String(
-    customer?.cci_name ?? customer?.name ?? customer?.customer_name ?? ""
-  ).trim();
-  const phone = String(
-    customer?.cci_phone ??
-    customer?.mobile ??
-    customer?.phone ??
-    customer?.customer_phone ??
-    customer?.email ??
-    ""
-  ).trim();
-  const address = String(
-    customer?.cci_address ??
-    customer?.address ??
-    customer?.customer_address ??
-    customer?.cci_customer_address ??
-    ""
-  ).trim();
+  const contactInfo = customer?.customer_contact_info || customer?.customer_contact || {};
+  const customerInfo = customer?.customer || {};
+
+  const id = getProductCardFirstValue(
+    customer?.cci_id,
+    customer?.p_cci_id,
+    customer?.id,
+    customer?.contact_info_id,
+    customer?.customer_contact_info_id,
+    contactInfo?.cci_id,
+    contactInfo?.id
+  );
+  const name = getProductCardFirstValue(
+    customer?.cci_name,
+    customer?.name,
+    customer?.customer_name,
+    customer?.c_name,
+    customer?._c_name,
+    contactInfo?.cci_name,
+    contactInfo?.name,
+    customerInfo?.name,
+    customerInfo?.c_name
+  );
+  const phone = getProductCardFirstValue(
+    customer?.cci_phone,
+    customer?.phone,
+    customer?.mobile,
+    customer?.customer_phone,
+    customer?.cus_phone,
+    customer?.c_phone,
+    customer?._c_phone,
+    contactInfo?.cci_phone,
+    contactInfo?.phone,
+    customerInfo?.phone,
+    customerInfo?.mobile,
+    customer?.email,
+    customerInfo?.email
+  );
+  const address = getProductCardFirstValue(
+    customer?.cci_address,
+    customer?.address,
+    customer?.customer_address,
+    customer?.cci_customer_address,
+    customer?.c_address,
+    customer?._c_address,
+    contactInfo?.cci_address,
+    contactInfo?.address,
+    customerInfo?.address
+  );
+  const label = [name, phone].filter(Boolean).join(" - ") || `Customer #${id}`;
 
   return {
-    id: String(id),
+    id,
     name,
     phone,
     address,
-    label: [name, phone].filter(Boolean).join(" - "),
+    label,
   };
 };
 
@@ -105,10 +146,8 @@ const getProductCardStoredAuthToken = () => {
   if (directToken) return directToken;
 
   try {
-    const userString = localStorage.getItem("user");
-    if (!userString) return "";
-
-    const user = JSON.parse(userString);
+    const user = parseStoredUser(localStorage.getItem("user"));
+    if (!user) return "";
     return user?.token || "";
   } catch (error) {
     console.error("Failed to parse user from localStorage:", error);
@@ -365,6 +404,23 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   const [quotationForm, setQuotationForm] = useState(() => buildInitialQuotationForm(product));
   const [isQuotationPriceDropdownOpen, setIsQuotationPriceDropdownOpen] = useState(false);
   const [displayVehiclePrice, setDisplayVehiclePrice] = useState(product?.vehicle_price || {});
+  const [billCopyModalOpen, setBillCopyModalOpen] = useState(false);
+  const [billCopyCustomers, setBillCopyCustomers] = useState([]);
+  const [isBillCopyCustomersLoading, setIsBillCopyCustomersLoading] = useState(false);
+  const [isBillCopySubmitting, setIsBillCopySubmitting] = useState(false);
+  const [billCopyForm, setBillCopyForm] = useState({
+    customerId: "",
+    customerName: "",
+    customerPhone: "",
+    customerAddress: "",
+    bankName: "",
+    bankBranch: "",
+    bankAddress: "",
+    carPrice: "",
+    bankPayment: "",
+    customerPayment: "",
+    date: "",
+  });
 
 
   const quotationPriceOptions = useMemo(
@@ -379,6 +435,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         name: customer.name,
         phone: customer.phone,
         address: customer.address,
+        customer,
       })),
     [chalanCustomers]
   );
@@ -397,6 +454,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         name: customer.name,
         phone: customer.phone,
         address: customer.address,
+        customer,
       })),
     [quotationCustomers]
   );
@@ -406,6 +464,25 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         (option) => option.value === String(quotationForm.customerId || "")
       ) || null,
     [quotationCustomerOptions, quotationForm.customerId]
+  );
+  const billCopyCustomerOptions = useMemo(
+    () =>
+      billCopyCustomers.map((customer) => ({
+        value: customer.id,
+        label: customer.label,
+        name: customer.name,
+        phone: customer.phone,
+        address: customer.address,
+        customer,
+      })),
+    [billCopyCustomers]
+  );
+  const selectedBillCopyCustomerOption = useMemo(
+    () =>
+      billCopyCustomerOptions.find(
+        (option) => String(option.value) === String(billCopyForm.customerId || "")
+      ) || null,
+    [billCopyCustomerOptions, billCopyForm.customerId]
   );
   const [displayVehicleDbPrice, setDisplayVehicleDbPrice] = useState(product?.vehicle_db_price || {});
   const [countries, setCountries] = useState([]);
@@ -776,7 +853,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         const rows = getProductCardCustomerListFromResponse(response);
         const customers = rows
           .map(normalizeProductCardCustomer)
-          .filter((customer) => customer.id && customer.name);
+          .filter((customer) => customer.id && (customer.name || customer.phone || customer.address));
 
         if (!isCancelled) {
           setChalanCustomers(customers);
@@ -872,7 +949,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         const rows = getProductCardCustomerListFromResponse(response);
         const customers = rows
           .map(normalizeProductCardCustomer)
-          .filter((customer) => customer.id && customer.name);
+          .filter((customer) => customer.id && (customer.name || customer.phone || customer.address));
 
         if (!isCancelled) {
           setQuotationCustomers(customers);
@@ -900,6 +977,49 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       isCancelled = true;
     };
   }, [chalanContactUserId, quotationModalOpen]);
+
+  useEffect(() => {
+    if (!billCopyModalOpen) return;
+
+    if (!chalanContactUserId) {
+      setBillCopyCustomers([]);
+      setIsBillCopyCustomersLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchBillCopyCustomers = async () => {
+      try {
+        setIsBillCopyCustomersLoading(true);
+        const response = await ContactCustomerService.Queries.getContactCustomers({
+          _user_id: chalanContactUserId,
+        });
+        const rows = getProductCardCustomerListFromResponse(response);
+        const customers = rows
+          .map(normalizeProductCardCustomer)
+          .filter((customer) => customer.id && (customer.name || customer.phone || customer.address));
+
+        if (!isCancelled) {
+          setBillCopyCustomers(customers);
+        }
+      } catch {
+        if (!isCancelled) {
+          setBillCopyCustomers([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsBillCopyCustomersLoading(false);
+        }
+      }
+    };
+
+    fetchBillCopyCustomers();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [chalanContactUserId, billCopyModalOpen]);
 
   // console.log("isFilterProductPage card 101------------", isFilterProductPage);
 
@@ -1141,12 +1261,13 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   };
 
   const handleChalanCustomerChange = (option) => {
+    const customer = option?.customer || option || {};
     setChalanForm((prev) => ({
       ...prev,
-      customerId: option?.value || "",
-      customerName: option?.name || "",
-      customerPhone: option?.phone || "",
-      address: option?.address || "",
+      customerId: customer?.id || option?.value || "",
+      customerName: customer?.name || option?.name || "",
+      customerPhone: customer?.phone || option?.phone || "",
+      address: customer?.address || option?.address || "",
     }));
   };
 
@@ -1183,7 +1304,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       const rows = getProductCardCustomerListFromResponse(response);
       const customers = rows
         .map(normalizeProductCardCustomer)
-        .filter((customer) => customer.id && customer.name);
+        .filter((customer) => customer.id && (customer.name || customer.phone || customer.address));
       setChalanCustomers(customers);
     } catch (error) {
       toast.error("Failed to load customers.");
@@ -1202,7 +1323,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       const rows = getProductCardCustomerListFromResponse(response);
       const customers = rows
         .map(normalizeProductCardCustomer)
-        .filter((customer) => customer.id && customer.name);
+        .filter((customer) => customer.id && (customer.name || customer.phone || customer.address));
       setQuotationCustomers(customers);
     } catch (error) {
       toast.error("Failed to load customers.");
@@ -1383,12 +1504,13 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
   };
 
   const handleQuotationCustomerChange = (option) => {
+    const customer = option?.customer || option || {};
     setQuotationForm((prev) => ({
       ...prev,
-      customerId: option?.value || "",
-      customerName: option?.name || "",
-      customerPhone: option?.phone || "",
-      customerFromAddress: option?.address || "",
+      customerId: customer?.id || option?.value || "",
+      customerName: customer?.name || option?.name || "",
+      customerPhone: customer?.phone || option?.phone || "",
+      customerFromAddress: customer?.address || option?.address || "",
     }));
   };
 
@@ -1521,6 +1643,161 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       toast.error(error?.message || "Failed to download quotation.");
     } finally {
       setIsQuotationSubmitting(false);
+    }
+  };
+
+  const billCopyInputClass =
+    "h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 disabled:cursor-not-allowed disabled:opacity-60";
+
+  const handleBillCopyModalChange = (nextOpen) => {
+    setBillCopyModalOpen(nextOpen);
+    if (!nextOpen) {
+      setBillCopyForm({
+        customerId: "", customerName: "", customerPhone: "", customerAddress: "",
+        bankName: "", bankBranch: "", bankAddress: "",
+        carPrice: "", bankPayment: "", customerPayment: "", date: "",
+      });
+    }
+  };
+
+  const openBillCopyModal = () => {
+    setBillCopyForm({
+      customerId: "", customerName: "", customerPhone: "", customerAddress: "",
+      bankName: "", bankBranch: "", bankAddress: "",
+      carPrice: "", bankPayment: "", customerPayment: "", date: "",
+    });
+    setEditModalOpen(false);
+    setTimeout(() => setBillCopyModalOpen(true), 150);
+  };
+
+  const handleBillCopyFormChange = (field, value) => {
+    setBillCopyForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleBillCopyCustomerChange = (option) => {
+    if (!option) {
+      setBillCopyForm((prev) => ({
+        ...prev,
+        customerId: "",
+        customerName: "",
+        customerPhone: "",
+        customerAddress: "",
+      }));
+      return;
+    }
+
+    const selectedCustomer = option?.customer || billCopyCustomers.find(
+      (customer) => String(customer.id) === String(option.value)
+    ) || option;
+
+    setBillCopyForm((prev) => ({
+      ...prev,
+      customerId: selectedCustomer?.id || String(option.value || ""),
+      customerName: selectedCustomer?.name || option.name || "",
+      customerPhone: selectedCustomer?.phone || option.phone || "",
+      customerAddress: selectedCustomer?.address || option.address || "",
+    }));
+  };
+
+  const handleBillCopySubmit = async (event) => {
+    event.preventDefault();
+
+    if (!productId) {
+      toast.error("Product id not found.");
+      return;
+    }
+
+    const customerName = String(billCopyForm.customerName || "").trim();
+    const customerPhone = String(billCopyForm.customerPhone || "").trim();
+    const customerAddress = String(billCopyForm.customerAddress || "").trim();
+    const selectedCustomerId = String(billCopyForm.customerId || "").trim();
+
+    if (!selectedCustomerId) {
+      if (!customerName) { toast.error("Please enter customer name."); return; }
+      if (!customerPhone) { toast.error("Please enter customer phone."); return; }
+      if (!customerAddress) { toast.error("Please enter customer address."); return; }
+    }
+
+    const authToken = getProductCardStoredAuthToken();
+    if (!authToken) {
+      toast.error("Authentication token not found.");
+      return;
+    }
+
+    setIsBillCopySubmitting(true);
+
+    try {
+      const queryParams = new URLSearchParams({
+        _bank_name: String(billCopyForm.bankName || "").trim(),
+        _bank_branch: String(billCopyForm.bankBranch || "").trim(),
+        _bank_address: String(billCopyForm.bankAddress || "").trim(),
+        _c_name: customerName,
+        _c_phone: customerPhone,
+        _c_address: customerAddress,
+        _car_price: String(billCopyForm.carPrice || "").trim().replace(/,/g, ""),
+        _bank_payment: String(billCopyForm.bankPayment || "").trim().replace(/,/g, ""),
+        _customer_payment: String(billCopyForm.customerPayment || "").trim().replace(/,/g, ""),
+        _date: String(billCopyForm.date || "").trim(),
+        _is_down: "1",
+      });
+
+      if (selectedCustomerId) {
+        queryParams.append("_cci_id", selectedCustomerId);
+      }
+
+      const response = await fetch(
+        `${API_URL}api/vehicle/bill-copy-pdf/${productId}?${queryParams.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            Accept: "*/*",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        let errorMessage = "Failed to download bill copy.";
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const errorPayload = await response.json();
+          errorMessage = errorPayload?.message || errorPayload?.error || errorMessage;
+        } else {
+          const errorText = await response.text();
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size === 0) throw new Error("Downloaded file is empty.");
+
+      const headerFilename = getProductCardDownloadFilenameFromHeaders(
+        response.headers.get("content-disposition") || ""
+      );
+      const fallbackBaseName =
+        sanitizeProductCardDownloadFileName(product?.v_code) ||
+        sanitizeProductCardDownloadFileName(product?.v_title) ||
+        `bill-copy-${productId}`;
+      const fallbackExtension = getProductCardDownloadFileExtensionFromType(blob.type);
+      const downloadFilename = headerFilename || `${fallbackBaseName}-bill-copy.${fallbackExtension}`;
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = objectUrl;
+      downloadLink.download = downloadFilename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.URL.revokeObjectURL(objectUrl);
+
+      toast.success("Bill copy downloaded.");
+      handleBillCopyModalChange(false);
+    } catch (error) {
+      toast.error(error?.message || "Failed to download bill copy.");
+    } finally {
+      setIsBillCopySubmitting(false);
     }
   };
 
@@ -2452,55 +2729,57 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               })}
             </div>
 
-            <div
-              title={!hasClientPaymentHistoryPermission ? "You don't have permission" : ""}
-              className="mt-3"
-            >
-              <button
-                type="button"
-                disabled={!hasClientPaymentHistoryPermission}
-                onClick={() => {
-                  setEditModalOpen(false);
-                  handleEditProduct("Client payment history", product);
-                }}
-                className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
-              >
-                Payment History/Money Receipt
-              </button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div title={!hasClientPaymentHistoryPermission ? "You don't have permission" : ""}>
+                <button
+                  type="button"
+                  disabled={!hasClientPaymentHistoryPermission}
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    handleEditProduct("Client payment history", product);
+                  }}
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  Money Receipt
+                </button>
+              </div>
+
+              <div title={!hasQuationViewPermission ? "You don't have permission" : ""}>
+                <button
+                  type="button"
+                  disabled={!hasQuationViewPermission}
+                  onClick={() => openBillCopyModal()}
+                  className="h-11 w-full rounded-xl border border-green-300 bg-green-50 px-3 text-base font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  Bank Docs
+                </button>
+              </div>
             </div>
 
-            <div
-              className="mt-3 grid grid-cols-2 gap-3"
-            >
-              <div
-                title={!hasChalanViewPermission ? "You don't have permission" : ""}
-              >
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div title={!hasChalanViewPermission ? "You don't have permission" : ""}>
                 <button
                   type="button"
                   disabled={!hasChalanViewPermission}
-                  onClick={() => {
-                    openChalanModal();
-                  }}
+                  onClick={() => { openChalanModal(); }}
                   className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Chalan
                 </button>
               </div>
 
-              <div
-                title={!hasQuationViewPermission ? "You don't have permission" : ""}
-              >
+              <div title={!hasQuationViewPermission ? "You don't have permission" : ""}>
                 <button
                   type="button"
                   disabled={!hasQuationViewPermission}
-                  onClick={() => {
-                    openQuotationModal();
-                  }}
+                  onClick={() => { openQuotationModal(); }}
                   className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Quotation
                 </button>
               </div>
+
+
             </div>
 
             <div className="mt-4 border-t border-gray-200"></div>
@@ -3410,6 +3689,222 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         </DialogContent>
       </Dialog>
 
+      {/* =========== BANK DOCS DIALOG =========== */}
+      <Dialog open={billCopyModalOpen} onOpenChange={handleBillCopyModalChange}>
+        <DialogContent className="w-[92vw] max-w-2xl rounded-2xl border border-gray-200 p-0 max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleBillCopySubmit}>
+            <div className="p-5 sm:p-6">
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-2xl font-bold text-gray-800">
+                  Bank Docs (For Bank Loan Purpose Only)
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                {/* ---- Bank / Institution Info ---- */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    (To) Bank / Institution Name
+                  </label>
+                  <input
+                    type="text"
+                    value={billCopyForm.bankName}
+                    onChange={(e) => handleBillCopyFormChange("bankName", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Bank Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    (To) Bank Branch
+                  </label>
+                  <input
+                    type="text"
+                    value={billCopyForm.bankBranch}
+                    onChange={(e) => handleBillCopyFormChange("bankBranch", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Bank Branch"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    (To) Bank / Institution Address
+                  </label>
+                  <input
+                    type="text"
+                    value={billCopyForm.bankAddress}
+                    onChange={(e) => handleBillCopyFormChange("bankAddress", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Bank Address"
+                  />
+                </div>
+
+                {/* ---- Customer Info ---- */}
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Select Customer
+                  </label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Select
+                      options={billCopyCustomerOptions}
+                      value={selectedBillCopyCustomerOption}
+                      onChange={handleBillCopyCustomerChange}
+                      isClearable
+                      isDisabled={isBillCopyCustomersLoading || isBillCopySubmitting}
+                      isLoading={isBillCopyCustomersLoading}
+                      placeholder={isBillCopyCustomersLoading ? "Loading customers..." : "Select Customer"}
+                      styles={productCardCustomerSelectStyles}
+                      noOptionsMessage={() => "No customers found"}
+                      className="min-w-0 flex-1 text-sm"
+                      classNamePrefix="react-select"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    value={billCopyForm.customerName}
+                    onChange={(e) => handleBillCopyFormChange("customerName", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Customer Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Customer Phone
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={billCopyForm.customerPhone}
+                    onChange={(e) => handleBillCopyFormChange("customerPhone", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Customer Phone"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Customer Address
+                  </label>
+                  <input
+                    type="text"
+                    value={billCopyForm.customerAddress}
+                    onChange={(e) => handleBillCopyFormChange("customerAddress", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Customer Address"
+                  />
+                </div>
+
+                {/* ---- Date ---- */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={billCopyForm.date}
+                    onChange={(e) => handleBillCopyFormChange("date", e.target.value)}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                  />
+                </div>
+
+                {/* ---- Prices ---- */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Car Price
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={billCopyForm.carPrice}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      handleBillCopyFormChange("carPrice", raw);
+                    }}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Car Price (numbers only)"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Bank Payment Amount
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={billCopyForm.bankPayment}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      handleBillCopyFormChange("bankPayment", raw);
+                    }}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Bank Payment Amount"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    Customer Payment Amount
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={billCopyForm.customerPayment}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      handleBillCopyFormChange("customerPayment", raw);
+                    }}
+                    disabled={isBillCopySubmitting}
+                    className={billCopyInputClass}
+                    placeholder="Customer Payment Amount"
+                  />
+                </div>
+
+
+              </div>
+            </div>
+
+            <DialogFooter className="grid grid-cols-2 gap-3 border-t border-gray-200 bg-white p-4 sm:px-6">
+              <button
+                type="button"
+                onClick={() => handleBillCopyModalChange(false)}
+                disabled={isBillCopySubmitting}
+                className="h-11 rounded-full border border-gray-300 bg-white text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isBillCopySubmitting || isBillCopyCustomersLoading || !productId}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-green-600 px-4 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isBillCopySubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {isBillCopySubmitting ? "Generating..." : "Download Bank Docs"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={locationModalOpen} onOpenChange={setLocationModalOpen}>
         <DialogContent className="w-[92vw] max-w-md rounded-2xl border border-gray-200 p-0">
           <div className="p-5">
@@ -3744,7 +4239,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       <Dialog open={chatConfirmOpen} onOpenChange={setChatConfirmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — Click4Details এর মাধ্যমে</DialogTitle><hr />
+            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — PilotBazar এর মাধ্যমে</DialogTitle><hr />
           </DialogHeader>
           <div className="text-sm text-gray-600 space-y-4 leading-relaxed max-h-[60vh] overflow-y-auto pr-4">
 
@@ -3753,9 +4248,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </p>
 
             <p>
-              <strong>১।</strong> Wow! Click4Details নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
-              যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
-              ঝামেলা ছাড়া, সময় নষ্ট না করে।
+              <strong>১।</strong> Wow! PilotBazar নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
+              যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
+              ঝামেলা ছাড়া, সময় নষ্ট না করে।
             </p>
 
             <p>
@@ -3782,7 +4277,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>প্রতিদিন প্রতি গাড়িতে হাজারের বেশি অফার আসে</li>
                 <li>সাধারণত ৭২ ঘণ্টার মধ্যে উত্তর পাওয়া যায়</li>
-                <li>অথবা Click4Details এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
+                <li>অথবা PilotBazar এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
               </ul>
             </div>
 
@@ -3930,7 +4425,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <div>
-              <strong>১৪। কেন ইমপোর্টাররা Click4Details পছন্দ করে?</strong>
+              <strong>১৪। কেন ইমপোর্টাররা PilotBazar পছন্দ করে?</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>অযথা দরদাম, লম্বা কথা, হোয়াটসঅ্যাপ স্প্যাম বন্ধ</li>
                 <li>টু-দা-পয়েন্ট Fixed Price Deal</li>
@@ -3943,9 +4438,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div>
               <strong>১৫। ট্রান্সপারেন্সি ও কমিটমেন্ট</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Click4Details কোনো পক্ষপাতমূলক দরদাম করে না</li>
+                <li>PilotBazar কোনো পক্ষপাতমূলক দরদাম করে না</li>
                 <li>
-                  ডিল সফল হলে Click4Details শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
+                  ডিল সফল হলে PilotBazar শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
                 </li>
                 <li>
                   <strong>I Agree</strong> বাটনে ক্লিক মানে—
@@ -3957,7 +4452,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <p className="font-semibold text-gray-800">
-              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন Click4Details এর মাধ্যমে।”
+              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন PilotBazar এর মাধ্যমে।”
             </p>
 
           </div>

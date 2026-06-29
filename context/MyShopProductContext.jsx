@@ -6,6 +6,7 @@ import GeneralProductService from '@/services/GeneralProductService';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from './AppContext';
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 // Create the context
 export const MyShopProductContext = createContext();
@@ -18,7 +19,7 @@ export const useMyShopProductContext = () => {
 // Context provider component
 export const MyShopProductContextProvider = ({ children }) => {
 
-  const { selectedShop } = useAppContext();
+  const { selectedShop, user: appUser, loading: appUserLoading } = useAppContext();
   const searchParams = useSearchParams();
 
   const [products, setProducts] = useState([]);
@@ -122,9 +123,12 @@ export const MyShopProductContextProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    if (appUserLoading) {
+      return;
+    }
+
     setLoading(true);
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(appUser) || parseStoredUser(localStorage.getItem("user"));
 
     if (userInfo) {
       setUser(userInfo);
@@ -132,7 +136,7 @@ export const MyShopProductContextProvider = ({ children }) => {
       router.push("/");
     }
     setLoading(false);
-  }, []);
+  }, [appUser, appUserLoading, router]);
 
   useEffect(() => {
     const productTypeFromUrl = String(searchParams.get('product_type') || "").toLowerCase();

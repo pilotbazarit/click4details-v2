@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import GeneralProductService from '@/services/GeneralProductService';
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 // Create the context
 export const GeneralProductContext = createContext();
 
@@ -17,11 +19,18 @@ export const GeneralProductContextProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState();
   const [categoryId, setCategoryId] = useState(null);
+  const [filters, setFilters] = useState({
+    search: "",
+    stock: "all",
+    minPrice: "",
+    maxPrice: "",
+    sort: "latest",
+  });
 
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const getAllProduct = async (reset = false, catId = null) => {
+  const getAllProduct = async (reset = false, catId = null, nextFilters = filters) => {
     try {
       // Reset state if needed
       if (reset) {
@@ -35,7 +44,7 @@ export const GeneralProductContextProvider = ({ children }) => {
       const apiParams = {
         _page: currentPage,
         _perPage: 25,
-        _order: 'asc',
+        _order: nextFilters?.sort === 'oldest' ? 'asc' : 'desc',
         _orderBy: 'p_id',
         _status: 'active'
       };
@@ -44,6 +53,11 @@ export const GeneralProductContextProvider = ({ children }) => {
       const finalCatId = catId !== null ? catId : categoryId;
       if (finalCatId) {
         apiParams._pCat_id = finalCatId;
+        apiParams._is_saleBy_pbl = 1;
+      }
+
+      if (nextFilters?.search?.trim()) {
+        apiParams._title = nextFilters.search.trim();
       }
 
       // Fetch products without login
@@ -75,8 +89,7 @@ export const GeneralProductContextProvider = ({ children }) => {
 
   useEffect(() => {
     setLoading(true);
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(localStorage.getItem("user"));
     // if (userInfo) {
     //   router.push("/pb-home");
     // }
@@ -86,9 +99,26 @@ export const GeneralProductContextProvider = ({ children }) => {
   // Only run when user loading is complete or category changes
   useEffect(() => {
     if (!loading) {
-      getAllProduct(true, categoryId);
+      getAllProduct(true, categoryId, filters);
     }
   }, [loading, user, categoryId]);
+
+  const applyFilters = (nextFilters = filters) => {
+    setFilters(nextFilters);
+    getAllProduct(true, categoryId, nextFilters);
+  };
+
+  const resetFilters = () => {
+    const nextFilters = {
+      search: "",
+      stock: "all",
+      minPrice: "",
+      maxPrice: "",
+      sort: "latest",
+    };
+    setFilters(nextFilters);
+    getAllProduct(true, categoryId, nextFilters);
+  };
 
   const value = {
     products,
@@ -96,6 +126,11 @@ export const GeneralProductContextProvider = ({ children }) => {
     loading,
     hasMore,
     getAllProduct,
+    categoryId,
+    filters,
+    setFilters,
+    applyFilters,
+    resetFilters,
   };
 
   return (

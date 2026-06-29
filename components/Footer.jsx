@@ -95,7 +95,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     phone = selectedCompanyShop?.shop?.user?.phone; // fallback number
   } else {
-    phone = "+8809638660077";
+    phone = "+8801969944400";
   }
 
   // ---------- Email ----------
@@ -105,7 +105,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     email = selectedCompanyShop?.shop?.user?.email;
   } else {
-    email = "click4details.com@gmail.com";
+    email = "pilotbazar.com@gmail.com";
   }
 
   // ---------- Address ----------

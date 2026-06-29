@@ -16,7 +16,7 @@ import RangeSlider from "@/components/RangeSlider";
 import PageHeaderSection from "@/components/advance-filter/PageHeaderSection";
 import CardViewFilteredProducts from "@/components/advance-filter/CardViewFilteredProducts";
 import { AdvanceFilterProductContextProvider } from "@/context/AdvanceFilterProductContextProvider";
-import { ArrowLeft, BarChart3, CreditCard, ExternalLink, FileText, FolderOpen, Headset, Mail, MapPin, Phone, Plus, Share2, Upload, UserRound, Youtube, Minus, Package } from "lucide-react";
+import { ArrowLeft, BarChart3, CreditCard, ExternalLink, Eye, EyeOff, FileText, FolderOpen, Headset, Mail, MapPin, Phone, Plus, Share2, Upload, UserRound, Youtube, Minus, Package } from "lucide-react";
 import user_icon from "@/assets/user_icon.svg";
 import Image from "next/image";
 import PhoneInput from "react-phone-input-2";
@@ -24,6 +24,8 @@ import "react-phone-input-2/lib/style.css";
 
 import UserService from "@/services/UserService";
 import { method } from "lodash";
+
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const partnerButtonStyles = `
   @keyframes pulse-glow {
@@ -107,15 +109,14 @@ const Profile = () => {
     const [profileImageFile, setProfileImageFile] = useState(null);
     const [profileImagePreview, setProfileImagePreview] = useState("");
     const [activeProfileSection, setActiveProfileSection] = useState("profile-info");
+    const [showFilterPassword, setShowFilterPassword] = useState(false);
 
 
 
     // console.log("upDocs 74", upDocs);
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
-        const user = JSON.parse(userInfo);
+        const user = parseStoredUser(localStorage.getItem("user"));
 
         if (user) {
             getUserById(user.id);
@@ -217,7 +218,7 @@ const Profile = () => {
                 linkedin: profile?.up_linkedin ?? "",
                 youtube: profile?.up_youtube ?? "",
                 website: profile?.up_website ?? "",
-                website: profile?.up_website ?? "",
+                filter_product_password: profile?.up_filter_product_password ?? "",
             });
 
             // Array গুলো null-safe করে সেট করা
@@ -325,6 +326,7 @@ const Profile = () => {
                 up_linkedin: user?.linkedin,
                 up_youtube: user?.youtube,
                 up_website: user?.website,
+                up_filter_product_password: user?.filter_product_password,
                 _method: 'PUT',
             };
 
@@ -1011,6 +1013,30 @@ const Profile = () => {
                                                     value={user.website || ""}
                                                     onChange={(e) => setUser({ ...user, website: e.target.value })}
                                                 />
+                                            </div>
+
+                                            {/* Filter Product Password */}
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-base font-medium" htmlFor="filter-product-password">
+                                                    Filter Product Password
+                                                </label>
+                                                <div className="relative">
+                                                    <input
+                                                        id="filter-product-password"
+                                                        type={showFilterPassword ? "text" : "password"}
+                                                        placeholder="Enter Filter Product Password"
+                                                        className="outline-none py-2 px-3 pr-10 rounded border border-gray-500/40 w-full"
+                                                        value={user.filter_product_password || ""}
+                                                        onChange={(e) => setUser({ ...user, filter_product_password: e.target.value })}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                        onClick={() => setShowFilterPassword(!showFilterPassword)}
+                                                    >
+                                                        {showFilterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </div>
                                             </div>
 
                                         </div>

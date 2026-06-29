@@ -30,6 +30,8 @@ import PackageService from "@/services/PackageService";
 import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
@@ -110,12 +112,16 @@ const ProductList = () => {
 
 
 
-  const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery, newPriorityQuery = priorityQuery) => {
+  const getProducts = async (
+    newCodeQuery = codeQuery,
+    newEditionQuery = editionQuery,
+    newChassisQuery = chassisQuery,
+    newPriorityQuery = priorityQuery,
+    searchQuery = query
+  ) => {
     try {
 
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
 
       // console.log("user mode:::", user);
@@ -136,8 +142,8 @@ const ProductList = () => {
         params._user_id = user?.id;
       }
 
-      if (query) {
-        params._name = query;
+      if (searchQuery) {
+        params._title = searchQuery;
       }
 
       if (newCodeQuery) {
@@ -158,6 +164,7 @@ const ProductList = () => {
         params._order = newPriorityQuery;
       }
 
+      params._status = 'archive';
 
       // console.log("_priority_order", _priority_order);
 
@@ -180,8 +187,8 @@ const ProductList = () => {
     }
   }
 
-  const fetchSearchResults = (value) => {
-    // getModels(value);
+  const fetchSearchResults = (value = query) => {
+    getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, value);
   };
 
   const handleAdd = async () => {
@@ -202,8 +209,8 @@ const ProductList = () => {
   }
 
   useEffect(() => {
-    getProducts(undefined, undefined, undefined, undefined);
-  }, [currentPage, itemsPerPage, query, sortColumn, sortOrder]);
+    getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery);
+  }, [currentPage, itemsPerPage, sortColumn, sortOrder]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -303,7 +310,16 @@ const ProductList = () => {
         </div>
 
         {/* Search Filter */}
-        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search..." />
+        <TableFilter
+          query={query}
+          setQuery={setQuery}
+          setCurrentPage={setCurrentPage}
+          fetchSearchResults={fetchSearchResults}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
+          placeholder="Search..."
+          onClearSearch={() => getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, '')}
+        />
 
 
         {/* Table Container */}
@@ -704,7 +720,7 @@ const ProductList = () => {
                         // Add delete handler here
                         onClick={() => handleDelete(item?.v_id)}
                         className="text-green-600 hover:text-green-800"
-                        aria-label={`Delete shop ${item.s_title}`}
+                        aria-label={`Restock ${item.s_title}`}
                       >
                         <ShieldMinus size={18} />
                       </button>

@@ -7,15 +7,15 @@ import Footer from "@/components/Footer";
 import PblHomeProduct from "@/components/PblHomeProduct";
 import { PblHomeProductContextProvider } from "@/context/PblHomeProductContext";
 import Header from "@/components/Header";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const PblHome = () => {
   const [user, setUser] = useState();
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(localStorage.getItem("user"));
     if (userInfo) {
-      setUser(JSON.parse(userInfo));
+      setUser(userInfo);
     }
   }, []);
 

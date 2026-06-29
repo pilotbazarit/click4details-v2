@@ -30,6 +30,8 @@ import PackageService from "@/services/PackageService";
 import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("")
@@ -119,9 +121,7 @@ const ProductList = () => {
     ) => {
         try {
 
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
 
 
             // console.log("user mode:::", user);

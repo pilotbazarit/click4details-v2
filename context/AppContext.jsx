@@ -11,6 +11,34 @@ import { formatPermissions } from "@/helpers/functions";
 const COMPARE_STORAGE_KEY = "compare_items";
 const MAX_COMPARE_ITEMS = 4;
 
+const parseMaybeJson = (value, fallback = null) => {
+  if (!value) return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizeStoredValue = (value, fallback = null) => {
+  const parsedValue = parseMaybeJson(value, fallback);
+  return typeof parsedValue === "string"
+    ? parseMaybeJson(parsedValue, fallback)
+    : parsedValue;
+};
+
+const getMediaUrl = (media) => {
+  if (!media) return "";
+  const parsedMedia = parseMaybeJson(media, media);
+
+  if (typeof parsedMedia === "string") return parsedMedia;
+  if (Array.isArray(parsedMedia)) return getMediaUrl(parsedMedia[0]);
+
+  return parsedMedia?.secure_url || parsedMedia?.url || "";
+};
+
 const getFormattedUserPermissions = (userValue) => {
   if (!userValue) return [];
 
@@ -45,7 +73,8 @@ export const AppContextProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);    // Cart items (array of objects with product details + quantity)
   const [cartId, setCartId] = useState(null);    
   const [user, setUser] = useState(null);            // User object
-  const [loading, setLoading] = useState(false);     // Loading state
+  const [loading, setLoading] = useState(true);      // User hydration state
+  const [hasHydratedUser, setHasHydratedUser] = useState(false);
   const [shops, setShops] = useState([]);           // Shops list
   const [companyShops, setCompanyShops] = useState([]);           // Shops list
   const [selectedShop, setSelectedShop] = useState(''); // Currently selected shop
@@ -76,13 +105,12 @@ export const AppContextProvider = ({ children }) => {
 
   // Load user from localStorage on mount (client-side only)
   useEffect(() => {
-    setLoading(true);
     try {
-      const userString = localStorage.getItem("user");
-      setUser(userString ? JSON.parse(userString) : null);
+      const storedUser = normalizeStoredValue(localStorage.getItem("user"), null);
+      setUser(storedUser);
 
-      if (userString) {
-        setPermissionList(getFormattedUserPermissions(userString));
+      if (storedUser) {
+        setPermissionList(getFormattedUserPermissions(storedUser));
         
         // if (finalUser.permissions.length > 0) {
         //   const permissionData = finalUser.permissions.map(item => {
@@ -101,6 +129,7 @@ export const AppContextProvider = ({ children }) => {
       console.log("Failed to parse user data", error);
       setUser(null);
     } finally {
+      setHasHydratedUser(true);
       setLoading(false);
     }
   }, []);
@@ -110,12 +139,16 @@ export const AppContextProvider = ({ children }) => {
 
   // Sync user state to localStorage whenever it changes
   useEffect(() => {
+    if (!hasHydratedUser) {
+      return;
+    }
+
     if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(normalizeStoredValue(user, user)));
     } else {
       localStorage.removeItem("user");
     }
-  }, [user]);
+  }, [hasHydratedUser, user]);
 
 
   useEffect(() => {
@@ -167,23 +200,14 @@ export const AppContextProvider = ({ children }) => {
 
   const isInCompare = (productId) => compareItems.includes(productId);
 
-  let parsedUser = null;
-  try {
-    parsedUser = user ? JSON.parse(user) : null;
-  } catch (error) {
-    console.log("Failed to parse user data:", error);
-  }
+  const parsedUser = parseMaybeJson(user, user);
 
   const fetchCartItems = async () => {
     try {
       // Parse user fresh inside the function to avoid stale closure
       let currentUser = null;
       try {
-        const userString = localStorage.getItem("user");
-        currentUser = userString ? JSON.parse(userString) : null;
-        if (currentUser && typeof currentUser === "string") {
-          currentUser = JSON.parse(currentUser);
-        }
+        currentUser = normalizeStoredValue(localStorage.getItem("user"), null);
       } catch (error) {
         console.log("Failed to parse user:", error);
         currentUser = null;
@@ -212,19 +236,31 @@ export const AppContextProvider = ({ children }) => {
         // Transform cart data to required format - loop through all carts
         const transformedCartItems = [];
 
-        response?.data?.data.length > 0 && response?.data?.data?.forEach(cart => {
+        (response?.data?.data || []).forEach(cart => {
           // setCartId(cart.c_id);
           cart?.items?.forEach(item => {
+            const variantSnapshot = parseMaybeJson(item?.ci_variant_snapshot, null);
+            const variantImage = getMediaUrl(variantSnapshot?.image);
+            const productImage = getMediaUrl(item?.ci_product_details?.image);
+            const quantity = Number(item?.ci_qty || 0);
+            const price = Number(item?.ci_price || 0);
+
             transformedCartItems.push({
+              ci_id: item.ci_id,
               cart_id: cart.c_id,
               ci_product_id: item.ci_product_id,
+              ci_product_variant_id: item.ci_product_variant_id,
               ci_type_id: item.ci_type_id,
-              ci_qty: item.ci_qty,
-              ci_price: item.ci_price,
-              ci_url: item?.ci_product_details?.image || '',
+              ci_qty: quantity,
+              ci_price: price,
+              ci_url: variantImage || productImage || '',
               ci_name: item?.ci_product_details?.name || '',
               ci_product_price_id: item.ci_product_price_id,
+              ci_variant_snapshot: variantSnapshot,
+              ci_variant_title: variantSnapshot?.title || variantSnapshot?.option_summary || '',
+              ci_variant_sku: variantSnapshot?.sku || '',
               ci_currency: item.ci_product_details?.currency || 'BDT',
+              ci_subtotal: price * quantity,
             });
           });
         });
@@ -260,9 +296,16 @@ export const AppContextProvider = ({ children }) => {
   };
 
   // Update the quantity of a cart item, or remove if quantity is 0
-  const updateCartQuantity = async (itemId, quantity) => {
+  const updateCartQuantity = async (cartItemOrProductId, quantity) => {
     try {
-      const itemData = cartItems.find(item => item.ci_product_id === itemId);
+      const itemData = typeof cartItemOrProductId === "object"
+        ? cartItemOrProductId
+        : cartItems.find(item => item.ci_product_id === cartItemOrProductId);
+
+      if (!itemData) {
+        toast.error("Cart item not found");
+        return;
+      }
 
       const productData = {
         c_user_id: parsedUser?.id || null,
@@ -274,6 +317,14 @@ export const AppContextProvider = ({ children }) => {
         ci_url: itemData.ci_url || '',
         ci_name: itemData.ci_name,
         ci_subtotal: itemData.ci_price * quantity,
+      }
+
+      if (itemData.ci_product_variant_id) {
+        productData.ci_product_variant_id = itemData.ci_product_variant_id;
+      }
+
+      if (itemData.ci_product_price_id) {
+        productData.ci_product_price_id = itemData.ci_product_price_id;
       }
 
       const response = await CartService.Commands.storeCart(productData);

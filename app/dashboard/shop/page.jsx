@@ -24,6 +24,8 @@ import UserRolePermissionListModal from "@/components/modals/UserRolePermissionL
 import RoleService from "@/services/RoleService";
 import AddUserModal from "@/components/modals/AddUserModal";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const Shop = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -60,9 +62,7 @@ const Shop = () => {
   ) => {
     setLoading(true);
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
       const params = {
         _page: page,

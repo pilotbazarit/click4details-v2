@@ -3,6 +3,8 @@ import VehicleService from '@/services/VehicleService';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 // Create the context
 export const ProductContext = createContext();
 
@@ -51,8 +53,7 @@ export const ProductContextProvider = ({ children }) => {
 
   useEffect(() => {
     setLoading(true);
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(localStorage.getItem("user"));
     if (userInfo) {
       router.push("/pb-home");
     }

@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import { usePathname } from "next/navigation";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const Header = () => {
     const [user, setUser] = useState();
@@ -12,10 +13,9 @@ const Header = () => {
     let isCompanyShop = pathname.includes("company-shop");
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
+        const userInfo = parseStoredUser(localStorage.getItem("user"));
         if (userInfo) {
-            setUser(JSON.parse(userInfo));
+            setUser(userInfo);
         }
     }, []);
     
@@ -30,7 +30,7 @@ const Header = () => {
                         user && ((pathname !== '/pb-home' && pathname !== '/pb-home/') || isMyShop || isCompanyShop) ? (
                             <a href={`tel:+880${user?.phone}`} className="hover:text-blue-300 transition-colors">+880{user?.phone}</a>
                         ) : (
-                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
+                            <a href="tel:+8801969944400" className="hover:text-blue-300 transition-colors">+8801969944400</a>
                         )
                     }
                 </h1>

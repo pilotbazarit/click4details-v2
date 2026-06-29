@@ -16,6 +16,8 @@ import { set } from 'lodash';
 import Link from 'next/link';
 import { components as selectComponents } from 'react-select';
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const presetQuestionsOld = [
     { value: 'Is this available?', label: 'Is this available?' },
     { value: 'What is the price?', label: 'What is the price?' },
@@ -315,9 +317,7 @@ const ProductChatModal = ({ open, setOpen, productInfo, conversationId: initialC
         if (open) {
             getPresetCategories();
 
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
             setUser(user);
         }
     }, [open]);

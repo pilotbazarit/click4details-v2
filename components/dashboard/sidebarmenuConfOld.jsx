@@ -251,7 +251,7 @@ export const dashboardMenuItems = [
         allowedModes: ADMIN_AND_SUPREME,
       },
       {
-        name: "Preset Queestion & Answer",
+        name: "Preset Question & Answer",
         path: "/dashboard/settings/preset-question-answer/",
         icon: Box,
         allowedModes: ADMIN_AND_SUPREME,

@@ -1,6 +1,8 @@
 import {
   Box,
   Boxes,
+  Building2,
+  ClipboardList,
   Database,
   DatabaseZap,
   FileText,
@@ -16,10 +18,14 @@ import {
   Package,
   PackageCheck,
   PackageSearch,
+  Receipt,
   Settings,
+  ShoppingCart,
   Store,
+  Truck,
   UserCog,
   Users,
+  Warehouse,
 } from "lucide-react";
 
 const ADMIN = "admin";
@@ -349,6 +355,41 @@ export const dashboardMenuItems = [
     ],
   },
   {
+    name: "POS Sale",
+    icon: ShoppingCart,
+    allowedModes: [ADMIN, SUPREME, USER, MEMBER, PARTNER, PBL],
+    requiredPermission: {
+      section: "Order",
+      action: "PosMenuShow",
+      appliesToModes: [ADMIN, PBL],
+      pblShopId: 0,
+    },
+    children: [
+      {
+        name: "POS Terminal",
+        path: "/dashboard/pos-sale",
+        icon: Receipt,
+        requiredPermission: {
+          section: "Order",
+          action: "PosCreate",
+          appliesToModes: [ADMIN, PBL],
+          pblShopId: 0,
+        },
+      },
+      {
+        name: "Sales History",
+        path: "/dashboard/pos-sale/history",
+        icon: History,
+        requiredPermission: {
+          section: "Order",
+          action: "PosView",
+          appliesToModes: [ADMIN, PBL],
+          pblShopId: 0,
+        },
+      },
+    ],
+  },
+  {
     name: "Cart List",
     path: "/dashboard/cart-list",
     icon: PackageSearch,
@@ -371,6 +412,46 @@ export const dashboardMenuItems = [
       appliesToModes: [ADMIN, PBL],
       pblShopId: 0,
     }
+  },
+  {
+    name: "Shop Operations",
+    icon: Warehouse,
+    allowedModes: SELLER_MODES,
+    children: [
+      {
+        name: "Stock Management",
+        path: "/dashboard/shop-operations/stock",
+        icon: Warehouse,
+        requiredPermission: {
+          section: "Stock",
+          action: "List",
+          appliesToModes: [ADMIN, PBL],
+          pblShopId: 0,
+        },
+      },
+      {
+        name: "Inventory Ledger",
+        path: "/dashboard/shop-operations/inventory",
+        icon: ClipboardList,
+        requiredPermission: {
+          section: "Inventory",
+          action: "List",
+          appliesToModes: [ADMIN, PBL],
+          pblShopId: 0,
+        },
+      },
+      {
+        name: "Purchase Management",
+        path: "/dashboard/shop-operations/purchases",
+        icon: Truck,
+        requiredPermission: {
+          section: "Purchase",
+          action: "List",
+          appliesToModes: [ADMIN, PBL],
+          pblShopId: 0,
+        },
+      },
+    ],
   },
   {
     name: "Conversation List",
@@ -466,7 +547,19 @@ export const dashboardMenuItems = [
         },
       },
       {
-        name: "Preset Question & Answer",
+        name: "Suppliers",
+        path: "/dashboard/settings/suppliers/",
+        icon: Building2,
+        allowedModes: [ADMIN, SUPREME, USER, MEMBER, PARTNER, PBL],
+        requiredPermission: {
+          section: "Supplier",
+          action: "List",
+          appliesToModes: [PBL, ADMIN],
+          pblShopId: 0,
+        },
+      },
+      {
+        name: "Preset Queestion & Answer",
         path: "/dashboard/settings/preset-question-answer/",
         icon: Box,
         allowedModes: [ADMIN, SUPREME, PBL],
@@ -477,7 +570,7 @@ export const dashboardMenuItems = [
           pblShopId: 0,
         },
       },
-       {
+      {
         name: "Preset Suggestions",
         path: "/dashboard/settings/preset-suggestions/",
         icon: Box,
@@ -488,6 +581,18 @@ export const dashboardMenuItems = [
           appliesToModes: [PBL, ADMIN],
           pblShopId: 0,
         },
+      },
+      {
+        name: "Payment List",
+        path: "/dashboard/settings/payment-list/",
+        icon: Box,
+        // allowedModes: [ADMIN, SUPREME, PBL],
+        // requiredPermission: {
+        //   section: "Settings",
+        //   action: "PaymentListMenuShow",
+        //   appliesToModes: [PBL, ADMIN],
+        //   pblShopId: 0,
+        // },
       },
       {
         name: "Models",
