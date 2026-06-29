@@ -13,6 +13,17 @@ import toast from "react-hot-toast";
 import OrderService from "@/services/OrderService";
 import LoginService from "@/services/LoginService";
 
+const parseMaybeJson = (value, fallback = null) => {
+  if (!value) return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
 const Checkout = () => {
   const { currency, router, getCartCount, getCartAmount, cartItems, user, setCartItems } = useAppContext();
   // const [cartId, setLocalCartId] = useState(null);
@@ -55,12 +66,7 @@ const Checkout = () => {
   });
 
 
-  let parsedUser = null;
-  try {
-    parsedUser = user ? JSON.parse(user) : null;
-  } catch (error) {
-    console.error("Failed to parse user data:", error);
-  }
+  const parsedUser = parseMaybeJson(user);
 
   // Sync context cartId with local state whenever it changes
   // useEffect(() => {
@@ -359,6 +365,9 @@ const Checkout = () => {
       Object.keys(cartItems).forEach((itemId, key) => {
         const item = cartItems[itemId];
         orderData[`oi_product_id[${key}]`] = item.ci_product_id;
+        if (item.ci_product_variant_id) {
+          orderData[`oi_product_variant_id[${key}]`] = item.ci_product_variant_id;
+        }
         orderData[`oi_type_id[${key}]`] = item.ci_type_id;
         orderData[`oi_quantity[${key}]`] = item.ci_qty;
         orderData[`oi_unit_price[${key}]`] = item.ci_price;
@@ -1019,19 +1028,22 @@ const Checkout = () => {
               <div className="space-y-4">
                 {Object.keys(cartItems).map((itemId) => {
                   const item = cartItems[itemId];
-                  if (!item || item.quantity === 0) return null;
+                  if (!item || Number(item.ci_qty) <= 0) return null;
+                  const variantSnapshot = parseMaybeJson(item?.ci_variant_snapshot, {});
+                  const variantTitle = item?.ci_variant_title || variantSnapshot?.title || variantSnapshot?.option_summary || "";
+                  const variantSku = item?.ci_variant_sku || variantSnapshot?.sku || "";
 
                   return (
                     <div
                       key={itemId}
-                      className="flex items-start gap-4 pb-4 border-b border-gray-200 last:border-b-0"
+                      className="flex items-start gap-4 rounded-lg border border-gray-100 bg-gray-50 p-3"
                     >
                       {/* Product Image */}
-                      <div className="w-20 h-20 flex-shrink-0">
+                      <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white">
                         <img
                           src={item?.ci_url || '/placeholder.png'}
-                          alt={item.name}
-                          className="w-full h-full object-cover rounded"
+                          alt={item.ci_name || 'Product'}
+                          className="w-full h-full object-cover"
                         />
                       </div>
 
@@ -1040,6 +1052,20 @@ const Checkout = () => {
                         <h3 className="font-medium text-gray-800 text-sm line-clamp-2">
                           {item.ci_name}
                         </h3>
+                        {(variantTitle || variantSku) && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {variantTitle && (
+                              <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700">
+                                {variantTitle}
+                              </span>
+                            )}
+                            {variantSku && (
+                              <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                                SKU {variantSku}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <p className="text-gray-600 text-sm mt-1">
                           {currency}
                           {formatPrice(item.ci_price)} x {item.ci_qty}

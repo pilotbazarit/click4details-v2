@@ -3,6 +3,7 @@
 import EditFollowupModal from "@/components/modals/EditFollowupModal"; // Import new edit modal
 import FollowupModal from "@/components/modals/FollowupModal";
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import { formatDate } from "@/helpers/functions";
@@ -30,7 +31,7 @@ const FollowupsDataTable = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const { permissionList, user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
   const commandApi = useMemo(() => createApiRequest(API_URL), []);
 

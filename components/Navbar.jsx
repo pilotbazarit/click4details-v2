@@ -694,15 +694,8 @@ const NavbarContent = () => {
     const currentShopId = searchParams.get('_shop_id');
 
     // If user is on my-shop page and is logged in, add user ID parameter
-    if (isActiveMyShop && user) {
-      try {
-        const parsedUser = JSON.parse(user);
-        if (parsedUser && parsedUser.id) {
-          searchUrl += `&user_id=${parsedUser.id}`;
-        }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
+    if (isActiveMyShop && parsedUser?.id) {
+      searchUrl += `&user_id=${parsedUser.id}`;
     }
     // If we're on search-results page and there's already a user_id, preserve it
     else if (pathname.includes('/search-results') && currentUserId) {

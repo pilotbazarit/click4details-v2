@@ -1,10 +1,11 @@
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
   const { user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");

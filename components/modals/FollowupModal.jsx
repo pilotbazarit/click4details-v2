@@ -2,6 +2,7 @@
 
 import CustomDatePicker from "@/components/CustomDatePicker";
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import { useEffect, useMemo, useState, useRef } from "react";
@@ -10,7 +11,7 @@ import Select from "react-select";
 
 const FollowupModal = ({ isOpen, onClose, onSuccess, customer = null, customerID = null }) => {
   const { user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
   const [formData, setFormData] = useState({
     followup_date: null,

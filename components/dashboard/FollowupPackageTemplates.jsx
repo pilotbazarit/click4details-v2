@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import { ChevronDown, ChevronRight, Clock, Edit, MessageSquare, Plus, Trash2 } from "lucide-react";
@@ -10,7 +11,7 @@ import { hasPermission } from "@/lib/utils";
 
 const FollowupPackageTemplates = () => {
   const { permissionList, user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

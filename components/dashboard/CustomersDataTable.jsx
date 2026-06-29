@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import CustomerService from "@/services/CustomerService";
@@ -37,7 +38,7 @@ const getPaginationNumbers = (currentPage, lastPage) => {
 
 const CustomersDataTable = () => {
   const { permissionList, user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
   const router = useRouter();
   const searchParams = useSearchParams();

@@ -2,6 +2,7 @@
 
 import FeedbackModal from "@/components/modals/FeedbackModal";
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import { formatDate } from "@/helpers/functions";
@@ -28,7 +29,7 @@ const FeedbacksCardView = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // 'cards' or 'table'
   const { user, permissionList } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
 
   const canShowAddFeedbackButton =
