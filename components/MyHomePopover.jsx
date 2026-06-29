@@ -27,6 +27,7 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
     } catch (error) {
         console.error("Failed to parse user data:", error);
     }
+    const displayName = parsedUser?.name || parsedUser?.username || parsedUser?.phone || "Login";
 
     const canShowMemberShop =
         parsedUser?.user_mode === 'supreme' ||
@@ -75,16 +76,7 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                     <div className="relative inline-flex">
                         <button className="flex items-center gap-2 border px-4 py-1.5 rounded-full text-sm hover:bg-gray-100 transition">
                             <User className="h-4 w-4" />
-                            <span>
-                                {(() => {
-                                    try {
-                                        const parsedUser = JSON.parse(user);
-                                        return parsedUser?.name || "Login";
-                                    } catch {
-                                        return "Login";
-                                    }
-                                })()}
-                            </span>
+                            <span>{displayName}</span>
                         </button>
 
 
