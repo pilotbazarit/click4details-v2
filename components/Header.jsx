@@ -11,6 +11,7 @@ const Header = () => {
     // ---------- Custom Helper ----------
     let isMyShop = pathname.includes("my-shop");
     let isCompanyShop = pathname.includes("company-shop");
+    let isPbHome = pathname === '/pb-home' || pathname === '/pb-home/';
 
     useEffect(() => {
         const userInfo = parseStoredUser(localStorage.getItem("user"));
@@ -25,12 +26,13 @@ const Header = () => {
                
 
                 <h1 className="text-xl lg:text-4xl font-large font-bold text-white tracking-wider animate-ring">
-                    📞 Hotline:&nbsp;
+                    &#128222; Hotline:&nbsp;
                     {
-                        user && ((pathname !== '/pb-home' && pathname !== '/pb-home/') || isMyShop || isCompanyShop) ? (
+                        
+                        user && (isPbHome || isMyShop || isCompanyShop) ? (
                             <a href={`tel:+880${user?.phone}`} className="hover:text-blue-300 transition-colors">+880{user?.phone}</a>
                         ) : (
-                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
+                            <a href="tel:+8801969944400" className="hover:text-blue-300 transition-colors">+8801969944400</a>
                         )
                     }
                 </h1>
