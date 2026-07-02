@@ -3,7 +3,7 @@
 'use client'
 import VehicleService from '@/services/VehicleService';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
 // Create the context
@@ -25,6 +25,8 @@ export const MemberShopProductContextProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryIdFromUrl = searchParams.get("_category_id") || "";
 
   const getAllProductold = async (reset = false) => {
     try {
@@ -98,15 +100,20 @@ export const MemberShopProductContextProvider = ({ children }) => {
       }
 
       const currentPage = reset ? 1 : page;
+      const params = {
+        _page: currentPage,
+        _perPage: 25,
+        _order: 'ASC',
+        _orderBy: 'v_priority',
+        _user_model: 'member',
+        _status: 'active'
+      };
 
-       const res = await VehicleService.Queries.getMemberShopVehicle({
-          _page: currentPage,
-          _perPage: 25,
-          _order: 'ASC',
-          _orderBy: 'v_priority',
-          _user_model: 'member',
-          _status: 'active'
-        });
+      if (categoryIdFromUrl) {
+        params._category_id = categoryIdFromUrl;
+      }
+
+      const res = await VehicleService.Queries.getMemberShopVehicle(params);
 
 
       if (res.status === "success") {
@@ -142,7 +149,7 @@ export const MemberShopProductContextProvider = ({ children }) => {
     if (!loading) {
       getAllProduct(true);
     }
-  }, [loading, user]);
+  }, [loading, user, categoryIdFromUrl]);
 
   const value = {
     products,

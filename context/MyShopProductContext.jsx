@@ -21,6 +21,7 @@ export const MyShopProductContextProvider = ({ children }) => {
 
   const { selectedShop, user: appUser, loading: appUserLoading } = useAppContext();
   const searchParams = useSearchParams();
+  const vehicleCategoryIdFromUrl = searchParams.get("_category_id") || "";
 
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
@@ -42,16 +43,20 @@ export const MyShopProductContextProvider = ({ children }) => {
       }
 
       const currentPage = reset ? 1 : page;
-
-
-      const res = await VehicleService.Queries.getVehiclesWithLogin({
+      const params = {
         _page: currentPage,
         _perPage: 25,
         _shop_id: selectedShop?.s_id,
         _order: 'desc',
         _orderBy: 'v_id',
         _status: 'active'
-      });
+      };
+
+      if (vehicleCategoryIdFromUrl) {
+        params._category_id = vehicleCategoryIdFromUrl;
+      }
+
+      const res = await VehicleService.Queries.getVehiclesWithLogin(params);
 
 
       if (res.status === "success") {
@@ -160,7 +165,7 @@ export const MyShopProductContextProvider = ({ children }) => {
         getAllGeneralProduct(true, categoryId);
       }
     }
-  }, [loading, user, selectedShop, selectedProductType, categoryId]);
+  }, [loading, user, selectedShop, selectedProductType, categoryId, vehicleCategoryIdFromUrl]);
 
   const value = {
     products,

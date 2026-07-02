@@ -3,7 +3,7 @@
 'use client'
 import VehicleService from '@/services/VehicleService';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from './AppContext';
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
@@ -26,6 +26,8 @@ export const CompanyShopProductContextProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryIdFromUrl = searchParams.get("_category_id") || "";
 
 
   const getAllProduct = async (reset = false) => {
@@ -38,16 +40,20 @@ export const CompanyShopProductContextProvider = ({ children }) => {
       }
 
       const currentPage = reset ? 1 : page;
-
-
-      const res = await VehicleService.Queries.getVehiclesWithLogin({
+      const params = {
         _page: currentPage,
         _perPage: 25,
         _shop_id: selectedCompanyShop?.shop?.s_id,
         _order: 'ASC',
         _orderBy: 'v_priority',
         _status: 'active'
-      });
+      };
+
+      if (categoryIdFromUrl) {
+        params._category_id = categoryIdFromUrl;
+      }
+
+      const res = await VehicleService.Queries.getVehiclesWithLogin(params);
 
 
       if (res.status === "success") {
@@ -83,7 +89,7 @@ export const CompanyShopProductContextProvider = ({ children }) => {
     if (!loading) {
       getAllProduct(true);
     }
-  }, [loading, user, selectedCompanyShop]);
+  }, [loading, user, selectedCompanyShop, categoryIdFromUrl]);
 
   const value = {
     products,

@@ -3,7 +3,7 @@
 'use client'
 import VehicleService from '@/services/VehicleService';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Create the context
 export const PblHomeProductContext = createContext();
@@ -36,9 +36,11 @@ export const PblHomeProductContextProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryIdFromUrl = searchParams.get("_category_id") || "";
   const pageRef = useRef(1);
   const isFetchingRef = useRef(false);
-  const hasLoadedInitialProductsRef = useRef(false);
+  const lastLoadedCategoryIdRef = useRef(null);
 
 
 
@@ -58,6 +60,18 @@ export const PblHomeProductContextProvider = ({ children }) => {
       }
 
       const currentPage = reset ? 1 : pageRef.current;
+      const params = {
+        _page: currentPage,
+        _perPage: 25,
+        _order: 'ASC',
+        _orderBy: 'v_priority',
+        _status: 'active'
+      };
+
+      if (categoryIdFromUrl) {
+        params._category_id = categoryIdFromUrl;
+      }
+
       // Fetch products without login
       // const res = await VehicleService.Queries.getVehiclesWithLogin({
       //   _page: currentPage,
@@ -67,13 +81,7 @@ export const PblHomeProductContextProvider = ({ children }) => {
       //   _orderBy: 'v_id'
       // });
 
-      const res = await VehicleService.Queries.getVehiclesWithoutLogin({
-        _page: currentPage,
-        _perPage: 25,
-        _order: 'ASC',
-        _orderBy: 'v_priority',
-        _status: 'active'
-      });
+      const res = await VehicleService.Queries.getVehiclesWithoutLogin(params);
 
       if (res.status === "success") {
         const newProducts = res?.data?.data || [];
@@ -92,7 +100,7 @@ export const PblHomeProductContextProvider = ({ children }) => {
       isFetchingRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [categoryIdFromUrl]);
 
   useEffect(() => {
     const userInfo = getStoredUser();
@@ -103,11 +111,11 @@ export const PblHomeProductContextProvider = ({ children }) => {
       router.push("/");
     }
 
-    if (!hasLoadedInitialProductsRef.current) {
-      hasLoadedInitialProductsRef.current = true;
+    if (lastLoadedCategoryIdRef.current !== categoryIdFromUrl) {
+      lastLoadedCategoryIdRef.current = categoryIdFromUrl;
       getAllProduct(true);
     }
-  }, [getAllProduct, router]);
+  }, [categoryIdFromUrl, getAllProduct, router]);
 
   const value = {
     products,

@@ -1,7 +1,7 @@
 'use client'
 import VehicleService from '@/services/VehicleService';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
@@ -19,6 +19,8 @@ export const ProductContextProvider = ({ children }) => {
   const [user, setUser] = useState();
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const categoryIdFromUrl = searchParams.get("_category_id");
 
   const getAllProduct = async (reset = false) => {
     try {
@@ -29,14 +31,20 @@ export const ProductContextProvider = ({ children }) => {
       }
 
       const currentPage = reset ? 1 : page;
-      // Fetch products without login
-      const res = await VehicleService.Queries.getVehiclesWithoutLogin({
+      const params = {
         _page: currentPage,
         _perPage: 25,
         _order: 'ASC',
         _orderBy: 'v_priority',
         _status: 'active'
-      });
+      };
+
+      if (categoryIdFromUrl) {
+        params._category_id = categoryIdFromUrl;
+      }
+
+      // Fetch products without login
+      const res = await VehicleService.Queries.getVehiclesWithoutLogin(params);
 
       // console.log("res:::", res);
 
@@ -70,7 +78,7 @@ export const ProductContextProvider = ({ children }) => {
     if (!loading) {
       getAllProduct(true);
     }
-  }, [loading, user]);
+  }, [loading, user, categoryIdFromUrl]);
 
   const value = {
     products,

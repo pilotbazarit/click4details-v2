@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import ProductDetailsSlider from "@/components/frontend/ProductDetailsSlider";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { Copy, Download, Edit, Eye, GitCompare, PhoneOutgoing, Share2, ShoppingCart } from "lucide-react";
+import { Copy, Download, Edit, ExternalLink, Eye, FileText, GitCompare, Image as ImageIcon, PhoneOutgoing, Share2, ShoppingCart, X } from "lucide-react";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ProductDetailsDescription from "@/components/frontend/ProductDetailsDescription";
@@ -29,6 +29,389 @@ const formatProductDetailsDate = (date) => {
     return parsedDate.format("YYYY-MM-DD");
 };
 
+const getDocumentUrl = (doc) => {
+    if (typeof doc === "string") return doc;
+    return doc?.url || doc?.secure_url || doc?.resource_url || "";
+};
+
+const getDocumentFormat = (doc, url) => {
+    const explicitFormat = typeof doc === "object" ? doc?.format : "";
+    if (explicitFormat) return String(explicitFormat).toLowerCase();
+
+    const cleanUrl = String(url || "").split(/[?#]/)[0];
+    const extension = cleanUrl.includes(".") ? cleanUrl.split(".").pop() : "";
+    return String(extension || "").toLowerCase();
+};
+
+const getDocumentFileName = (doc, index = 0) => {
+    const url = getDocumentUrl(doc);
+    const publicId = typeof doc === "object" ? doc?.public_id : "";
+    const cleanSource = String(publicId || url || `Document ${index + 1}`).split(/[?#]/)[0];
+    const fileName = cleanSource.split("/").pop() || `Document ${index + 1}`;
+
+    try {
+        return decodeURIComponent(fileName);
+    } catch (error) {
+        return fileName;
+    }
+};
+
+const isPdfDocument = (doc, url) => {
+    const format = getDocumentFormat(doc, url);
+    return format === "pdf" || /\.pdf(?:[?#].*)?$/i.test(String(url || ""));
+};
+
+const isImageDocument = (doc, url) => {
+    const resourceType = typeof doc === "object" ? String(doc?.resource_type || "").toLowerCase() : "";
+    const format = getDocumentFormat(doc, url);
+
+    return (
+        resourceType === "image" ||
+        /^(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(format) ||
+        /\.(jpg|jpeg|png|gif|webp|bmp|svg)(?:[?#].*)?$/i.test(String(url || ""))
+    );
+};
+
+const getCloudinaryPdfPreviewUrls = (doc, url) => {
+    const sourceUrl = String(url || "");
+    if (!sourceUrl.includes("res.cloudinary.com") || !sourceUrl.includes("/raw/upload/")) {
+        return [];
+    }
+
+    const [cloudinaryBase, uploadPathWithQuery] = sourceUrl.split("/raw/upload/");
+    const uploadPath = String(uploadPathWithQuery || "").split(/[?#]/)[0];
+    if (!cloudinaryBase || !uploadPath) return [];
+
+    const withoutPdfExtension = uploadPath.replace(/\.pdf$/i, "");
+    const publicId = typeof doc === "object" ? String(doc?.public_id || "").replace(/^\/+/, "") : "";
+    const versionMatch = uploadPath.match(/^(v\d+)\//);
+    const versionPrefix = versionMatch?.[1] ? `${versionMatch[1]}/` : "";
+    const publicIdPath = publicId ? `${versionPrefix}${publicId}` : "";
+    const publicIdWithoutPdfExtension = publicIdPath.replace(/\.pdf$/i, "");
+    const imageBase = `${cloudinaryBase}/image/upload`;
+
+    return Array.from(new Set([
+        `${imageBase}/pg_1,f_jpg,q_auto/${uploadPath}`,
+        `${imageBase}/pg_1,f_png,q_auto/${uploadPath}`,
+        `${imageBase}/pg_1,f_jpg,q_auto/${withoutPdfExtension}.jpg`,
+        `${imageBase}/pg_1,f_png,q_auto/${withoutPdfExtension}.png`,
+        publicIdPath ? `${imageBase}/pg_1,f_jpg,q_auto/${publicIdPath}` : "",
+        publicIdPath ? `${imageBase}/pg_1,f_png,q_auto/${publicIdPath}` : "",
+        publicIdWithoutPdfExtension ? `${imageBase}/pg_1,f_jpg,q_auto/${publicIdWithoutPdfExtension}.jpg` : "",
+        publicIdWithoutPdfExtension ? `${imageBase}/pg_1,f_png,q_auto/${publicIdWithoutPdfExtension}.png` : "",
+    ].filter(Boolean)));
+};
+
+const normalizeSecretDocuments = (docs = []) => (
+    docs
+        .map((doc, index) => {
+            const url = getDocumentUrl(doc);
+            if (!url) return null;
+
+            const type = isPdfDocument(doc, url)
+                ? "pdf"
+                : isImageDocument(doc, url)
+                    ? "image"
+                    : "document";
+
+            return {
+                url,
+                type,
+                name: getDocumentFileName(doc, index),
+                format: getDocumentFormat(doc, url),
+                pdfPreviewUrls: type === "pdf" ? getCloudinaryPdfPreviewUrls(doc, url) : [],
+            };
+        })
+        .filter(Boolean)
+);
+
+const PdfDocumentPreview = ({ url, title, previewUrls = [] }) => {
+    const [previewUrl, setPreviewUrl] = useState("");
+    const [status, setStatus] = useState(previewUrls.length ? "image-preview" : "loading");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [imagePreviewIndex, setImagePreviewIndex] = useState(0);
+    const [tryDirectPdf, setTryDirectPdf] = useState(false);
+
+    useEffect(() => {
+        setPreviewUrl("");
+        setErrorMessage("");
+        setImagePreviewIndex(0);
+        setTryDirectPdf(false);
+        setStatus(previewUrls.length ? "image-preview" : "loading");
+    }, [url, previewUrls.length]);
+
+    useEffect(() => {
+        if (previewUrls.length && !tryDirectPdf) {
+            setStatus("image-preview");
+            return;
+        }
+
+        let isMounted = true;
+        let objectUrl = "";
+
+        const loadPdf = async () => {
+            setStatus("loading");
+            setPreviewUrl("");
+            setErrorMessage("");
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const statusText = response.status === 401
+                        ? "PDF URL is unauthorized (401)."
+                        : `PDF request failed (${response.status}).`;
+                    throw new Error(statusText);
+                }
+
+                const buffer = await response.arrayBuffer();
+                const signature = String.fromCharCode(...new Uint8Array(buffer.slice(0, 5)));
+                if (signature !== "%PDF-") {
+                    throw new Error("Response is not a valid PDF file.");
+                }
+
+                const nextObjectUrl = URL.createObjectURL(new Blob([buffer], { type: "application/pdf" }));
+
+                if (isMounted) {
+                    objectUrl = nextObjectUrl;
+                    setPreviewUrl(nextObjectUrl);
+                    setStatus("ready");
+                } else {
+                    URL.revokeObjectURL(nextObjectUrl);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    setErrorMessage(error?.message || "PDF preview is not available.");
+                    setStatus("failed");
+                }
+            }
+        };
+
+        loadPdf();
+
+        return () => {
+            isMounted = false;
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [url, previewUrls.length, tryDirectPdf]);
+
+    if (status === "image-preview" && previewUrls.length) {
+        return (
+            <div className="flex h-full min-h-[320px] w-full flex-col">
+                <div className="border-b border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
+                    Showing PDF first page preview.
+                </div>
+                <div className="min-h-0 flex-1 bg-slate-100">
+                    <img
+                        src={previewUrls[imagePreviewIndex]}
+                        alt={title}
+                        className="h-full w-full object-contain"
+                        onError={() => {
+                            if (imagePreviewIndex < previewUrls.length - 1) {
+                                setImagePreviewIndex((currentIndex) => currentIndex + 1);
+                            } else {
+                                setTryDirectPdf(true);
+                            }
+                        }}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (status === "loading") {
+        return (
+            <div className="flex h-full min-h-[320px] w-full items-center justify-center p-6 text-center">
+                <div>
+                    <FileText className="mx-auto mb-3 h-10 w-10 text-blue-600" />
+                    <p className="text-sm font-bold text-slate-900">Loading PDF...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (status === "failed") {
+        return (
+            <div className="flex h-full min-h-[320px] w-full items-center justify-center p-6 text-center">
+                <div className="max-w-md">
+                    <FileText className="mx-auto mb-3 h-10 w-10 text-amber-600" />
+                    <p className="text-sm font-bold text-slate-900">PDF preview is blocked</p>
+                    <p className="mt-2 text-xs font-medium text-slate-500">
+                        {errorMessage || "This PDF cannot be loaded from the current document URL."}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-slate-500">
+                        Cloudinary raw PDF delivery needs to be public, signed, or proxied by the backend.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <iframe
+            src={previewUrl}
+            title={title}
+            className="h-full min-h-[320px] w-full"
+        />
+    );
+};
+const SecretDocumentsModal = ({ documents, onClose }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const activeDocument = documents[activeIndex] || documents[0];
+
+    useEffect(() => {
+        const originalOverflow = document.body.style.overflow;
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        };
+
+        document.body.style.overflow = "hidden";
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener("keydown", handleEscape);
+        };
+    }, [onClose]);
+
+    useEffect(() => {
+        if (activeIndex >= documents.length) {
+            setActiveIndex(0);
+        }
+    }, [activeIndex, documents.length]);
+
+    if (!activeDocument) return null;
+
+    const activeTypeLabel = activeDocument.type === "pdf"
+        ? "PDF"
+        : activeDocument.type === "image"
+            ? "Image"
+            : "Document";
+
+    return (
+        <div
+            className="fixed inset-0 z-50 bg-slate-950/80 p-2 sm:p-4"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
+            <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                    <div>
+                        <h2 className="text-base font-bold text-slate-900">Secret Documents</h2>
+                        <p className="text-xs font-medium text-slate-500">
+                            {documents.length} file{documents.length > 1 ? "s" : ""}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-label="Close secret documents"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)]">
+                    <aside className="max-h-44 overflow-y-auto border-b border-slate-200 bg-slate-50 p-3 md:max-h-none md:border-b-0 md:border-r">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1">
+                            {documents.map((doc, index) => {
+                                const isActive = index === activeIndex;
+                                const label = doc.type === "pdf" ? "PDF" : doc.type === "image" ? "Image" : "Document";
+
+                                return (
+                                    <button
+                                        key={`${doc.url}-${index}`}
+                                        type="button"
+                                        onClick={() => setActiveIndex(index)}
+                                        className={`flex min-w-0 items-center gap-3 rounded-lg border p-3 text-left transition ${isActive
+                                            ? "border-blue-500 bg-blue-50 text-blue-900"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"}`}
+                                    >
+                                        <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${doc.type === "image"
+                                            ? "bg-emerald-50 text-emerald-600"
+                                            : "bg-blue-50 text-blue-600"}`}
+                                        >
+                                            {doc.type === "image" ? (
+                                                <ImageIcon className="h-5 w-5" />
+                                            ) : (
+                                                <FileText className="h-5 w-5" />
+                                            )}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm font-semibold">{doc.name}</span>
+                                            <span className="block text-xs font-bold uppercase text-slate-400">{label}</span>
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </aside>
+
+                    <section className="flex min-h-0 flex-1 flex-col bg-slate-100">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-slate-900">{activeDocument.name}</p>
+                                <p className="text-xs font-medium text-slate-500">{activeTypeLabel}</p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <a
+                                    href={activeDocument.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                                    title="Open in new tab"
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                </a>
+                                <a
+                                    href={activeDocument.url}
+                                    download={activeDocument.name}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                                    title="Download document"
+                                >
+                                    <Download className="h-4 w-4" />
+                                </a>
+                            </div>
+                        </div>
+
+                        <div className="min-h-0 flex-1 p-3">
+                            <div className="flex h-full min-h-[320px] items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                {activeDocument.type === "pdf" ? (
+                                    <PdfDocumentPreview
+                                        url={activeDocument.url}
+                                        title={activeDocument.name}
+                                        previewUrls={activeDocument.pdfPreviewUrls}
+                                    />
+                                ) : activeDocument.type === "image" ? (
+                                    <img
+                                        src={activeDocument.url}
+                                        alt={activeDocument.name}
+                                        className="h-full max-h-full w-full object-contain"
+                                    />
+                                ) : (
+                                    <div className="max-w-sm p-6 text-center">
+                                        <FileText className="mx-auto mb-3 h-10 w-10 text-blue-600" />
+                                        <p className="text-sm font-bold text-slate-900">{activeDocument.name}</p>
+                                        <p className="mt-1 text-xs font-medium text-slate-500">
+                                            Preview is not available for this file type.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    );
+};
 const ProductDetails = ({ productDetails }) => {
     const [sliderImage, setSliderImage] = useState([])
     const [user, setUser] = useState(null);
@@ -41,6 +424,7 @@ const ProductDetails = ({ productDetails }) => {
     const [shopModalOpen, setShopModalOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [showDocumentModal, setShowDocumentModal] = useState(false);
+    const [showSecretDocumentSlider, setShowSecretDocumentSlider] = useState(false);
 
 
     const additionalDocumentImages = useMemo(() => (
@@ -55,15 +439,20 @@ const ProductDetails = ({ productDetails }) => {
 
     
 
-    const additionalSecretDocumentImages = useMemo(() => (
-        Array.isArray(productDetails?.data?.v_secret_docs)
+    const additionalSecretDocuments = useMemo(() => {
+        const docs = Array.isArray(productDetails?.data?.v_secret_docs)
             ? productDetails.data.v_secret_docs
             : Array.isArray(productDetails?.v_secret_docs)
                 ? productDetails.v_secret_docs
-                : []
-    )
-        .map((doc) => doc?.url || doc?.secure_url)
-        .filter(Boolean), [productDetails]);
+                : [];
+
+        return normalizeSecretDocuments(docs);
+    }, [productDetails]);
+
+    const additionalSecretDocumentImages = useMemo(
+        () => additionalSecretDocuments.map((doc) => doc.url),
+        [additionalSecretDocuments]
+    );
 
 
     // console.log("productDetails?.data-----------------------", productDetails);
@@ -87,7 +476,7 @@ const ProductDetails = ({ productDetails }) => {
 
 
     const canShowAdditionalSecretDocument =
-        additionalSecretDocumentImages.length > 0 &&
+        additionalSecretDocuments.length > 0 &&
         !isMyShop &&
         !isCompanyShop &&
         (
@@ -331,8 +720,16 @@ const ProductDetails = ({ productDetails }) => {
         window.open(normalizedLink, "_blank", "noopener,noreferrer");
     };
 
-    const handleOpenAdditionalSecretDocumentModal = () => {
+    const handleOpenAdditionalSecretDocumentSlider = () => {
         if (additionalSecretDocumentImages.length === 0) {
+            toast.error("Additional secret document not available.");
+            return;
+        }
+
+        setShowSecretDocumentSlider(true);
+    };
+    const handleOpenAdditionalSecretDocumentModal = () => {
+        if (additionalSecretDocuments.length === 0) {
             toast.error("Additional secret document not available.");
             return;
         }
@@ -986,15 +1383,28 @@ const ProductDetails = ({ productDetails }) => {
                                 <div className="space-y-2">
                                     {
                                         canShowAdditionalSecretDocument && (
-                                            <div className="">
-                                                <button
-                                                    type="button"
-                                                    onClick={handleOpenAdditionalSecretDocumentModal}
-                                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                            </div>
+                                            <>
+                                                {/* <div className="">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleOpenAdditionalSecretDocumentSlider}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+                                                </div> */}
+                                                <div className="">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleOpenAdditionalSecretDocumentModal}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-700 rounded-l hover:bg-indigo-700 flex items-center gap-2"
+                                                        title="View secret documents"
+                                                        aria-label="View secret documents"
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </>
                                         )
                                     }
 
@@ -1371,11 +1781,17 @@ const ProductDetails = ({ productDetails }) => {
 
             <ProductShareModal open={shareModalOpen} setOpen={setShareModalOpen} product={productDetails} />
             <ShopSelectModal open={shopModalOpen} setOpen={setShopModalOpen} product={productDetails} />
-            {showDocumentModal && (
+            {showSecretDocumentSlider && (
                 <ModalSlider
-                    setShowModal={setShowDocumentModal}
+                    setShowModal={setShowSecretDocumentSlider}
                     images={additionalSecretDocumentImages}
                     activeIndex={0}
+                />
+            )}
+            {showDocumentModal && (
+                <SecretDocumentsModal
+                    documents={additionalSecretDocuments}
+                    onClose={() => setShowDocumentModal(false)}
                 />
             )}
         </div>
