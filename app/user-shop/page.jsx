@@ -1,5 +1,5 @@
 'use client'
-import React from "react";
+import React, { Suspense } from "react";
 import HeaderSlider from "@/components/HeaderSlider";
 import NewsLetter from "@/components/NewsLetter";
 import Navbar from "@/components/Navbar";
@@ -9,8 +9,9 @@ import MyShopProducts from "@/components/MyShopProducts";
 import Header from "@/components/Header";
 import { UserShopProductContextProvider } from "@/context/UserShopProductContext";
 import UserShopProducts from "@/components/UserShopProducts";
+import Loading from "@/components/Loading";
 
-const UserShop = () => {
+const UserShopContent = () => {
   return (
     <UserShopProductContextProvider>
       <Header />
@@ -26,6 +27,14 @@ const UserShop = () => {
       </div>
       <Footer />
     </UserShopProductContextProvider>
+  );
+};
+
+const UserShop = () => {
+  return (
+    <Suspense fallback={<Loading />}>
+      <UserShopContent />
+    </Suspense>
   );
 };
 

@@ -204,7 +204,7 @@ export default function ChatbotWidget() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-white text-sm leading-tight">Sidratul Muntaha</p>
-              <p className="text-[11px] text-white/70 mt-0.5">Pilot Bazar · Customer Service</p>
+              <p className="text-[11px] text-white/70 mt-0.5">Click4Details · Customer Service</p>
             </div>
             <button
               onClick={toggleChat}

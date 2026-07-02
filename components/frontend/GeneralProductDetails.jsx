@@ -33,7 +33,7 @@ import { useAppContext } from "@/context/AppContext";
 
 dayjs.extend(relativeTime);
 
-const DEFAULT_PHONE = "+8801969944400";
+const DEFAULT_PHONE = "+8809638660077";
 
 const parseMaybeJson = (value) => {
   if (typeof value !== "string") return value;
@@ -423,7 +423,7 @@ const GeneralProductDetails = ({ productDetails }) => {
   const shareProduct = async () => {
     const productUrl = productUrlFor(productDetails);
     const shareData = {
-      title: productDetails?.p_name || "Pilot Bazar product",
+      title: productDetails?.p_name || "Click4Details product",
       text: `${productDetails?.p_name || "Product"} - ${selectedVariant ? money(selectedVariant.sellingPrice) : ""}`,
       url: productUrl,
     };

@@ -1,12 +1,12 @@
 'use client'
-import React, { useEffect } from "react";
+import React, { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { CompanyShopProductContextProvider } from "@/context/CompanyShopProductContext";
 import CompanyShopProducts from "@/components/CompanyShopProducts";
 
-const CompanyShop = () => {
+const CompanyShopContent = () => {
   return (
     <CompanyShopProductContextProvider>
       <Header />
@@ -16,6 +16,14 @@ const CompanyShop = () => {
       </div>
       <Footer />
     </CompanyShopProductContextProvider>
+  );
+};
+
+const CompanyShop = () => {
+  return (
+    <Suspense fallback={null}>
+      <CompanyShopContent />
+    </Suspense>
   );
 };
 

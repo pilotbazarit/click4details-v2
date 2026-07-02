@@ -151,7 +151,7 @@ export default function PosReceipt({ sale, onClose }) {
                         <div className="border-t border-dashed border-gray-400 my-3" />
                         <div className="thank-you text-center text-gray-500 text-xs">
                             <p>Thank you for your purchase!</p>
-                            <p className="mt-1">Powered by Pilot Bazar</p>
+                            <p className="mt-1">Powered by Click4Details</p>
                         </div>
                     </div>
                 </div>

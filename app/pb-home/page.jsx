@@ -1,5 +1,5 @@
 'use client'
-import React, { useContext, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import HeaderSlider from "@/components/HeaderSlider";
 import NewsLetter from "@/components/NewsLetter";
 import Navbar from "@/components/Navbar";
@@ -8,8 +8,9 @@ import PblHomeProduct from "@/components/PblHomeProduct";
 import { PblHomeProductContextProvider } from "@/context/PblHomeProductContext";
 import Header from "@/components/Header";
 import { parseStoredUser } from "@/lib/parseStoredUser";
+import Loading from "@/components/Loading";
 
-const PblHome = () => {
+const PblHomeContent = () => {
   const [user, setUser] = useState();
 
   useEffect(() => {
@@ -40,6 +41,14 @@ const PblHome = () => {
       }
     
     </PblHomeProductContextProvider>
+  );
+};
+
+const PblHome = () => {
+  return (
+    <Suspense fallback={<Loading />}>
+      <PblHomeContent />
+    </Suspense>
   );
 };
 

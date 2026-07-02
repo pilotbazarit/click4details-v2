@@ -1146,7 +1146,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8801969944400";
+        const phoneNumber = user?.phone || "+8809638660077";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1278,7 +1278,7 @@ const ProductDetails = ({ productDetails }) => {
                                                     user ? (
                                                         <a href={`tel:${user?.phone}`}>{user?.phone}</a>
                                                     ) : (
-                                                        <a href="tel:+8801969944400">+8801969944400</a>
+                                                        <a href="tel:+8809638660077">+8809638660077</a>
                                                     )
                                                 }
                                             </p>
