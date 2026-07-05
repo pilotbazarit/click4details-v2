@@ -286,6 +286,16 @@ const Vehicle = () => {
     );
   };
 
+  const canShowSellerMobileToggle = (targetUser = user) => {
+    if (!targetUser) return false;
+    const targetPermissions = permissionList?.length
+      ? permissionList
+      : formatPermissions(targetUser?.permissions ?? []);
+    const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+
+    return userMode === "supreme" || hasPermission(targetPermissions, 0, "Vehicle", "Edit");
+  };
+
   const {
     register,
     handleSubmit,
@@ -603,6 +613,7 @@ const Vehicle = () => {
         "vp_show_price",
         "v_urgent_sale",
         "v_is_saleBy_pbl",
+        "v_show_seller_mobile",
         "v_location_id",
         "v_availability_id",
         "v_outlet_id",
@@ -671,6 +682,7 @@ const Vehicle = () => {
       appendFormValue(formData, "vp_show_price", data.vp_show_price || "fixed");
       appendFormValue(formData, "v_urgent_sale", data.v_urgent_sale ? 1 : 0);
       appendFormValue(formData, "v_is_saleBy_pbl", data.v_is_saleBy_pbl ? 1 : 0);
+      appendFormValue(formData, "v_show_seller_mobile", data.v_show_seller_mobile ? 1 : 0);
       // formData.append("v_to_be_partner", data.v_to_be_partner ? 1 : 0);
       appendFormValue(formData, "v_location_id", data.v_location_id ? data.v_location_id : '');
       appendFormValue(formData, "v_availability_id", data.v_availability_id ? data.v_availability_id : '');
@@ -2674,6 +2686,18 @@ const Vehicle = () => {
                             />
                           </div>
 
+                          <div className="mb-2">
+                            <label className="text-base font-medium" htmlFor="v_delivery_condition">
+                              Delivery Condition
+                            </label>
+                            <Input
+                              id="v_delivery_condition"
+                              name="v_delivery_condition"
+                              placeholder="Enter Delivery Condition"
+                              {...register("v_delivery_condition")}
+                            />
+                          </div>
+
                           <div>
                             <label className="text-base font-medium" htmlFor="customer-name">
                               Color
@@ -3100,6 +3124,40 @@ const Vehicle = () => {
                               />
                             </div>
 
+                            {/* PBL Text section */}
+                            <div className="mb-3 mt-4">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-1">PBL Text</h4>
+                              <div className="flex w-24 h-1">
+                                <div className="w-2/3 bg-green-500"></div>
+                                <div className="w-1/2 bg-gray-500/20"></div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <textarea
+                                id="v_pbl_text"
+                                name="v_pbl_text"
+                                placeholder="PBL Text"
+                                rows="4"
+                                className="outline-none py-2 px-3 rounded border w-full"
+                                {...register("v_pbl_text")}
+                              ></textarea>
+                            </div>
+
+                            {canShowSellerMobileToggle() && (
+                              <div className="mt-4 flex items-center">
+                                <input
+                                  type="checkbox"
+                                  id="v_show_seller_mobile"
+                                  className="mr-2"
+                                  {...register("v_show_seller_mobile")}
+                                />
+                                <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
+                                  Show Seller Mobile Number
+                                </label>
+                              </div>
+                            )}
+
                           </div>
                         )
                       }
@@ -3119,7 +3177,7 @@ const Vehicle = () => {
                             {...register("v_is_saleBy_pbl")}
                           />
                           <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I am click4details.comm Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                            I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                             <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                               Terms and Conditions
                             </Link>. Please Sale My Product and Increase My Profit.
@@ -3138,7 +3196,7 @@ const Vehicle = () => {
                             {...register("v_to_be_partner")}
                           />
                           <label htmlFor="partnership" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I Want to be a Partner of click4details.comm. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.comm team will Call You Soon. Or Call click4details.comm Hotline Number 01969444000 to be Our Partner. &nbsp;
+                            I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                           </label>
                         </div> */}
 

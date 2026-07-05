@@ -29,6 +29,12 @@ const formatProductDetailsDate = (date) => {
     return parsedDate.format("YYYY-MM-DD");
 };
 
+const formatLocalMobile = (value) => {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return "";
+    return trimmed.startsWith("0") ? trimmed : `0${trimmed}`;
+};
+
 const getDocumentUrl = (doc) => {
     if (typeof doc === "string") return doc;
     return doc?.url || doc?.secure_url || doc?.resource_url || "";
@@ -493,6 +499,9 @@ const ProductDetails = ({ productDetails }) => {
         isMyShop ||
         isCompanyShop ||
         (user && ["supreme", "admin", "pbl"].includes(user.user_type));
+
+    const sellerMobileNumber = formatLocalMobile(productDetails?.user?.phone);
+    const showSellerMobile = Number(productDetails?.v_show_seller_mobile) === 1 && Boolean(sellerMobileNumber);
 
     const handleCopy = (e) => {
         e.preventDefault();
@@ -1146,7 +1155,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8809638660077";
+        const phoneNumber = user?.phone || "+8801969944400";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1278,7 +1287,7 @@ const ProductDetails = ({ productDetails }) => {
                                                     user ? (
                                                         <a href={`tel:${user?.phone}`}>{user?.phone}</a>
                                                     ) : (
-                                                        <a href="tel:+8809638660077">+8809638660077</a>
+                                                        <a href="tel:+8801969944400">+8801969944400</a>
                                                     )
                                                 }
                                             </p>
@@ -1324,6 +1333,17 @@ const ProductDetails = ({ productDetails }) => {
                     <div>
                         <ProductDetailsSlider images={sliderImage} />
                     </div>
+
+                    {productDetails?.v_pbl_text && (
+                        <div className="mt-4 border rounded-lg shadow-sm overflow-hidden">
+                            <div className="flex items-center gap-2 px-4 py-3 border-b bg-gray-50">
+                                <span className="text-sm font-medium text-blue-600">PBL Text</span>
+                            </div>
+                            <div className="p-4">
+                                <p className="text-sm leading-7 text-gray-600 whitespace-pre-line">{productDetails.v_pbl_text}</p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="mt-4">
                         <div className="w-full border bg-blue-50 border-blue-100 rounded-lg shadow p-4 lg:p-6 space-y-4">
@@ -1574,6 +1594,24 @@ const ProductDetails = ({ productDetails }) => {
 
 
                 <div className="md:col-span-2 md:col-start-4 md:h-full md:min-h-0 md:overflow-y-scroll md:pl-2 md:overscroll-contain">
+                    {showSellerMobile && (
+                        <a
+                            href={`tel:${sellerMobileNumber}`}
+                            title="Call seller"
+                            className="relative flex items-center gap-3 rounded-lg border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-4 shadow-sm animate-pulse hover:shadow-md hover:animate-none transition-shadow mb-4"
+                        >
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                                <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+                                    <PhoneOutgoing className="h-5 w-5 text-white" />
+                                </span>
+                            </span>
+                            <span>
+                                <span className="block text-xs font-medium text-green-700">Seller Mobile Number</span>
+                                <span className="block text-lg font-bold tracking-wide text-green-800">{sellerMobileNumber}</span>
+                            </span>
+                        </a>
+                    )}
                     <div className="border rounded shadow-sm p-4">
                         <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
                             <h2 className="text-lg font-medium text-blue-600">Features</h2>
@@ -1699,6 +1737,15 @@ const ProductDetails = ({ productDetails }) => {
                                     <div className="col-span-3 text-base">Arrival Date :</div>
                                     <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_arrival_date)}</div>
                                 </div>
+
+                                {
+                                    productDetails?.v_delivery_condition && (
+                                        <div className="grid grid-cols-6 gap-2">
+                                            <div className="col-span-3 text-base">Delivery Condition :</div>
+                                            <div className="col-span-3 text-base font-semibold">{productDetails.v_delivery_condition}</div>
+                                        </div>
+                                    )
+                                }
 
                                 {
                                     shouldShowGdocButton && (

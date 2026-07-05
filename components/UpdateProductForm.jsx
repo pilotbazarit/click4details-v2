@@ -11,7 +11,9 @@ import VehicleService from "@/services/VehicleService";
 import ShopService from "@/services/ShopService";
 import UserService from "@/services/UserService";
 import constData from "@/lib/constant";
-import { onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { formatPermissions, onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { hasPermission } from "@/lib/utils";
+import { useAppContext } from "@/context/AppContext";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import VehicleModelService from "@/services/VehicleModelService";
@@ -217,6 +219,17 @@ const UpdateProductForm = ({ productId }) => {
     const [isCategoryListVisible, setIsCategoryListVisible] = useState(false);
     const categoryDropdownRef = useRef(null);
     const [user, setUser] = useState(null);
+    const { permissionList } = useAppContext();
+
+    const canShowSellerMobileToggle = (targetUser = user) => {
+        if (!targetUser) return false;
+        const targetPermissions = permissionList?.length
+            ? permissionList
+            : formatPermissions(targetUser?.permissions ?? []);
+        const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+
+        return userMode === "supreme" || hasPermission(targetPermissions, 0, "Vehicle", "Edit");
+    };
     const [countryData, setCountryData] = useState([]);
     const [locationData, setLocationData] = useState([]);
     const [availabilityStatusData, setAvailabilityStatusData] = useState([
@@ -1301,6 +1314,8 @@ const UpdateProductForm = ({ productId }) => {
                 setValue('v_description', data.v_description);
                 setValue('v_user_description', data.v_user_description);
                 setValue('vm_description', data?.v_metadata?.vm_description);
+                setValue('v_pbl_text', data.v_pbl_text || '');
+                setValue('v_delivery_condition', data.v_delivery_condition || '');
                 const videoData = data?.v_video;
                 const userVideo = (videoData && typeof videoData === 'object')
                     ? (videoData?.user ? String(videoData.user) : '')
@@ -1319,6 +1334,7 @@ const UpdateProductForm = ({ productId }) => {
                 setValue('v_video_gdocpbl', gdocVideo);
                 setValue('v_video_gdocuser', gdocUserVideo);
                 setValue('v_is_saleBy_pbl', data.v_is_saleBy_pbl == 1);
+                setValue('v_show_seller_mobile', Number(data.v_show_seller_mobile) === 1);
                 // setValue('v_to_be_partner', data.v_to_be_partner == 1);
             }
         } catch (error) {
@@ -1444,6 +1460,7 @@ const UpdateProductForm = ({ productId }) => {
         // ✅ Convert checkboxes  formData.append('v_edition_id', data.v_edition_id ? 1 : 0);
         data.v_urgent_sale = data.v_urgent_sale ? 1 : 0;
         data.v_is_saleBy_pbl = data.v_is_saleBy_pbl ? 1 : 0;
+        data.v_show_seller_mobile = data.v_show_seller_mobile ? 1 : 0;
         // data.v_to_be_partner = data.v_to_be_partner ? 1 : 0;
         data.v_int_grade_id = data?.v_int_grade_id ? data?.v_int_grade_id : '';
         data.v_ext_grade_id = data?.v_ext_grade_id ? data?.v_ext_grade_id : '';
@@ -1485,6 +1502,8 @@ const UpdateProductForm = ({ productId }) => {
         data.v_description = data.v_description ? data?.v_description : '';
         data.v_user_description = data.v_user_description ? data?.v_user_description : '';
         data.vm_description = data.vm_description ? data?.vm_description : '';
+        data.v_pbl_text = data.v_pbl_text ? data?.v_pbl_text : '';
+        data.v_delivery_condition = data.v_delivery_condition ? data?.v_delivery_condition : '';
         data.v_video_user = data.v_video_user ? data?.v_video_user : '';
         data.v_video_pbl = data.v_video_pbl ? data?.v_video_pbl : '';
         data.v_video_gdocpbl = data.v_video_gdocpbl ? data?.v_video_gdocpbl : '';
@@ -2057,6 +2076,18 @@ const UpdateProductForm = ({ productId }) => {
                                                 {/* {errors.v_color_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_mileage.message}</p>
                                                             )} */}
+                                            </div>
+
+                                            <div className="mb-2">
+                                                <label className="text-base font-medium" htmlFor="v_delivery_condition">
+                                                    Delivery Condition
+                                                </label>
+                                                <Input
+                                                    id="v_delivery_condition"
+                                                    name="v_delivery_condition"
+                                                    placeholder="Enter Delivery Condition"
+                                                    {...register("v_delivery_condition")}
+                                                />
                                             </div>
 
                                             <div>
@@ -3257,6 +3288,39 @@ const UpdateProductForm = ({ productId }) => {
                                                     />
                                                 </div>
 
+                                                {/* PBL Text section */}
+                                                <div className="mb-3 mt-4">
+                                                    <h4 className="text-lg font-semibold text-gray-800 mb-1">PBL Text</h4>
+                                                    <div className="flex w-24 h-1">
+                                                        <div className="w-2/3 bg-green-500"></div>
+                                                        <div className="w-1/2 bg-gray-500/20"></div>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <textarea
+                                                        id="v_pbl_text"
+                                                        name="v_pbl_text"
+                                                        placeholder="PBL Text"
+                                                        rows="4"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_pbl_text")}
+                                                    ></textarea>
+                                                </div>
+
+                                                {canShowSellerMobileToggle() && (
+                                                    <div className="mt-4 flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="v_show_seller_mobile"
+                                                            className="mr-2"
+                                                            {...register("v_show_seller_mobile")}
+                                                        />
+                                                        <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
+                                                            Show Seller Mobile Number
+                                                        </label>
+                                                    </div>
+                                                )}
 
                                             </div>
                                         )
@@ -3280,7 +3344,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("v_is_saleBy_pbl")}
                                             />
                                             <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I am click4details Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                 <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                     Terms and Conditions
                                                 </Link>. Please Sale My Product and Increase My Profit.
