@@ -3280,7 +3280,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("v_is_saleBy_pbl")}
                                             />
                                             <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                I am click4details Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                 <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                     Terms and Conditions
                                                 </Link>. Please Sale My Product and Increase My Profit.
