@@ -1,16 +1,18 @@
 "use client";
 
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import CustomerService from "@/services/CustomerService";
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import CustomerModal from "../modals/CustomerModal";
 import EditCustomerModal from "../modals/EditCustomerModal";
 import LoadingSpinner from "../ui/LoadingSpinner";
+import { hasPermission } from "@/lib/utils";
 
 const getPaginationNumbers = (currentPage, lastPage) => {
   const delta = 2;
@@ -35,15 +37,14 @@ const getPaginationNumbers = (currentPage, lastPage) => {
 };
 
 const CustomersDataTable = () => {
-  const { user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const { permissionList, user } = useAppContext();
+  const parsedUser = parseStoredUser(user);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentCustomer, setCurrentCustomer] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -65,6 +66,12 @@ const CustomersDataTable = () => {
   const [search, setSearch] = useState("");
 
   const CUSTOMERS_API = `${API_URL}api/customers`;
+
+
+  const canShowAddCategoryButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Customer", "ShowCustomerAddButton")
+
 
   const fetchData = useCallback(async () => {
     try {
@@ -134,38 +141,6 @@ const CustomersDataTable = () => {
     return () => clearTimeout(timeoutId);
   }, [search, fetchData]);
 
-  const handleAddEdit = async (customerData) => {
-    try {
-      const formattedData = {
-        name: customerData.name,
-        mobile: customerData.mobile,
-        email: customerData.email,
-        date_of_birth: customerData.date_of_birth,
-        anniversary_date: customerData.anniversary_date,
-        facebook_link: customerData.facebook_link,
-        address: customerData.address,
-        created_by: customerData.created_by,
-        updated_by: customerData.updated_by,
-      };
-
-      if (currentCustomer) {
-        const response = await CustomerService.Commands.updateCustomer(currentCustomer.id, formattedData);
-        toast.success(response.data.message || "Customer updated successfully");
-      } else {
-        const response = await CustomerService.Commands.storeCustomer(formattedData);
-        toast.success(response.data.message || "Customer created successfully");
-      }
-
-      setCurrentCustomer(null);
-      setIsModalOpen(false);
-      fetchData();
-    } catch (err) {
-      // Always re-throw the error so the modal can handle it properly
-      // The modal will show appropriate error messages (validation or general)
-      throw err;
-    }
-  };
-
   const handleDelete = async (id) => {
     setCustomerToDeleteId(id);
     setShowConfirmDialog(true);
@@ -191,12 +166,7 @@ const CustomersDataTable = () => {
 
   const openAddModal = () => {
     setCurrentCustomer(null);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setCurrentCustomer(null);
+    setIsEditModalOpen(true);
   };
 
   const closeEditModal = () => {
@@ -228,19 +198,18 @@ const CustomersDataTable = () => {
     setCurrentPage(1);
   };
 
-  const handleCustomerNameClick = (customerId) => {
-    router.push(`/dashboard/customers/${customerId}`);
-  };
-
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
     <div className="w-full p-6 space-y-6 bg-gray-50">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold mb-4">Customers</h1>
-        <button className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 hover:bg-blue-600" onClick={openAddModal}>
-          Add New Customer
-        </button>
+        
+        {canShowAddCategoryButton && (
+          <button className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 hover:bg-blue-600" onClick={openAddModal}>
+            Add New Customer
+          </button>
+        )}
       </div>
 
       {/* Search and Controls */}
@@ -336,13 +305,13 @@ const CustomersDataTable = () => {
                   return (
                     <tr key={customer.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button
-                          onClick={() => handleCustomerNameClick(customer.id)}
+                        <Link
+                          href={`/dashboard/customers/${customer.id}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer flex items-center space-x-1"
                         >
                           <span>{customer.name}</span>
                           <ExternalLink className="w-3 h-3" />
-                        </button>
+                        </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.mobile}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.client_seriousness?.md_title || "-"}</td>
@@ -455,11 +424,9 @@ const CustomersDataTable = () => {
         </div>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && <CustomerModal isOpen={isModalOpen} onClose={closeModal} onSubmitCustomer={handleAddEdit} customer={currentCustomer} />}
-
-      {/* Edit Modal */}
-      {isEditModalOpen && <EditCustomerModal isOpen={isEditModalOpen} onClose={closeEditModal} customer={currentCustomer} onSuccess={fetchData} />}
+      {isEditModalOpen && (
+        <EditCustomerModal isOpen={isEditModalOpen} onClose={closeEditModal} customer={currentCustomer} onSuccess={fetchData} />
+      )}
 
       {/* Delete Confirmation */}
       {showConfirmDialog && (

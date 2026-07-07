@@ -6,7 +6,7 @@ const HeaderSlider = () => {
   const sliderData = [
     {
       id: 1,
-      title: "গাড়ি বাড়ি জমি ক্রয় বিক্রয়ে একমাত্র ঠিকানা click4detils.com",
+      title: "গাড়ি বাড়ি জমি ক্রয় বিক্রয়ে একমাত্র ঠিকানা click4details.com",
       offer: "",
       buttonText1: "যোগাযোগ করুন",
       buttonText2: "09638660077",

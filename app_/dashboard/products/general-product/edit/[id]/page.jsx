@@ -490,6 +490,7 @@ const GeneralProductEdit = (productId) => {
     const selectedCountryId = watch("country");
     const selectedProductTypeId = watch("p_type_id");
 
+
     // console.log("00000000000000000000000000, ", selectedProductTypeId)
     // console.log("selectedProductTypeId, selectedModelId", watch("model"))
 
@@ -974,7 +975,7 @@ const GeneralProductEdit = (productId) => {
 
     const onSubmit = async (data) => {
         setIsSubmitting(true);
-        console.log("Data", data);
+        // console.log("Data", data);
         const formData = new FormData();
         formData.append("p_name", data.productName || '');
         // formData.append("p_code", data.code);
@@ -1727,9 +1728,12 @@ const GeneralProductEdit = (productId) => {
                                             </button>
                                         </div>
                                     ))}
-                                    {[...Array(12 - imagesPreview.length)].map((_, index) => (
-                                        <div key={`placeholder-${index}`} className="h-28 w-28 flex items-center justify-center rounded-md shadow-lg bg-gray-100 border border-gray-300 text-gray-400 text-2xl">
-                                            <span className="">+</span>
+                                    {imagesPreview.length < 12 && [...Array(12 - imagesPreview.length)].map((_, index) => (
+                                        <div
+                                            key={`placeholder-${index}`}
+                                            className="h-28 w-28 flex items-center justify-center rounded-md shadow-lg bg-gray-100 border border-gray-300 text-gray-400 text-2xl"
+                                        >
+                                            <span>+</span>
                                         </div>
                                     ))}
                                 </div>
@@ -1754,7 +1758,7 @@ const GeneralProductEdit = (productId) => {
 
                     {/* ----------Section One---------- */}
                     <div>
-                        <h1 className="text-2xl font-medium mb-4 border-b pb-2">Product Price</h1>
+                        <h1 className="text-2xl font-medium mb-4 border-b pb-2"></h1>
                         {/* ----------Product Price------------- */}
                         {priceFields.map((field, index) => (
                             <div key={field.id} className="border rounded-lg p-4 bg-white shadow-sm mb-4">
@@ -1972,6 +1976,7 @@ const GeneralProductEdit = (productId) => {
                 setFormData={setFormData}
                 featureData={featureData}
                 setSelectedFsId={setSelectedFsId}
+                user={user}
             />
         </div>
     );

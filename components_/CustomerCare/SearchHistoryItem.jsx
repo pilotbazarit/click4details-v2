@@ -13,6 +13,7 @@ const SearchHistoryItem = ({
   handleOpenModal, // This will be for non-consolidated items
   onDelete,
   allLocations,
+  allShops,
 }) => {
   const router = useRouter();
 
@@ -98,6 +99,18 @@ const SearchHistoryItem = ({
       addDisplayEntry("Location", locationNames);
     }
 
+    // Add this block for Shops
+    if (parsed.shops && Array.isArray(parsed.shops) && allShops && allShops.length > 0) {
+      const shopNames = parsed.shops
+        .map((shopId) => {
+          const foundShop = allShops.find((shop) => shop.value === shopId || shop.value === String(shopId));
+          return foundShop ? foundShop.label : null;
+        })
+        .filter((name) => name !== null)
+        .join(", ");
+      addDisplayEntry("Shops", shopNames);
+    }
+
     // Add all other parameters
     Object.entries(parsed).forEach(([key, value]) => {
       // Only display if the key is not in the list of already displayed "names" fields
@@ -134,6 +147,7 @@ const SearchHistoryItem = ({
           "history_id", // Exclude 'history_id' field
           "customerMobile", // Exclude 'customerMobile' field
           "location", // Exclude 'location' field as it's handled separately
+          "shops", // Exclude 'shops' field as it's handled separately
         ].includes(key)
       ) {
         addDisplayEntry(key, value);

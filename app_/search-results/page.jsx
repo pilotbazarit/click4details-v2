@@ -7,8 +7,10 @@ import { useSearchParams, usePathname } from 'next/navigation';
 import { useEffect, useState } from "react";
 import SearchService from "@/services/SearchService";
 import Loading from "@/components/Loading";
+import { useAppContext } from "@/context/AppContext";
 
 const SearchResultsContent = () => {
+  const { user, parsedUser } = useAppContext();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const [products, setProducts] = useState([]);
@@ -37,6 +39,8 @@ const SearchResultsContent = () => {
     });
   }, [userIdParam, sourceParam, shopIdParam]);
 
+
+
   // Listen for custom event when search is triggered from Navbar (when already on search-results page)
   useEffect(() => {
     const handleSearchQueryChanged = (event) => {
@@ -45,7 +49,7 @@ const SearchResultsContent = () => {
       const newUserId = url.searchParams.get('user_id');
       const newSource = url.searchParams.get('source');
       const newShopId = url.searchParams.get('_shop_id');
-      
+
       if (newQuery && newQuery !== searchQuery) {
         // Update query and reset state
         setSearchQuery(newQuery);
@@ -85,7 +89,7 @@ const SearchResultsContent = () => {
       const userId = searchParamsState.userId || userIdParam;
       const source = searchParamsState.source || sourceParam;
       const shopId = searchParamsState.shopId || shopIdParam;
-      
+
       if (userId) {
         params.user_id = userId;
       }
@@ -136,6 +140,12 @@ const SearchResultsContent = () => {
     };
   }, [hasMore, loading]);
 
+
+  
+
+
+  // console.log("=======user from sourceParam-========: search result 147", searchParamsState);
+
   return (
     <>
       <Navbar />
@@ -145,6 +155,12 @@ const SearchResultsContent = () => {
           <p className="text-lg text-gray-600">Discover products matching your search criteria.</p>
           <div className="w-24 h-1 bg-orange-600 rounded-full mt-4"></div>
         </div>
+
+         {/* {
+           console.log("sourceParam: 160", sourceParam)
+         } */}
+
+
         <div className="
               grid 
           grid-cols-1          
@@ -163,7 +179,7 @@ const SearchResultsContent = () => {
           max-w-screen-5xl"
         >
           {products.map((product, index) => (
-            <ProductCard key={index} product={product} />
+            <ProductCard key={index} product={product} parsedUser={parsedUser} sourceParam={sourceParam} />
           ))}
         </div>
 
@@ -199,6 +215,7 @@ const SearchResultsContent = () => {
 };
 
 const SearchResults = () => {
+
   return (
     <Suspense fallback={<Loading />}>
       <SearchResultsContent />

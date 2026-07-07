@@ -13,7 +13,7 @@ import * as yup from "yup";
 import VehicleService from "@/services/VehicleService";
 import ShopService from "@/services/ShopService";
 import constData from "@/lib/constant";
-import { onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { formatPermissions, onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import VehicleModelService from "@/services/VehicleModelService";
@@ -29,6 +29,8 @@ import { hasPermission } from "@/lib/utils";
 import VehiclePricingSection from "@/components/pricing/VehiclePricingSection";
 import CategoryService from "@/services/CategoryService";
 import { ChevronDown, ChevronRight } from "lucide-react";
+
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 // Yup Validation Schema
 const schema = yup.object().shape({
@@ -188,7 +190,7 @@ const Vehicle = () => {
   const [featureData, setFeatureData] = useState([]);
   const [featureModalShow, setFeatureModalShow] = useState(false);
   const [fontImageError, setFontImageError] = useState(false);
-  const [showAdditionalFields, setShowAdditionalFields] = useState(true);
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
   const [user, setUser] = useState(null);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isPackageLoading, setIsPackageLoading] = useState(false);
@@ -209,6 +211,14 @@ const Vehicle = () => {
       value: "booked",
       label: "Booked",
     },
+    {
+      value: "hold",
+      label: "Hold",
+    },
+    {
+      value: "slightly_negotiable",
+      label: "Slightly Negotiable",
+    }
   ]);
 
 
@@ -251,6 +261,40 @@ const Vehicle = () => {
 
 
   const router = useRouter();
+
+  const getStoredUser = () => {
+    try {
+      return parseStoredUser(localStorage.getItem("user"));
+    } catch {
+      return null;
+    }
+  };
+
+  const canAllShopView = (targetUser = user) => {
+    if (!targetUser) return false;
+    const targetPermissions = permissionList?.length
+      ? permissionList
+      : formatPermissions(targetUser?.permissions ?? []);
+    const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+
+    return (
+      userMode === "supreme" ||
+      (
+        (userMode === "pbl" || userMode === "admin") &&
+        hasPermission(targetPermissions, 0, "Vehicle", "AllShopView")
+      )
+    );
+  };
+
+  const canShowSellerMobileToggle = (targetUser = user) => {
+    if (!targetUser) return false;
+    const targetPermissions = permissionList?.length
+      ? permissionList
+      : formatPermissions(targetUser?.permissions ?? []);
+    const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+
+    return userMode === "supreme" || hasPermission(targetPermissions, 0, "Vehicle", "Edit");
+  };
 
   const {
     register,
@@ -569,6 +613,7 @@ const Vehicle = () => {
         "vp_show_price",
         "v_urgent_sale",
         "v_is_saleBy_pbl",
+        "v_show_seller_mobile",
         "v_location_id",
         "v_availability_id",
         "v_outlet_id",
@@ -637,6 +682,7 @@ const Vehicle = () => {
       appendFormValue(formData, "vp_show_price", data.vp_show_price || "fixed");
       appendFormValue(formData, "v_urgent_sale", data.v_urgent_sale ? 1 : 0);
       appendFormValue(formData, "v_is_saleBy_pbl", data.v_is_saleBy_pbl ? 1 : 0);
+      appendFormValue(formData, "v_show_seller_mobile", data.v_show_seller_mobile ? 1 : 0);
       // formData.append("v_to_be_partner", data.v_to_be_partner ? 1 : 0);
       appendFormValue(formData, "v_location_id", data.v_location_id ? data.v_location_id : '');
       appendFormValue(formData, "v_availability_id", data.v_availability_id ? data.v_availability_id : '');
@@ -661,13 +707,11 @@ const Vehicle = () => {
       appendFormValue(formData, "vp_user_variable_price", data.vp_user_variable_price ? data.vp_user_variable_price : '');
       appendFormValue(formData, "vp_pbl_additional_amount", data.vp_pbl_additional_amount ? data.vp_pbl_additional_amount : '');
       // formData.append('v_user_mode', data.v_user_mode ? data.v_user_mode : '');
-      appendFormValue(formData, "vp_pbl_price_status", data.vp_pbl_price_status ? 1 : 0);
-      appendFormValue(formData, "vp_pbl_hs_price_status", data.vp_pbl_hs_price_status ? 1 : 0);
+      appendFormValue(formData, "vp_pbl_price_status", data.vp_pbl_price_status || '');
       appendFormValue(formData, "v_int_grade_id", data.v_int_grade_id ? data.v_int_grade_id : '');
       appendFormValue(formData, "v_ext_grade_id", data.v_ext_grade_id ? data.v_ext_grade_id : '');
       appendFormValue(formData, "v_condition_id", data.v_condition_id ? data.v_condition_id : '');
       appendFormValue(formData, "v_transmission_id", data.v_transmission_id ? data.v_transmission_id : '');
-      appendFormValue(formData, "v_fuel_id", data.v_fuel_id ? data.v_fuel_id : '');
       appendFormValue(formData, "v_grade_id", data.v_grade_id ? data.v_grade_id : '');
       appendFormValue(formData, "v_skeleton_id", data.v_skeleton_id ? data.v_skeleton_id : '');
       appendFormValue(formData, "v_color_id", data.v_color_id ? data.v_color_id : '');
@@ -729,33 +773,6 @@ const Vehicle = () => {
         }
       } else {
         setLoading(true);
-
-        appendFormValue(formData, "v_int_grade_id", data?.v_int_grade_id || '');
-        appendFormValue(formData, "v_ext_grade_id", data.v_ext_grade_id || '');
-        appendFormValue(formData, "v_condition_id", data.v_condition_id || '');
-        appendFormValue(formData, "v_transmission_id", data.v_transmission_id || '');
-        appendFormValue(formData, "v_fuel_id", data.v_fuel_id || '');
-        appendFormValue(formData, "v_grade_id", data.v_grade_id || '');
-        appendFormValue(formData, "v_skeleton_id", data.v_skeleton_id || '');
-        appendFormValue(formData, "v_color_id", data.v_color_id || '');
-        appendFormValue(formData, "v_edition_id", data.v_edition_id || '');
-
-        appendFormValue(formData, "v_availability_id", data.v_availability_id || '');
-        appendFormValue(formData, "v_capacity", data.v_capacity || '');
-        appendFormValue(formData, "v_mileage", data.v_mileage || '');
-        appendFormValue(formData, "v_registration", data.v_registration || '');
-        appendFormValue(formData, "v_mod_year", data.v_mod_year || '');
-
-        appendFormValue(formData, "v_seat_id", data.v_seat_id || '');
-        appendFormValue(formData, "vp_user_purchase_price", data.vp_user_purchase_price || '');
-        appendFormValue(formData, "vp_user_to_pbl_price", data.vp_user_to_pbl_price || '');
-        appendFormValue(formData, "vp_user_fixed_price", data.vp_user_fixed_price || '');
-        appendFormValue(formData, "vp_user_asking_price", data.vp_user_asking_price || '');
-        appendFormValue(formData, "vp_user_variable_price", data.vp_user_variable_price || '');
-        appendFormValue(formData, "vp_pbl_additional_amount", data.vp_pbl_additional_amount || '');
-        appendFormValue(formData, "vp_pbl_price_status", data.vp_pbl_price_status ? 1 : 0);
-        appendFormValue(formData, "vp_pbl_hs_price_status", data.vp_pbl_hs_price_status ? 1 : 0);
-
 
         selectedFsId.forEach((fsId) => {
           formData.append("v_fs[]", fsId);
@@ -935,10 +952,9 @@ const Vehicle = () => {
   // shop data get from api
   const getShopData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const activeUser = user || getStoredUser();
 
+      
 
       // Build request params conditionally
       const params = {
@@ -946,7 +962,7 @@ const Vehicle = () => {
         orderBy: "md_id",
         _page: 1,
         _perPage: 1000,
-        ...(user?.user_mode !== "admin" && { _user_id: user?.id }),
+        ...(!canAllShopView(activeUser) && activeUser?.id && { _user_id: activeUser.id }),
         // _user_id: user?.id,
         // ...(user.user_mode !== "pbl" && user.user_mode !== "supreme" && { _user_id: user?.id })
       };
@@ -975,11 +991,6 @@ const Vehicle = () => {
   // getPartnerData
   const getPartnerData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
-
-
       // Build request params conditionally
       const params = {
         order: "desc",
@@ -1552,10 +1563,9 @@ const Vehicle = () => {
 
   useEffect(() => {
 
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
     }
 
     getShopData();
@@ -2434,7 +2444,7 @@ const Vehicle = () => {
                                   PBL Price Negotiation
                                 </label>
                                 <Controller
-                                  name="vp_pbl_hs_price_status"
+                                  name="vp_pbl_price_status"
                                   control={control}
                                   render={({ field }) => (
                                     <Select
@@ -2673,6 +2683,18 @@ const Vehicle = () => {
                               placeholder="Enter Mileage"
                               {...register("v_mileage")}
                               onKeyDown={onlyNumberInput}
+                            />
+                          </div>
+
+                          <div className="mb-2">
+                            <label className="text-base font-medium" htmlFor="v_delivery_condition">
+                              Delivery Condition
+                            </label>
+                            <Input
+                              id="v_delivery_condition"
+                              name="v_delivery_condition"
+                              placeholder="Enter Delivery Condition"
+                              {...register("v_delivery_condition")}
                             />
                           </div>
 
@@ -3102,6 +3124,40 @@ const Vehicle = () => {
                               />
                             </div>
 
+                            {/* PBL Text section */}
+                            <div className="mb-3 mt-4">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-1">PBL Text</h4>
+                              <div className="flex w-24 h-1">
+                                <div className="w-2/3 bg-green-500"></div>
+                                <div className="w-1/2 bg-gray-500/20"></div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <textarea
+                                id="v_pbl_text"
+                                name="v_pbl_text"
+                                placeholder="PBL Text"
+                                rows="4"
+                                className="outline-none py-2 px-3 rounded border w-full"
+                                {...register("v_pbl_text")}
+                              ></textarea>
+                            </div>
+
+                            {canShowSellerMobileToggle() && (
+                              <div className="mt-4 flex items-center">
+                                <input
+                                  type="checkbox"
+                                  id="v_show_seller_mobile"
+                                  className="mr-2"
+                                  {...register("v_show_seller_mobile")}
+                                />
+                                <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
+                                  Show Seller Mobile Number
+                                </label>
+                              </div>
+                            )}
+
                           </div>
                         )
                       }
@@ -3121,7 +3177,7 @@ const Vehicle = () => {
                             {...register("v_is_saleBy_pbl")}
                           />
                           <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                            I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                             <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                               Terms and Conditions
                             </Link>. Please Sale My Product and Increase My Profit.
@@ -3140,7 +3196,7 @@ const Vehicle = () => {
                             {...register("v_to_be_partner")}
                           />
                           <label htmlFor="partnership" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                            I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                           </label>
                         </div> */}
 

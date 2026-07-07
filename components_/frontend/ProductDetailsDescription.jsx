@@ -1,7 +1,21 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 // import { usePathname } from "next/navigation";
 
 const ProductDetailsDescription = ({ productDetails, basePath }) => {
+    const descriptionTitle = basePath == '/product/my-shop' ? "Description (User)" : "Description (PB)";
+    const descriptionTabs = [
+        { key: "description", label: descriptionTitle },
+        ...(basePath == '/product' ? [
+            { key: "special", label: "Special Description (PB)" },
+            { key: "warranty", label: "Warranty" },
+        ] : []),
+    ];
+    const [activeDescriptionTab, setActiveDescriptionTab] = useState("description");
+    const visibleDescriptionTab = descriptionTabs.some((tab) => tab.key === activeDescriptionTab)
+        ? activeDescriptionTab
+        : "description";
     // console.log("user", basePath);
 
     // const pathname = usePathname();
@@ -18,8 +32,32 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
     return (
         <div>
             <div className="space-y-6">
+                <div className="border rounded shadow-sm mt-4 overflow-hidden">
+                    <div className="flex flex-wrap gap-2 border-b bg-white p-2" role="tablist">
+                        {descriptionTabs.map((tab) => {
+                            const isActive = visibleDescriptionTab === tab.key;
+
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    onClick={() => setActiveDescriptionTab(tab.key)}
+                                    className={
+                                        isActive
+                                            ? "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+                                            : "rounded-md px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+                                    }
+                                >
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
                 {/* Description */}
-                <div className="border rounded shadow-sm p-4 mt-4">
+                <div className={visibleDescriptionTab === "description" ? "border rounded shadow-sm p-4" : "hidden"}>
                     {
                         basePath == '/product/my-shop' ? (
                             <h2 className="ext-md font-medium text-blue-700 mb-4 border-b pb-2"> Description (User)</h2>
@@ -46,7 +84,7 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                     basePath == '/product' && (
                         <>
                             {/* SEO Description */}
-                            <div className="border rounded shadow-sm p-4">
+                            <div className={visibleDescriptionTab === "special" ? "border rounded shadow-sm p-4" : "hidden"}>
                                 <h2 className="text-md font-medium text-blue-700 mb-4 border-b pb-2">Special Description (PB)</h2>
 
                                 <div className="text-sm font-small space-y-2 leading-normal">
@@ -59,22 +97,22 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                                         গাড়ি ক্রয়ের সঠিক পরামর্শ এবং তথ্য প্রদান।
                                     </p>
 
-                                    {/* <div className="mt-4 font-bold">Social Media:</div>
+                                    <div className="mt-4 font-bold">Social Media:</div>
 
                                     <p>
-                                        Fb Page Click4details : https://rb.gy/f7srjcFb Page Click4details : https://rb.gy/psidwuFb
+                                        Fb Page Click4Details Automobiles : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
                                         Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : click4details
-                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4details Please Visit
+                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4Details Automobiles Please Visit
                                         Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
-                                        find us by : Click4details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
-                                    </p> */}
+                                        find us by : Click4Details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
+                                    </p>
 
                                     <div className="mt-4 font-bold">𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡</div>
                                 </div>
                             </div>
 
                             {/* Warranty */}
-                            <div className="border rounded shadow-sm p-4">
+                            <div className={visibleDescriptionTab === "warranty" ? "border rounded shadow-sm p-4" : "hidden"}>
                                 <h2 className="text-md font-medium text-blue-700 mb-4 border-b pb-2">Warranty </h2>
 
                                 <div className="text-sm font-small space-y-2 leading-normal">
@@ -86,15 +124,15 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                                         গাড়ি ক্রয়ের সঠিক পরামর্শ এবং তথ্য প্রদান।
                                     </p>
 
-                                    {/* <div className="mt-4 font-bold">Social Media:</div>
+                                    <div className="mt-4 font-bold">Social Media:</div>
 
                                     <p>
-                                        Fb Page Click4details : https://rb.gy/f7srjcFb Page Click4details : https://rb.gy/psidwuFb
+                                        Fb Page Click4Details Automobiles : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
                                         Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : click4details
-                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4details Please Visit
+                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4Details Automobiles Please Visit
                                         Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
-                                        find us by : Click4details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
-                                    </p> */}
+                                        find us by : Click4Details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
+                                    </p>
 
                                     <div className="mt-4 font-bold">𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡</div>
                                 </div>

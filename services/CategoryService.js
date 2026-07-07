@@ -25,6 +25,7 @@ const Commands = {
 const Queries = {
     // getVehicles: () => commandApi.get("/api/partner-vehicle", {}),
     getCategories: (params) => commandApi.get(`/api/category`, { params }),
+    getCategoryChildren: (parentId) => commandApi.get(`/api/category/children/${parentId}`),
 
     // getModelsByBrand: (params) => commandApi.get(`/api/vehicle-model`, { params }),
     // getModelsByBrand: (brandId) => commandApi.get(`/api/vehicle-model`, { params: { p_brand_id: brandId } }),

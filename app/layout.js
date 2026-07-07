@@ -10,8 +10,8 @@ import "./globals.css";
 const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500"] });
 
 export const metadata = {
-  title: "click4Details - Your one-stop shop for everything",
-  description: "click4Details - Your one-stop shop for everything",
+  title: "Pilot Bazar",
+  description: "Pilot Bazar - Your one-stop shop for everything",
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -21,11 +21,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body className={`${outfit.className} antialiased text-gray-700 debug-screens`}>
+      <body className={`${outfit.className} antialiased text-gray-700 debug-screens`} suppressHydrationWarning>
         {/* <MouseTrail /> */}
         <Toaster position="top-right" />
         <AppContextProvider>

@@ -83,15 +83,15 @@ const GeneralProductDetailsDescription = ({ productDetails, basePath }) => {
                                         গাড়ি ক্রয়ের সঠিক পরামর্শ এবং তথ্য প্রদান।
                                     </p>
 
-                                    {/* <div className="mt-4 font-bold">Social Media:</div>
+                                    <div className="mt-4 font-bold">Social Media:</div>
 
                                     <p>
-                                        Fb Page Click4Details : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
+                                        Fb Page Click4Details Automobiles : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
                                         Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : click4details
-                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4details Please Visit
+                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4Details Automobiles Please Visit
                                         Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
-                                        find us by : Click4details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
-                                    </p> */}
+                                        find us by : Click4Details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
+                                    </p>
 
                                     <div className="mt-4 font-bold">𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡</div>
                                 </div>
@@ -110,15 +110,15 @@ const GeneralProductDetailsDescription = ({ productDetails, basePath }) => {
                                         গাড়ি ক্রয়ের সঠিক পরামর্শ এবং তথ্য প্রদান।
                                     </p>
 
-                                    {/* <div className="mt-4 font-bold">Social Media:</div> */}
+                                    <div className="mt-4 font-bold">Social Media:</div>
 
-                                    {/* <p>
-                                        Fb Page Click4details : https://rb.gy/f7srjcFb Page Click4details : https://rb.gy/psidwuFb
+                                    <p>
+                                        Fb Page Click4Details Automobiles : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
                                         Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : click4details
-                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4details Please Visit
+                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4Details Automobiles Please Visit
                                         Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
-                                        find us by : Click4details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
-                                    </p> */}
+                                        find us by : Click4Details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
+                                    </p>
 
                                     <div className="mt-4 font-bold">𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡</div>
                                 </div>

@@ -1,12 +1,13 @@
 'use client'
-import React from "react";
+import React, { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { MemberShopProductContextProvider } from "@/context/MemberShopProductContext";
 import MemberShopProducts from "@/components/MemberShopProducts";
+import Loading from "@/components/Loading";
 
-const MemberShop = () => {
+const MemberShopContent = () => {
   return (
     <MemberShopProductContextProvider>
       <Header />
@@ -22,6 +23,14 @@ const MemberShop = () => {
       </div>
       <Footer />
     </MemberShopProductContextProvider>
+  );
+};
+
+const MemberShop = () => {
+  return (
+    <Suspense fallback={<Loading />}>
+      <MemberShopContent />
+    </Suspense>
   );
 };
 

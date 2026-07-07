@@ -1,15 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Loading from '@/components/Loading';
 import Footer from "@/components/dashboard/Footer";
 import { Button } from "@/components/ui/button";
 import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
-import ShopModal from "@/components/modals/ShopModal";
-import StoreService from "@/services/ShopService";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import constData from "@/lib/constant";
-import api from "@/lib/api";
 
 import {
   Table,
@@ -21,39 +17,67 @@ import {
 } from "@/components/ui/table";
 
 import toast from "react-hot-toast";
-import VehicleModelModal from "@/components/modals/VehicleModelModal";
 import VehicleModelService from "@/services/VehicleModelService";
 import PackageModal from "@/components/modals/PackageModal";
 import PackageService from "@/services/PackageService";
 import Swal from "sweetalert2";
 import MasterDataService from "@/services/MasterDataService";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const Model = () => {
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [query, setQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [packages, setPackages] = useState([]);
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [open, setOpen] = useState(false);
-  const [shops, setShops] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const { permissionList, user } = useAppContext();
 
+
+  const canShowAddPackageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Package", "ShowPackageAddButton")
+
+  const canShowEditPackageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Package", "ShowPackageEditButton")
+
+  const canShowDeletePackageButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Package", "ShowPackageDeleteButton")
 
   useEffect(() => {
-    getPackages();
     getBrands();
     getModels();
   }, []);
 
-  const getPackages = async () => {
+  const getPackages = async (
+    value = searchQuery,
+    page = currentPage,
+    perPage = itemsPerPage
+  ) => {
     try {
       setLoading(true);
       const response = await PackageService.Queries.getPackages({
-        _page: 1,
-        _perPage: 1000
+        _page: page,
+        _perPage: perPage,
+        _name: value,
       });
-      setPackages(response?.data?.data);
-      setLoading(false);
+
+      if (response?.status == "success") {
+        setTotalItems(response?.data?.total);
+        setPackages(response?.data?.data || []);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        toast.error(response?.data?.message || "Failed to fetch packages");
+      }
     } catch (error) {
       setLoading(false);
       toast.error(
@@ -98,8 +122,9 @@ const Model = () => {
   }
 
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+  const fetchSearchResults = () => {
+    setCurrentPage(1);
+    setSearchQuery(query.trim());
   };
 
   // const filteredItem = packages.filter((item) =>
@@ -147,34 +172,66 @@ const Model = () => {
     }
   };
 
+  useEffect(() => {
+    getPackages(searchQuery, currentPage, itemsPerPage);
+  }, [searchQuery, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    if (query.trim() === "" && searchQuery !== "") {
+      setCurrentPage(1);
+      setSearchQuery("");
+    }
+  }, [query, searchQuery]);
+
+  const handleClearSearch = () => {
+    setCurrentPage(1);
+    setSearchQuery("");
+  };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+
   return (
     <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
       <main className="mx-auto bg-white rounded-lg shadow-lg border border-gray-200 p-6 my-6 w-full">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <h2 className="text-xl text-gray-800">All Packages</h2>
-          <Button
-            onClick={() => {
-              setOpen(true);
-              setSelectedModel(null);
-            }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <svg
-              className="w-5 h-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Packages
-          </Button>
+          {
+            canShowAddPackageButton && (
+              <Button
+                onClick={() => {
+                  setOpen(true);
+                  setSelectedModel(null);
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Packages
+              </Button>
+            )
+          }
+
         </div>
 
         {/* Search Filter */}
-        <TableFilter searchTerm={searchTerm} setSearchTerm={handleSearchChange} />
+        <TableFilter
+          query={query}
+          setQuery={setQuery}
+          setCurrentPage={setCurrentPage}
+          fetchSearchResults={fetchSearchResults}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
+          placeholder="Search by name..."
+          onClearSearch={handleClearSearch}
+        />
 
         {/* Table Container */}
         <div className="overflow-x-auto rounded-md border border-gray-300 mt-4">
@@ -209,27 +266,38 @@ const Model = () => {
               {packages?.length > 0 ? (
                 packages.map((item, index) => (
                   <TableRow key={item.id || index} className="border-b border-gray-200">
-                    <TableCell className="border-r border-gray-200 text-center">{index + 1}</TableCell>
+                    <TableCell className="border-r border-gray-200 text-center">{startIndex + index + 1}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item?.p_brand_name}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item?.p_model_name}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item?.p_name}</TableCell>
 
                     <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-800"
-                        aria-label={`Edit shop ${item.p_name}`}
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        // Add delete handler here
-                        onClick={() => handleDelete(item?.p_id)}
-                        className="text-red-600 hover:text-red-800"
-                        aria-label={`Delete shop ${item.p_name}`}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+
+                      {
+                        canShowEditPackageButton && (
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                            aria-label={`Edit shop ${item.p_name}`}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )
+                      }
+
+                      {
+                        canShowDeletePackageButton && (
+                          <button
+                            // Add delete handler here
+                            onClick={() => handleDelete(item?.p_id)}
+                            className="text-red-600 hover:text-red-800"
+                            aria-label={`Delete shop ${item.p_name}`}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )
+                      }
+
                     </TableCell>
                   </TableRow>
                 ))
@@ -251,7 +319,12 @@ const Model = () => {
           </Table>
 
           {/* Pagination */}
-          <Pagination />
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </main>
       <Footer />

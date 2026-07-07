@@ -35,6 +35,12 @@ dayjs.extend(relativeTime);
 
 const DEFAULT_PHONE = "+8809638660077";
 
+const formatLocalMobile = (value) => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("0") ? trimmed : `0${trimmed}`;
+};
+
 const parseMaybeJson = (value) => {
   if (typeof value !== "string") return value;
   try {
@@ -380,6 +386,8 @@ const GeneralProductDetails = ({ productDetails }) => {
   const moreInformation = useMemo(() => normalizeMoreInformation(productDetails), [productDetails]);
   const currentUser = parseUser(user) || parsedUser || null;
   const sellerPhone = currentUser?.phone || productDetails?.shop?.s_phone || DEFAULT_PHONE;
+  const sellerMobileNumber = formatLocalMobile(productDetails?.user?.phone);
+  const showSellerMobile = Number(productDetails?.p_show_seller_mobile) === 1 && Boolean(sellerMobileNumber);
   const selectedStatus = statusLabel(selectedVariant);
   const totalStock = variants.reduce((sum, v) => sum + toNumber(v.availableQty ?? v.stockQty), 0);
   const videoLink = String(productDetails?.p_video_link || "").trim();
@@ -423,7 +431,7 @@ const GeneralProductDetails = ({ productDetails }) => {
   const shareProduct = async () => {
     const productUrl = productUrlFor(productDetails);
     const shareData = {
-      title: productDetails?.p_name || "Click4Details product",
+      title: productDetails?.p_name || "Pilot Bazar product",
       text: `${productDetails?.p_name || "Product"} - ${selectedVariant ? money(selectedVariant.sellingPrice) : ""}`,
       url: productUrl,
     };
@@ -509,6 +517,37 @@ const GeneralProductDetails = ({ productDetails }) => {
       </ActionButton>
     </div>
   );
+
+  const pblTestContent = description?.pbl_test ? (
+    <div className="border rounded-lg shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b bg-gray-50">
+        <Layers className="h-4 w-4 text-blue-600" />
+        <span className="text-sm font-medium text-blue-600">PBL Test</span>
+      </div>
+      <div className="p-4">
+        <p className="text-sm leading-7 text-gray-600 whitespace-pre-line">{description.pbl_test}</p>
+      </div>
+    </div>
+  ) : null;
+
+  const sellerMobileBlock = showSellerMobile ? (
+    <a
+      href={`tel:${sellerMobileNumber}`}
+      title="Call seller"
+      className="relative flex items-center gap-3 rounded-lg border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-4 shadow-sm animate-pulse hover:shadow-md hover:animate-none transition-shadow"
+    >
+      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+        <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+          <PhoneOutgoing className="h-5 w-5 text-white" />
+        </span>
+      </span>
+      <span>
+        <span className="block text-xs font-medium text-green-700">Seller Mobile Number</span>
+        <span className="block text-lg font-bold tracking-wide text-green-800">{sellerMobileNumber}</span>
+      </span>
+    </a>
+  ) : null;
 
   const descTabs = [
     { key: "description", label: "Description", content: description?.pbl || description?.user || "" },
@@ -768,7 +807,8 @@ const GeneralProductDetails = ({ productDetails }) => {
           </div>
 
           {/* Description – desktop only */}
-          <div className="hidden md:block">
+          <div className="hidden md:block space-y-4">
+            {pblTestContent}
             {descriptionContent}
           </div>
         </div>
@@ -790,6 +830,8 @@ const GeneralProductDetails = ({ productDetails }) => {
 
         {/* ── RIGHT col (2/5) — sticky + scrollable ── */}
         <div className="md:col-span-2 md:col-start-4 space-y-4 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto md:pr-1">
+
+          {sellerMobileBlock}
 
           {/* Product Facts */}
           <div className="border rounded-lg shadow-sm p-4">
@@ -901,7 +943,8 @@ const GeneralProductDetails = ({ productDetails }) => {
       </div>
 
       {/* Description – mobile only */}
-      <div className="md:hidden mt-2">
+      <div className="md:hidden mt-2 space-y-4">
+        {pblTestContent}
         {descriptionContent}
       </div>
     </div>

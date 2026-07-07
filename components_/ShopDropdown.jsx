@@ -2,17 +2,24 @@
 import React, { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronDown, Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronDown, Check, ChevronsUpDown, Plug, LogOut, Store } from 'lucide-react';
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import ShopModal from './modals/ShopModal';
 import ManageShopModal from './modals/ManageShopModal';
 
 const ShopDropdown = () => {
     const { shops, selectedShop, setSelectedShop } = useAppContext();
+    const searchParams = useSearchParams();
     const [isOpen, setIsOpen] = useState(false);
     const [isOpenManageModal, setIsOpenManageModal] = useState(false);
+    const [isOpenNewShopModal, setIsOpenNewShopModal] = useState(false);
     const [openCollapsible, setOpenCollapsible] = useState(null);
+    const productType = String(searchParams.get('product_type') || '').toLowerCase();
+    const uploadProductHref = productType === 'general'
+        ? '/dashboard/products/general-product/create/'
+        : '/dashboard/products/vehicle/create';
 
     const handleSelect = (shop) => {
         setSelectedShop(shop);
@@ -30,10 +37,10 @@ const ShopDropdown = () => {
             <Popover.Portal>
                 <Popover.Content
                     sideOffset={5}
-                    className="rounded bg-white p-2 shadow-lg border border-gray-200 w-56"
+                    className="z-[9999] rounded bg-white p-2 shadow-lg border border-gray-200 w-56"
                 >
                     <div className="flex flex-col gap-1">
-                        { shops && shops.length > 0 && shops.map((shop) => (
+                        {shops && shops.length > 0 && shops.map((shop) => (
                             <Collapsible.Root
                                 key={shop.s_id}
                                 open={openCollapsible === shop.s_id}
@@ -69,19 +76,45 @@ const ShopDropdown = () => {
                                                 </button>
                                             </li>
                                             <li className="hover:bg-gray-200 rounded p-1">
-                                                <Link href={`/dashboard/products/vehicle/create`} className="block">Product Upload</Link>
+                                                <Link href={uploadProductHref} className="block">Product Upload</Link>
                                             </li>
                                         </ul>
                                     </div>
                                 </Collapsible.Content>
                             </Collapsible.Root>
                         ))}
+
+
+
+                        <div className="border-t border-gray-200 mt-2 pt-2">
+                            <div className="flex flex-col gap-2">
+                                <Link
+                                    href="/dashboard/shop"
+                                    className="flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-gray-100 transition"
+                                >
+                                    <Store className="h-4 w-4 text-blue-600" />
+                                    <span>Shop Create / Edit</span>
+                                </Link>
+
+                            </div>
+                        </div>
+
+                        {/* <div className="pt-2 mt-2 border-t border-gray-200">
+                            <button
+                                // onClick={}
+                                // onClick={() => setIsOpenNewShopModal(true)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                            >
+                                Create a new shop
+                            </button>
+                        </div> */}
                     </div>
                 </Popover.Content>
             </Popover.Portal>
 
 
             <ManageShopModal open={isOpenManageModal} setOpen={setIsOpenManageModal} />
+            <ShopModal open={isOpenNewShopModal} setOpen={setIsOpenNewShopModal} />
 
         </Popover.Root>
     );

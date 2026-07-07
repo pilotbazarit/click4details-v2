@@ -31,6 +31,8 @@ import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
 import GeneralProductService from "@/services/GeneralProductService";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const ProductList = () => {
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("")
@@ -107,9 +109,7 @@ const ProductList = () => {
     const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery) => {
         try {
 
-            const userData = localStorage.getItem("user");
-            const userInfo = userData && JSON.parse(userData);
-            const user = JSON.parse(userInfo);
+            const user = parseStoredUser(localStorage.getItem("user"));
 
 
             console.log("user mode:::", user);
@@ -255,11 +255,7 @@ const ProductList = () => {
             }
         }
     };
-
-
-    console.log("setProducts==================================", products);
-
-
+    
     return (
         <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
             <main className="mx-auto bg-white rounded-lg shadow-lg border border-gray-200 p-6 my-6 w-full">

@@ -20,28 +20,56 @@ import toast from "react-hot-toast";
 import MasterDataTypeModal from "@/components/modals/MasterDataTypeModal";
 import MasterDataService from "@/services/MasterDataService";
 import Swal from "sweetalert2";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const MasterDataType = () => {
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [dataTypes, setDataTypes] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState();
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
-  const getMasterDataTypes = async () => {
+  const { permissionList, user } = useAppContext();
+
+  const canShowAddMasterDataTypeButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "MasterDataType", "ShowMasterDataTypeAddButton");
+
+  const canShowEditMasterDataTypeButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "MasterDataType", "ShowMasterDataTypeEditButton");
+
+  const canShowDeleteMasterDataTypeButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "MasterDataType", "ShowMasterDataTypeDeleteButton");
+
+  const getMasterDataTypes = async (value = query) => {
     try {
       setLoading(true);
       const response = await MasterDataService.Queries.getMaterDatatype({
         order: "desc",
         orderBy: "mdt_id",
-        _page: 1,
-        _perPage: 1000
+        _page: currentPage,
+        _perPage: itemsPerPage,
+        _title: value,
       });
 
-      setDataTypes(response.data.data);
-      setLoading(false);
+      if (response?.status === "success") {
+        setTotalItems(response?.data?.total);
+        setDataTypes(response?.data?.data || []);
+        setLoading(false);
+      } else {
+        setDataTypes([]);
+        setLoading(false);
+        toast.error(response?.data?.message || "Failed to fetch data types");
+      }
     } catch (error) {
       setLoading(false);
+      setDataTypes([]);
       toast.error(
         error.response?.data?.message || "Failed to fetch data types"
       );
@@ -50,10 +78,10 @@ const MasterDataType = () => {
 
   useEffect(() => {
     getMasterDataTypes();
-  }, []);
+  }, [currentPage, itemsPerPage]);
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+  const fetchSearchResults = () => {
+    getMasterDataTypes(query);
   };
 
   const handleEdit = (item) => {
@@ -98,29 +126,42 @@ const MasterDataType = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <h2 className="text-xl text-gray-800">All Master Data Type</h2>
-          <Button
-            onClick={() => {
-              setOpen(true);
-              setSelectedModel(null);
-            }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <svg
-              className="w-5 h-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Master Data Type
+          {
+            canShowAddMasterDataTypeButton && (
+              <Button
+                onClick={() => {
+                  setOpen(true);
+                  setSelectedModel(null);
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Master Data Type
 
-          </Button>
+              </Button>
+            )
+          }
+
         </div>
 
         {/* Search Filter */}
-        <TableFilter searchTerm={searchTerm} setSearchTerm={handleSearchChange} placeholder="Search Master Data Type..." />
+        <TableFilter
+          query={query}
+          setQuery={setQuery}
+          setCurrentPage={setCurrentPage}
+          fetchSearchResults={fetchSearchResults}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
+          placeholder="Search Master Data Type..."
+        />
 
         {/* Table Container */}
         <div className="overflow-x-auto rounded-md border border-gray-300 mt-4">
@@ -155,26 +196,36 @@ const MasterDataType = () => {
               {dataTypes.length > 0 ? (
                 dataTypes.map((item, index) => (
                   <TableRow key={item.mdt_id || index} className="border-b border-gray-200">
-                    <TableCell className="border-r border-gray-200 text-center">{index + 1}</TableCell>
+                    <TableCell className="border-r border-gray-200 text-center">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item.mdt_title}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item.mdt_code}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item.mdt_description}</TableCell>
                     <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-800"
-                        aria-label={`Edit ${item.mdt_title}`}
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        // Add delete handler here
-                        className="text-red-600 hover:text-red-800"
-                        aria-label={`Delete shop ${item.mdt_title}`}
-                        onClick={() => handleDelete(item?.mdt_id)}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {
+                        canShowEditMasterDataTypeButton && (
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                            aria-label={`Edit ${item.mdt_title}`}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )
+                      }
+
+                      {
+                        canShowDeleteMasterDataTypeButton && (
+                          <button
+                            // Add delete handler here
+                            className="text-red-600 hover:text-red-800"
+                            aria-label={`Delete shop ${item.mdt_title}`}
+                            onClick={() => handleDelete(item?.mdt_id)}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )
+                      }
+
                     </TableCell>
                   </TableRow>
                 ))
@@ -196,7 +247,12 @@ const MasterDataType = () => {
           </Table>
 
           {/* Pagination */}
-          <Pagination />
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </div>
       </main>
       {/* )} */}

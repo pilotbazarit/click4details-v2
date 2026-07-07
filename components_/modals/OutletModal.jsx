@@ -21,6 +21,14 @@ const schema = yup.object().shape({
     uo_name: yup.string().required("Name is required"),
 });
 
+const defaultFormValues = {
+    uo_shop_id: '',
+    uo_country_id: '',
+    uo_location_id: '',
+    uo_name: '',
+    uo_address: '',
+    uo_map_link: '',
+};
 
 const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
     const {
@@ -28,53 +36,78 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
         handleSubmit,
         formState: { errors, isSubmitting },
         reset,
-        setValue
+        setValue,
+        watch
     } = useForm({
         resolver: yupResolver(schema),
+        defaultValues: defaultFormValues,
     });
 
     const [countries, setCountries] = React.useState([]);
     const [locations, setLocations] = React.useState([]);
     const [loadingLocations, setLoadingLocations] = React.useState(false);
 
-    // Set form values when initialData changes
-    useEffect(() => {
-        if (initialData) {
-            setValue('uo_shop_id', initialData.uo_shop_id);
-            setValue('uo_country_id', initialData.uo_country_id);
-            setValue('uo_location_id', initialData.uo_location_id);
-            setValue('uo_name', initialData.uo_name);
-            setValue('uo_address', initialData.uo_address);
-            setValue('uo_map_link', initialData.uo_map_link);
-        } else {
-            reset();
+    const getLocations = React.useCallback(async (countryId, selectedLocationId = '') => {
+        if (!countryId) {
+            setLocations([]);
+            setValue('uo_location_id', '');
+            return;
         }
-    }, [initialData, reset, setValue]);
 
-
-    const getLocations = async (countryId) => {
         setLoadingLocations(true);
         try {
-            const response = await LocationService.Queries.getLocationByCountryId({ 
+            const response = await LocationService.Queries.getLocationByCountryId({
                 _page: 1,
                 _perPage: 1000,
                 _country_id: countryId
             });
 
-            if (response.status == 'Success') {
-                const locationMasterData = response?.data?.data;
+            if (response?.status === 'Success') {
+                const locationMasterData = response?.data?.data || [];
                 const locationData = locationMasterData.map((location) => ({
                     value: location.l_id,
                     label: location.l_name,
                 }));
+
                 setLocations(locationData);
+                const matchedLocation = locationData.find(
+                    (location) => String(location.value) === String(selectedLocationId)
+                );
+                setValue('uo_location_id', matchedLocation ? String(matchedLocation.value) : '');
+            } else {
+                setLocations([]);
+                setValue('uo_location_id', '');
             }
         } catch (error) {
             console.log("Error fetching location data:", error);
+            setLocations([]);
+            setValue('uo_location_id', '');
         } finally {
             setLoadingLocations(false);
         }
-    };
+    }, [setValue]);
+
+    // Set form values when initialData changes
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        if (initialData) {
+            reset({
+                uo_shop_id: initialData.uo_shop_id ? String(initialData.uo_shop_id) : '',
+                uo_country_id: initialData.uo_country_id ? String(initialData.uo_country_id) : '',
+                uo_location_id: '',
+                uo_name: initialData.uo_name || '',
+                uo_address: initialData.uo_address || '',
+                uo_map_link: initialData.uo_map_link || '',
+            });
+            getLocations(initialData.uo_country_id, initialData.uo_location_id);
+        } else {
+            reset(defaultFormValues);
+            setLocations([]);
+        }
+    }, [open, initialData, reset, getLocations]);
 
 
     const getCountry = async () => {
@@ -100,7 +133,6 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
     }, []);
 
     const onSubmit = async (data) => {
-        console.log("form data", data);
         try {
             if (initialData) {
                 // Update existing model
@@ -155,9 +187,15 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen);
         if (!isOpen) {
-            reset(); // Reset form when dialog closes
+            reset(defaultFormValues);
+            setLocations([]);
         }
     };
+
+    const countryField = register("uo_country_id");
+    const locationField = register("uo_location_id");
+    const selectedCountryId = watch("uo_country_id");
+    const selectedLocationId = watch("uo_location_id");
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -206,9 +244,10 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
                             <select
                                 id="uo_country_id"
                                 className="outline-none py-2 px-3 rounded border border-gray-400 w-full"
-                                {...register("uo_country_id")}
+                                {...countryField}
+                                value={selectedCountryId || ''}
                                 onChange={(e) => {
-                                    setValue("uo_country_id", e.target.value);
+                                    countryField.onChange(e);
                                     getLocations(e.target.value);
                                 }}
                             >
@@ -234,7 +273,8 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
                             <select
                                 id="uo_location_id"
                                 className="outline-none py-2 px-3 rounded border border-gray-400 w-full"
-                                {...register("uo_location_id")}
+                                {...locationField}
+                                value={selectedLocationId || ''}
                             >
                                 <option value="">Select Location</option>
                                 {

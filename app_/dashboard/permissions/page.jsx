@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Footer from "@/components/dashboard/Footer";
 import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Eye, Info, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -18,24 +18,84 @@ import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import AddPermissionModal from "@/components/modals/AddPermissionModal";
 import PermissionService from "@/services/PermissionService";
+import { PERMISSION_MODEL_OPTIONS } from "@/lib/permissionModelOptions";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
+
+const PERMISSION_TYPE_OPTIONS = [
+  { label: "System", value: "system" },
+  { label: "General", value: "general" },
+  { label: "Custom", value: "custom" },
+  { label: "Reserved", value: "reserved" },
+];
 
 const Permission = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [modelQuery, setModelQuery] = useState("");
+  const [appliedModelQuery, setAppliedModelQuery] = useState("");
+  const [showModelSearch, setShowModelSearch] = useState(false);
+  const [typeQuery, setTypeQuery] = useState("");
+  const [appliedTypeQuery, setAppliedTypeQuery] = useState("");
+  const [showTypeSearch, setShowTypeSearch] = useState(false);
   const [open, setOpen] = useState(false);
   const [permissions, setPermissions] = useState(null);
   const [currentPage, setCurrentPage] = useState(1)
   const [totalItems, setTotalItems] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [selectedModel, setSelectedModel] = useState(null);
+  const modelButtonRef = useRef(null);
+  const modelTooltipRef = useRef(null);
+  const typeButtonRef = useRef(null);
+  const typeTooltipRef = useRef(null);
 
-  const getPermissions = async (value = "") => {
+  const { permissionList, user } = useAppContext();
+
+  const canShowAddPermissionButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Permission", "ShowPermissionAddButton")
+
+  const canShowEditPermissionButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Permission", "ShowPermissionEditButton")
+
+
+  const canShowCheckPermissionButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Permission", "ShowPermissionCheckButton")
+
+  const canShowDeletePermissionButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Permission", "ShowPermissionDeleteButton")
+
+
+
+
+  const getPermissions = async (
+    value = searchQuery,
+    page = currentPage,
+    perPage = itemsPerPage,
+    modelValue = appliedModelQuery,
+    typeValue = appliedTypeQuery
+  ) => {
     try {
       setLoading(true);
-      const response = await PermissionService.Queries.getPermissions({
-        _page: currentPage,
-        _perPage: itemsPerPage,
-      });
+      const params = {
+        _page: page,
+        _perPage: perPage,
+        _name: value,
+      };
+
+      if (modelValue) {
+        params._model = modelValue;
+      }
+
+      if (typeValue) {
+        params._type = typeValue;
+      }
+
+      const response = await PermissionService.Queries.getPermissions(params);
 
       if (response?.status == "success") {
         setTotalItems(response?.data?.total)
@@ -54,13 +114,23 @@ const Permission = () => {
     }
   }
 
-  const fetchSearchResults = (value) => {
-    getPermissions(value);
+  const fetchSearchResults = () => {
+    setCurrentPage(1);
+    setSearchQuery(query.trim());
   };
 
   const handleShow = (item) => {
     setSelectedModel(item);
     setOpen(true);
+  }
+
+  const handleViewDescription = (item) => {
+    Swal.fire({
+      title: item?.p_name || "Permission Description",
+      text: item?.p_description || "No description available.",
+      icon: "info",
+      confirmButtonText: "Close",
+    });
   }
 
   const handleDelete = async (id) => {
@@ -105,8 +175,54 @@ const Permission = () => {
   }
 
   useEffect(() => {
-    getPermissions();
-  }, [currentPage, itemsPerPage]);
+    getPermissions(
+      searchQuery,
+      currentPage,
+      itemsPerPage,
+      appliedModelQuery,
+      appliedTypeQuery
+    );
+  }, [searchQuery, appliedModelQuery, appliedTypeQuery, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    if (query.trim() === "" && searchQuery !== "") {
+      setCurrentPage(1);
+      setSearchQuery("");
+    }
+  }, [query, searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const isClickInsideModelButton =
+        modelButtonRef.current && modelButtonRef.current.contains(event.target);
+      const isClickInsideModelTooltip =
+        modelTooltipRef.current && modelTooltipRef.current.contains(event.target);
+      const isClickInsideTypeButton =
+        typeButtonRef.current && typeButtonRef.current.contains(event.target);
+      const isClickInsideTypeTooltip =
+        typeTooltipRef.current && typeTooltipRef.current.contains(event.target);
+
+      if (!isClickInsideModelButton && !isClickInsideModelTooltip) {
+        setShowModelSearch(false);
+      }
+
+      if (!isClickInsideTypeButton && !isClickInsideTypeTooltip) {
+        setShowTypeSearch(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleClearSearch = () => {
+    setCurrentPage(1);
+    setSearchQuery("");
+  };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
 
 
   return (
@@ -115,28 +231,32 @@ const Permission = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <h2 className="text-xl text-gray-800">Permission List</h2>
-          <Button
-            onClick={() => {
-              setOpen(true);
-              // setSelectedModel(null);
-            }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <svg
-              className="w-5 h-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Permission
-          </Button>
+          {
+            canShowAddPermissionButton && (
+              <Button
+                onClick={() => {
+                  setOpen(true);
+                  // setSelectedModel(null);
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Permission
+              </Button>
+            )
+          }
         </div>
 
         {/* Search Filter */}
-        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search by name..." />
+        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search by name..." onClearSearch={handleClearSearch} />
 
         {/* Table Container */}
         <div className="overflow-x-auto rounded-md border border-gray-300 mt-4">
@@ -145,8 +265,166 @@ const Permission = () => {
               <TableRow className="border-b border-gray-300">
                 <TableHead className="w-[60px] border-r border-gray-300 text-center">SL</TableHead>
                 <TableHead className="border-r border-gray-300">Name</TableHead>
-                <TableHead className="border-r border-gray-300">Model</TableHead>
-                <TableHead className="border-r border-gray-300">Type</TableHead>
+                <TableHead className="border-r border-gray-300 relative">
+                  <div className="flex items-center justify-between relative">
+                    <span>Model</span>
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          setShowModelSearch(!showModelSearch);
+                          setShowTypeSearch(false);
+                        }}
+                        className="ml-2 focus:outline-none"
+                        ref={modelButtonRef}
+                      >
+                        <Search
+                          className={`w-4 h-4 ${appliedModelQuery ? "text-orange-500" : ""
+                            }`}
+                        />
+                      </button>
+                      {showModelSearch && (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-[2px] w-0 h-0 border-l-6 border-r-6 border-b-6 border-transparent border-b-gray-300" />
+                      )}
+                    </div>
+                  </div>
+                  {showModelSearch && (
+                    <div className="relative" ref={modelTooltipRef}>
+                      <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white z-20" />
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-white border border-gray-300 rounded-md shadow-lg z-50 w-52 flex flex-col items-end">
+                        <div className="flex items-center w-full mb-2">
+                          <select
+                            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            value={modelQuery}
+                            onChange={(e) => setModelQuery(e.target.value)}
+                          >
+                            <option value="">All Models</option>
+                            {PERMISSION_MODEL_OPTIONS.map((item) => (
+                              <option key={item} value={item}>
+                                {item}
+                              </option>
+                            ))}
+                          </select>
+                          {(modelQuery || appliedModelQuery) && (
+                            <button
+                              onClick={() => {
+                                setModelQuery("");
+                                setAppliedModelQuery("");
+                                setCurrentPage(1);
+                                setShowModelSearch(false);
+                              }}
+                              className="ml-2 text-gray-500 hover:text-red-500 focus:outline-none"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCurrentPage(1);
+                            setAppliedModelQuery(modelQuery);
+                            setShowModelSearch(false);
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 focus:outline-none"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </TableHead>
+                <TableHead className="border-r border-gray-300 relative">
+                  <div className="flex items-center justify-between relative">
+                    <span>Type</span>
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          setShowTypeSearch(!showTypeSearch);
+                          setShowModelSearch(false);
+                        }}
+                        className="ml-2 focus:outline-none"
+                        ref={typeButtonRef}
+                      >
+                        <Search
+                          className={`w-4 h-4 ${appliedTypeQuery ? "text-orange-500" : ""
+                            }`}
+                        />
+                      </button>
+                      {showTypeSearch && (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-[2px] w-0 h-0 border-l-6 border-r-6 border-b-6 border-transparent border-b-gray-300" />
+                      )}
+                    </div>
+                  </div>
+                  {showTypeSearch && (
+                    <div className="relative" ref={typeTooltipRef}>
+                      <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-white z-20" />
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-white border border-gray-300 rounded-md shadow-lg z-50 w-52 flex flex-col items-end">
+                        <div className="flex items-center w-full mb-2">
+                          <select
+                            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            value={typeQuery}
+                            onChange={(e) => setTypeQuery(e.target.value)}
+                          >
+                            <option value="">All Types</option>
+                            {PERMISSION_TYPE_OPTIONS.map((item) => (
+                              <option key={item.value} value={item.value}>
+                                {item.label}
+                              </option>
+                            ))}
+                          </select>
+                          {(typeQuery || appliedTypeQuery) && (
+                            <button
+                              onClick={() => {
+                                setTypeQuery("");
+                                setAppliedTypeQuery("");
+                                setCurrentPage(1);
+                                setShowTypeSearch(false);
+                              }}
+                              className="ml-2 text-gray-500 hover:text-red-500 focus:outline-none"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCurrentPage(1);
+                            setAppliedTypeQuery(typeQuery);
+                            setShowTypeSearch(false);
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 focus:outline-none"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </TableHead>
                 <TableHead className="border-r border-gray-300">Status</TableHead>
                 <TableHead className="border-r border-gray-300">Action</TableHead>
               </TableRow>
@@ -156,10 +434,10 @@ const Permission = () => {
               {!loading && permissions?.length > 0 ? (
                 permissions.map((item, index) => (
                   <TableRow key={item.id || index} className="border-b border-gray-200">
-                    <TableCell className="border-r border-gray-200 font-medium">{index + 1}</TableCell>
+                    <TableCell className="border-r border-gray-200 font-medium">{startIndex + index + 1}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item?.p_name}</TableCell>
-                    <TableCell className="border-r border-gray-200 font-medium">{item?.p_model }</TableCell>
-                    <TableCell className="border-r border-gray-200 font-medium">{item?.p_type }</TableCell>
+                    <TableCell className="border-r border-gray-200 font-medium">{item?.p_model}</TableCell>
+                    <TableCell className="border-r border-gray-200 font-medium">{item?.p_type}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">
                       <div className="flex items-center gap-2">
                         {item?.p_status === "active" ? (
@@ -172,20 +450,41 @@ const Permission = () => {
                     </TableCell>
 
                     <TableCell className="flex  gap-2 border-r border-gray-200 font-medium">
-                      <button
-                        onClick={() => handleShow(item)}
-                        className="text-blue-600 hover:text-blue-800"
-                        aria-label="View Shop"
-                      >
-                        <Pencil size={18} />
-                      </button>
+                      {
+                        canShowEditPermissionButton && (
+                          <button
+                            onClick={() => handleShow(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                            aria-label="View Shop"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )
+                      }
 
-                      <button
-                        onClick={() => handleDelete(item?.p_id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {
+                        canShowCheckPermissionButton && (
+                          <button
+                            onClick={() => handleViewDescription(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                            aria-label="View Description"
+                          >
+                            <Info size={18} />
+                          </button>
+                        )
+                      }
+
+                      {
+                        canShowDeletePermissionButton && (
+                          <button
+                            onClick={() => handleDelete(item?.p_id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )
+                      }
+
                     </TableCell>
                   </TableRow>
                 ))
@@ -217,7 +516,7 @@ const Permission = () => {
       </main>
       <Footer />
 
-   
+
 
       {/* Shop Modal */}
       <AddPermissionModal

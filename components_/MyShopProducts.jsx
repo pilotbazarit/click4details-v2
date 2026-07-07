@@ -13,6 +13,9 @@ const MyShopProducts = () => {
   const { products, loading, hasMore, getAllProduct, getAllGeneralProduct, selectedProductType } = useMyShopProductContext();
   const observerRef = useRef();
   const [loadingNewData, setLoadingNewData] = useState(false);
+  const uploadProductHref = selectedProductType === 'general'
+    ? '/dashboard/products/general-product/create/'
+    : '/dashboard/products/vehicle/create';
 
   const { shops, setShops, user, selectedShop, setSelectedShop } = useAppContext();
 
@@ -88,7 +91,7 @@ const MyShopProducts = () => {
 
   return (
     <div className="flex flex-col items-start pt-4">
-      <div className="w-[100%] px-4 mb-6">
+      <div className="w-[100%] px-4 mb-6 flex justify-end">
         <MyShopFilter />
       </div>
 
@@ -146,7 +149,7 @@ const MyShopProducts = () => {
                 gap-2"
               >
               <span className="text-xl">+</span>
-                <Link href={`/dashboard/products/vehicle/create`} className="block">Upload Your Products</Link>            
+                <Link href={uploadProductHref} className="block">Upload Your Products</Link>            
             </button>
 
             {/* Message */}

@@ -7,7 +7,7 @@ import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
 import ShopModal from "@/components/modals/ShopModal";
 import StoreService from "@/services/ShopService";
-import { DollarSign, Funnel, Loader2, Pencil, ShieldMinus, Trash2 } from "lucide-react";
+import { Copy, DollarSign, Funnel, Loader2, Pencil, ShieldMinus, Trash2 } from "lucide-react";
 import Select from 'react-select';
 import constData from "@/lib/constant";
 import api from "@/lib/api";
@@ -29,6 +29,8 @@ import { useRouter } from "next/navigation";
 import PackageService from "@/services/PackageService";
 import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
+
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const ProductList = () => {
   const [loading, setLoading] = useState(false);
@@ -107,15 +109,19 @@ const ProductList = () => {
   // console.log("priorityQuery", priorityQuery);
 
 
- 
 
 
-  const getProducts = async (newCodeQuery = codeQuery, newEditionQuery = editionQuery, newChassisQuery = chassisQuery, newPriorityQuery = priorityQuery) => {
+
+  const getProducts = async (
+    newCodeQuery = codeQuery,
+    newEditionQuery = editionQuery,
+    newChassisQuery = chassisQuery,
+    newPriorityQuery = priorityQuery,
+    searchQuery = query
+  ) => {
     try {
 
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
 
       // console.log("user mode:::", user);
@@ -126,9 +132,9 @@ const ProductList = () => {
       const params = {
         _page: currentPage,
         _perPage: itemsPerPage,
-        // _order: 'desc',
-        // _orderBy: 'v_id',
-        _status: 'inactive',
+        _order: 'desc',
+        _orderBy: 'v_updated_at',
+        _status: 'archive',
       };
 
       // Only set _user_id if user.mode is not 'pbl'
@@ -136,8 +142,8 @@ const ProductList = () => {
         params._user_id = user?.id;
       }
 
-      if (query) {
-        params._name = query;
+      if (searchQuery) {
+        params._title = searchQuery;
       }
 
       if (newCodeQuery) {
@@ -158,6 +164,7 @@ const ProductList = () => {
         params._order = newPriorityQuery;
       }
 
+      params._status = 'archive';
 
       // console.log("_priority_order", _priority_order);
 
@@ -180,8 +187,8 @@ const ProductList = () => {
     }
   }
 
-  const fetchSearchResults = (value) => {
-    // getModels(value);
+  const fetchSearchResults = (value = query) => {
+    getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, value);
   };
 
   const handleAdd = async () => {
@@ -197,9 +204,13 @@ const ProductList = () => {
     setOpen(true);
   }
 
+  const handleClone = async (id) => {
+    router.push(`/dashboard/products/vehicle/clone/${id}`);
+  }
+
   useEffect(() => {
-    getProducts(undefined, undefined, undefined, undefined);
-  }, [currentPage, itemsPerPage, query, sortColumn, sortOrder]);
+    getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery);
+  }, [currentPage, itemsPerPage, sortColumn, sortOrder]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -252,7 +263,7 @@ const ProductList = () => {
           v_status: "active",
           _method: 'PUT'
         });
-        
+
         // console.log("response:::", response);
 
         if (response) {
@@ -280,7 +291,7 @@ const ProductList = () => {
       <main className="mx-auto bg-white rounded-lg shadow-lg border border-gray-200 p-6 my-6 w-full">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-          <h2 className="text-xl text-gray-800">Product List</h2>
+          <h2 className="text-xl text-gray-800">Archived Product List</h2>
           <Button
             onClick={handleAdd}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
@@ -299,7 +310,16 @@ const ProductList = () => {
         </div>
 
         {/* Search Filter */}
-        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search..." />
+        <TableFilter
+          query={query}
+          setQuery={setQuery}
+          setCurrentPage={setCurrentPage}
+          fetchSearchResults={fetchSearchResults}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
+          placeholder="Search..."
+          onClearSearch={() => getProducts(codeQuery, editionQuery, chassisQuery, priorityQuery, '')}
+        />
 
 
         {/* Table Container */}
@@ -662,10 +682,23 @@ const ProductList = () => {
                           : "bg-red-100 text-red-700"
                           }`}
                       >
-                        {item.v_status === 'active' ? "Active" : "Inactive"}
+                        {
+                          item.v_status
+                        }
+                        {/* {item.v_status === 'active' ? "Active" : "Inactive"} */}
                       </span>
                     </TableCell>
                     <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium py-4">
+
+                      <button
+                        // Add delete handler here
+                        onClick={() => handleClone(item?.v_id)}
+                        className="text-green-600 hover:text-green-800"
+                        aria-label={`Delete shop ${item.s_title}`}
+                        title="Clone Product"
+                      >
+                        <Copy size={18} />
+                      </button>
 
                       <button
                         onClick={() => handlePriceHistory(item)}
@@ -687,7 +720,7 @@ const ProductList = () => {
                         // Add delete handler here
                         onClick={() => handleDelete(item?.v_id)}
                         className="text-green-600 hover:text-green-800"
-                        aria-label={`Delete shop ${item.s_title}`}
+                        aria-label={`Restock ${item.s_title}`}
                       >
                         <ShieldMinus size={18} />
                       </button>

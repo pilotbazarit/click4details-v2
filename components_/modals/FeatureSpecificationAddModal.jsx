@@ -22,6 +22,24 @@ const schema = yup.object().shape({
     fs_title: yup.string().required("Title is required")
 });
 
+const getApiErrorMessage = (error) => {
+    const payload = error?.response?.data || error?.data || error;
+
+    if (payload?.errors) {
+        const firstError = Object.values(payload.errors)
+            .flat()
+            .filter(Boolean)[0];
+        if (firstError) return firstError;
+    }
+
+    return (
+        payload?.message ||
+        payload?.error ||
+        error?.message ||
+        "Something went wrong"
+    );
+};
+
 
 const FeatureSpecificationAddModal = ({ open, setOpen, featureId, getFeatureSpecification }) => {
 
@@ -35,22 +53,26 @@ const FeatureSpecificationAddModal = ({ open, setOpen, featureId, getFeatureSpec
     });
 
     const onSubmit = async (data) => {
+        try {
+            const FormData = {
+                fs_feature_id: featureId,
+                fs_title: data.fs_title,
+                fs_status: data.fs_status,
+            }
 
+            const res = await FeatureSpecificationService.Commands.storeFeatureSpecification(FormData);
 
-        const FormData = {
-            fs_feature_id: featureId,
-            fs_title: data.fs_title,
-            fs_status: data.fs_status,
-        }
+            if (res?.status !== 'success') {
+                toast.error(getApiErrorMessage(res));
+                return;
+            }
 
-        //  console.log("FormData", FormData);
-        const res = await FeatureSpecificationService.Commands.storeFeatureSpecification(FormData);
-
-        if (res?.status === 'success') {
             setOpen(false);
             toast.success("Feature Specification created successfully");
-            getFeatureSpecification();
+            await getFeatureSpecification();
             reset(); // clear form
+        } catch (error) {
+            toast.error(getApiErrorMessage(error));
         }
     };
 

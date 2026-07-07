@@ -44,6 +44,14 @@ const schema = yup.object().shape({
 
 const MAX_ADDITIONAL_IMAGES = 12;
 
+const deliveryConditionOptions = [
+    { value: "Japan Condition", label: "Japan Condition" },
+    { value: "Shipment Condition", label: "Shipment Condition" },
+    { value: "As it is Port Delivery", label: "As it is Port Delivery" },
+    { value: "Showroom Condition", label: "Showroom Condition" },
+    { value: "Auction Sheet Condition", label: "Auction Sheet Condition" },
+];
+
 const auctionTypeOptions = [
     {
       value: "orginal_auc",
@@ -219,7 +227,20 @@ const UpdateProductForm = ({ productId }) => {
     const [isCategoryListVisible, setIsCategoryListVisible] = useState(false);
     const categoryDropdownRef = useRef(null);
     const [user, setUser] = useState(null);
+    const [sellerInfoRows, setSellerInfoRows] = useState([{ name: "", phone: "" }]);
     const { permissionList } = useAppContext();
+
+    const handleSellerInfoChange = (index, field, value) => {
+        setSellerInfoRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    };
+
+    const handleAddSellerInfoRow = () => {
+        setSellerInfoRows((prev) => [...prev, { name: "", phone: "" }]);
+    };
+
+    const handleRemoveSellerInfoRow = (index) => {
+        setSellerInfoRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+    };
 
     const canShowSellerMobileToggle = (targetUser = user) => {
         if (!targetUser) return false;
@@ -1316,6 +1337,14 @@ const UpdateProductForm = ({ productId }) => {
                 setValue('vm_description', data?.v_metadata?.vm_description);
                 setValue('v_pbl_text', data.v_pbl_text || '');
                 setValue('v_delivery_condition', data.v_delivery_condition || '');
+                setValue('v_secret_text', data.v_secret_text || '');
+                setValue('v_secret_video_link', data.v_secret_video_link || '');
+                const sellerInfoData = Array.isArray(data?.v_seller_info) ? data.v_seller_info : [];
+                setSellerInfoRows(
+                    sellerInfoData.length > 0
+                        ? sellerInfoData.map((row) => ({ name: row?.name || '', phone: row?.phone || '' }))
+                        : [{ name: '', phone: '' }]
+                );
                 const videoData = data?.v_video;
                 const userVideo = (videoData && typeof videoData === 'object')
                     ? (videoData?.user ? String(videoData.user) : '')
@@ -1526,6 +1555,9 @@ const UpdateProductForm = ({ productId }) => {
                 appendFormValue(formData, key, data[key]);
             }
         }
+
+        const sellerInfoPayload = sellerInfoRows.filter((row) => (row.name && row.name.trim()) || (row.phone && row.phone.trim()));
+        appendFormValue(formData, "v_seller_info", JSON.stringify(sellerInfoPayload));
 
         const otherCosts = Array.isArray(data?.vp_other_cost) ? data.vp_other_cost : [];
         otherCosts.forEach((item, index) => {
@@ -2082,11 +2114,20 @@ const UpdateProductForm = ({ productId }) => {
                                                 <label className="text-base font-medium" htmlFor="v_delivery_condition">
                                                     Delivery Condition
                                                 </label>
-                                                <Input
-                                                    id="v_delivery_condition"
+                                                <Controller
                                                     name="v_delivery_condition"
-                                                    placeholder="Enter Delivery Condition"
-                                                    {...register("v_delivery_condition")}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <Select
+                                                            {...field}
+                                                            options={deliveryConditionOptions}
+                                                            onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
+                                                            value={deliveryConditionOptions.find(option => option.value === field.value) || null}
+                                                            placeholder="Select Delivery Condition"
+                                                            className="basic-single"
+                                                            classNamePrefix="select"
+                                                        />
+                                                    )}
                                                 />
                                             </div>
 
@@ -2953,6 +2994,32 @@ const UpdateProductForm = ({ productId }) => {
                                                     </div>
                                                 </div>
 
+                                                <div className="mb-2 w-[50%]">
+                                                    <label className="text-base font-medium" htmlFor="v_secret_text">
+                                                        Secret Text
+                                                    </label>
+                                                    <textarea
+                                                        id="v_secret_text"
+                                                        name="v_secret_text"
+                                                        placeholder="Secret Text"
+                                                        rows="4"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_secret_text")}
+                                                    ></textarea>
+                                                </div>
+
+                                                <div className="mb-2 w-[50%]">
+                                                    <label className="text-base font-medium" htmlFor="v_secret_video_link">
+                                                        Secret Video Link
+                                                    </label>
+                                                    <Input
+                                                        id="v_secret_video_link"
+                                                        name="v_secret_video_link"
+                                                        placeholder="Enter Secret Video Link"
+                                                        {...register("v_secret_video_link")}
+                                                    />
+                                                </div>
+
 
 
                                                 <div className="grid grid-cols-4 gap-4 mb-4">
@@ -3288,9 +3355,9 @@ const UpdateProductForm = ({ productId }) => {
                                                     />
                                                 </div>
 
-                                                {/* PBL Text section */}
+                                                {/* Vendor Agreement section */}
                                                 <div className="mb-3 mt-4">
-                                                    <h4 className="text-lg font-semibold text-gray-800 mb-1">PBL Text</h4>
+                                                    <h4 className="text-lg font-semibold text-gray-800 mb-1">Vendor Agreement</h4>
                                                     <div className="flex w-24 h-1">
                                                         <div className="w-2/3 bg-green-500"></div>
                                                         <div className="w-1/2 bg-gray-500/20"></div>
@@ -3301,7 +3368,7 @@ const UpdateProductForm = ({ productId }) => {
                                                     <textarea
                                                         id="v_pbl_text"
                                                         name="v_pbl_text"
-                                                        placeholder="PBL Text"
+                                                        placeholder="Vendor Agreement"
                                                         rows="4"
                                                         className="outline-none py-2 px-3 rounded border w-full"
                                                         {...register("v_pbl_text")}
@@ -3319,6 +3386,46 @@ const UpdateProductForm = ({ productId }) => {
                                                         <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
                                                             Show Seller Mobile Number
                                                         </label>
+                                                    </div>
+                                                )}
+
+                                                {canShowSellerMobileToggle() && watch("v_show_seller_mobile") && (
+                                                    <div className="mt-4">
+                                                        <h4 className="text-sm font-semibold text-gray-800 mb-2">Sellers</h4>
+                                                        {sellerInfoRows.map((row, index) => (
+                                                            <div key={index} className="flex items-end gap-2 mb-2">
+                                                                <div className="flex-1">
+                                                                    <label className="text-sm font-medium text-gray-700">Seller Name</label>
+                                                                    <Input
+                                                                        value={row.name}
+                                                                        placeholder="Seller Name"
+                                                                        onChange={(e) => handleSellerInfoChange(index, "name", e.target.value)}
+                                                                    />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                                                                    <Input
+                                                                        value={row.phone}
+                                                                        placeholder="Phone"
+                                                                        onChange={(e) => handleSellerInfoChange(index, "phone", e.target.value)}
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveSellerInfoRow(index)}
+                                                                    className="px-3 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddSellerInfoRow}
+                                                            className="mt-1 px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+                                                        >
+                                                            + Add Seller
+                                                        </button>
                                                     </div>
                                                 )}
 

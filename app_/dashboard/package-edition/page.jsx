@@ -15,6 +15,7 @@ import VehicleModelAddModal from "@/components/modals/VehicleModelAddModal";
 import PackageAddModal from "@/components/modals/PackageAddModal";
 import FeatureSpecificationAddModal from "@/components/modals/FeatureSpecificationAddModal";
 import FeatureAddModal from "@/components/modals/FeatureAddModal";
+import { hasPermission } from "@/lib/utils";
 
 const PackageEdition = () => {
     const [loading, setLoading] = useState(false);
@@ -40,6 +41,29 @@ const PackageEdition = () => {
     const [selectedModel, setSelectedModel] = useState("");
     const [selectedPackage, setSelectedPackage] = useState("");
     const [selectedFeatureSpecification, setSelectedFeatureSpecification] = useState("");
+
+    const { permissionList, user } = useAppContext();
+
+    const canShowAddFeatureSpecificationButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "FeatureSpecification", "ShowFeatureSpecificationAddButton")
+
+    const canShowAddFeatureButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "MasterData", "FeatureAddButtonShow")
+
+    const canShowAddBrandButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "MasterData", "AddBrandButton")
+
+    const canShowAddModelButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "MasterData", "AddModelButton")
+
+    const canShowAddPackageButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "Package", "AddPackageButton")
+
 
     const handleChange = (e, id) => {
         const isChecked = e.target.checked;
@@ -102,7 +126,7 @@ const PackageEdition = () => {
     }
 
 
-    
+
 
     const handleAddBrand = () => {
         setOpenBrand(true);
@@ -331,6 +355,11 @@ const PackageEdition = () => {
                 }
             } catch (error) {
                 console.log("Error creating subscription:", error);
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: `${error}`,
+                });
             } finally {
                 setIsSubmitting(false);
             }
@@ -374,12 +403,17 @@ const PackageEdition = () => {
                                         ))}
                                     </select>
 
-                                    <button
-                                        onClick={handleAddBrand}
-                                        className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                                    >
-                                        <Plus />
-                                    </button>
+                                    {
+                                        canShowAddBrandButton && (
+                                            <button
+                                                onClick={handleAddBrand}
+                                                className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                                            >
+                                                <Plus />
+                                            </button>
+                                        )
+                                    }
+
                                 </div>
                             </div>
 
@@ -406,11 +440,15 @@ const PackageEdition = () => {
                                         ))}
                                     </select>
 
-                                    <button
-                                        onClick={handleAddModel}
-                                        className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                        <Plus />
-                                    </button>
+                                    {
+                                        canShowAddModelButton && (
+                                            <button
+                                                onClick={handleAddModel}
+                                                className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                                <Plus />
+                                            </button>
+                                        )
+                                    }
                                 </div>
                             </div>
 
@@ -439,11 +477,16 @@ const PackageEdition = () => {
                                         ))}
                                     </select>
 
-                                    <button
-                                        onClick={handleAddPackage}
-                                        className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                        <Plus />
-                                    </button>
+                                    {
+                                        canShowAddPackageButton && (
+                                            <button
+                                                onClick={handleAddPackage}
+                                                className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                                <Plus />
+                                            </button>
+                                        )
+                                    }
+
                                 </div>
                             </div>
                         </div>
@@ -461,7 +504,7 @@ const PackageEdition = () => {
                                         {
                                             featureData && featureData.length > 0 && featureData.map((item, index) => (
                                                 <div key={index} className="border rounded p-4">
-                                                   
+
                                                     <p className="text-sm font-medium mb-2">{item?.md_title}:</p>
                                                     <hr />
                                                     <div className="flex items-end justify-between mt-2">
@@ -481,12 +524,16 @@ const PackageEdition = () => {
                                                             }
                                                         </div>
                                                         <div>
-                                                            <button
+                                                            {
+                                                                canShowAddFeatureSpecificationButton && (
+                                                                    <button
+                                                                        onClick={() => handleAddFeatureSpecification(item?.md_id)}
+                                                                        className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                                                        <Plus />
+                                                                    </button>
+                                                                )
+                                                            }
 
-                                                                onClick={() => handleAddFeatureSpecification(item?.md_id)}
-                                                                className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                                                <Plus />
-                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -494,15 +541,19 @@ const PackageEdition = () => {
                                         }
                                     </div>
 
+                                    {
+                                        canShowAddFeatureButton && (
+                                            <div className="flex items-center justify-end gap-2 mt-4">
+                                                <span className="font-medium">Add Feature Head </span>
+                                                <button
+                                                    onClick={handleAddFeature}
+                                                    className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                                    <Plus />
+                                                </button>
+                                            </div>
+                                        )
+                                    }
 
-                                    <div className="flex items-center justify-end gap-2 mt-4">
-                                        <span className="font-medium">Add Feature Head </span>
-                                        <button 
-                                            onClick={handleAddFeature}
-                                            className="px-1 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                            <Plus />
-                                        </button>
-                                    </div>
                                 </div>
                             )
                         }
@@ -563,7 +614,7 @@ const PackageEdition = () => {
                 getFeatureSpecification={getFeatureSpecification}
             />
 
-           
+
 
 
             {/* setOpenFeature */}

@@ -5,6 +5,9 @@ import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import ShopService from "@/services/ShopService";
 
+// Session-scoped cache: key = "cat_root" | "cat_{parentId}"
+const _categoryCache = new Map();
+
 const Queries = {
   getColorOptions: async () => {
     const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.COLOR_MD_CODE);
@@ -270,6 +273,16 @@ const Queries = {
       })),
     ];
   },
+  getMasterDataOptions: async (typeCode) => {
+    const cacheKey = `md_${typeCode}`;
+    if (_categoryCache.has(cacheKey)) return _categoryCache.get(cacheKey);
+
+    const response = await MasterDataService.Queries.getMasterDataByTypeCode(typeCode);
+    const items = Array.isArray(response?.data?.master_data) ? response.data.master_data : [];
+    const result = items.map((item) => ({ value: item.md_id, label: item.md_title }));
+    _categoryCache.set(cacheKey, result);
+    return result;
+  },
   getLocationOptions: async () => {
     const response = await LocationService.Queries.getAllLocation();
     const locations = response.data?.data || response.data || [];
@@ -283,9 +296,12 @@ const Queries = {
     ];
   },
   getCategoryOptions: async () => {
+    const cacheKey = "cat_root";
+    if (_categoryCache.has(cacheKey)) return _categoryCache.get(cacheKey);
+
     const response = await CategoryService.Queries.getCategories({
       _page: 1,
-      _perPage: 1000,
+      _perPage: 200,
       _parent_id: 0,
     });
 
@@ -293,39 +309,31 @@ const Queries = {
       return [{ value: "", label: "-Select Category-" }];
     }
 
-    const categoriesMasterData = response.data?.data || [];
-    return [
-      {
-        value: "",
-        label: "-Select Category-",
-      },
-      ...categoriesMasterData.map((category) => ({
-        value: category.c_id,
-        label: category.c_name,
-      })),
+    const result = [
+      { value: "", label: "-Select Category-" },
+      ...(response.data?.data || []).map((c) => ({ value: c.c_id, label: c.c_name })),
     ];
+    _categoryCache.set(cacheKey, result);
+    return result;
   },
   getSubcategoryOptions: async (parentCategoryId) => {
     if (!parentCategoryId) return [{ value: "", label: "-Select Subcategory-" }];
 
-    const response = await CategoryService.Queries.getCategories({
-      _page: 1,
-      _perPage: 5000,
-      _parent_id: parentCategoryId,
-    });
+    const cacheKey = `cat_${parentCategoryId}`;
+    if (_categoryCache.has(cacheKey)) return _categoryCache.get(cacheKey);
+
+    const response = await CategoryService.Queries.getCategoryChildren(parentCategoryId);
 
     if (response?.status !== "success") {
       return [{ value: "", label: "-Select Subcategory-" }];
     }
 
-    const subcategoriesMasterData = response.data?.data || [];
-    return [
+    const result = [
       { value: "", label: "-Select Subcategory-" },
-      ...subcategoriesMasterData.map((subcategory) => ({
-        value: subcategory.c_id,
-        label: subcategory.c_name,
-      })),
+      ...(response.data || []).map((c) => ({ value: c.c_id, label: c.c_name })),
     ];
+    _categoryCache.set(cacheKey, result);
+    return result;
   },
   getShopsOptions: async (normalizedUserId) => {
     const params = {

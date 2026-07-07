@@ -1,15 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Loading from '@/components/Loading';
 import Footer from "@/components/dashboard/Footer";
 import { Button } from "@/components/ui/button";
 import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
-import ShopModal from "@/components/modals/ShopModal";
-import StoreService from "@/services/ShopService";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import constData from "@/lib/constant";
-import api from "@/lib/api";
 
 import {
   Table,
@@ -21,24 +17,40 @@ import {
 } from "@/components/ui/table";
 
 import toast from "react-hot-toast";
-import VehicleModelModal from "@/components/modals/VehicleModelModal";
-import VehicleModelService from "@/services/VehicleModelService";
 import Swal from "sweetalert2";
 import MasterDataService from "@/services/MasterDataService";
 import AddLocationModal from "@/components/modals/AddLocationModal";
 import LocationService from "@/services/LocationService";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 const Model = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [countries, setCountries] = useState("");
   const [locations, setLocations] = useState([]);
   const [open, setOpen] = useState(false);
-  const [shops, setShops] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalItems, setTotalItems] = useState();
+  const [totalItems, setTotalItems] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+
+
+  const { permissionList, user } = useAppContext();
+
+
+  const canShowAddLocationButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Location", "ShowLocationAddButton")
+
+  const canShowEditLocationButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Location", "ShowLocationEditButton")
+
+  const canShowDeleteLocationButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Location", "ShowLocationDeleteButton")
 
 
   const getCountries = async () => {
@@ -47,6 +59,7 @@ const Model = () => {
       const response = await MasterDataService.Queries.getMasterDataByTypeCode(country_code);
 
       const countryMasterData = response.data?.master_data;
+
       const countryData = countryMasterData.map((country) => ({
         value: country.md_id,
         label: country.md_title,
@@ -61,12 +74,16 @@ const Model = () => {
     }
   }
 
-  const getLocations = async (value = "") => {
+  const getLocations = async (
+    value = searchQuery,
+    page = currentPage,
+    perPage = itemsPerPage
+  ) => {
     try {
       setLoading(true);
       const response = await LocationService.Queries.getLocationall({
-        _page: currentPage,
-        _perPage: itemsPerPage,
+        _page: page,
+        _perPage: perPage,
         _name: value,
       });
 
@@ -87,9 +104,9 @@ const Model = () => {
     }
   }
 
-  const fetchSearchResults = (value) => {
-    // console.log("value", value);
-    getLocations(value);
+  const fetchSearchResults = () => {
+    setCurrentPage(1);
+    setSearchQuery(query.trim());
   };
 
   const handleEdit = (item) => {
@@ -133,16 +150,29 @@ const Model = () => {
     setSelectedModel(null);
   }
 
-  
+
   useEffect(() => {
     getCountries();
-    getLocations();
   }, []);
 
 
   useEffect(() => {
-    getLocations();
-  }, [currentPage, itemsPerPage]);
+    getLocations(searchQuery, currentPage, itemsPerPage);
+  }, [searchQuery, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    if (query.trim() === "" && searchQuery !== "") {
+      setCurrentPage(1);
+      setSearchQuery("");
+    }
+  }, [query, searchQuery]);
+
+  const handleClearSearch = () => {
+    setCurrentPage(1);
+    setSearchQuery("");
+  };
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
 
   return (
     <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
@@ -150,28 +180,33 @@ const Model = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <h2 className="text-xl text-gray-800">All Locations</h2>
-          <Button
-            onClick={() => {
-              setOpen(true);
-              setSelectedModel(null);
-            }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <svg
-              className="w-5 h-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Location
-          </Button>
+          {
+            canShowAddLocationButton && (
+              <Button
+                onClick={() => {
+                  setOpen(true);
+                  setSelectedModel(null);
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Location
+              </Button>
+            )
+          }
+
         </div>
 
         {/* Search Filter */}
-        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search by name..." />
+        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search by name..." onClearSearch={handleClearSearch} />
 
         {/* Table Container */}
         <div className="overflow-x-auto rounded-md border border-gray-300 mt-4">
@@ -204,13 +239,13 @@ const Model = () => {
               </TableRow>
             </TableHeader>
 
-            
+
 
             <TableBody>
               {!loading && locations?.length > 0 ? (
                 locations.map((item, index) => (
                   <TableRow key={item.id || index} className="border-b border-gray-200">
-                    <TableCell className="border-r border-gray-200 text-center">{index + 1}</TableCell>
+                    <TableCell className="border-r border-gray-200 text-center">{startIndex + index + 1}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item.country_name}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item.l_name}</TableCell>
                     <TableCell className="border-r border-gray-200 font-medium">{item.l_address}</TableCell>
@@ -226,20 +261,33 @@ const Model = () => {
                       </span>
                     </TableCell>
                     <TableCell className="flex justify-center gap-2 border-r border-gray-200 font-medium">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-800"
-                        aria-label={`Edit shop ${item.l_name}`}
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      {/* <button
-                        onClick={() => handleDelete(item?.l_id)}
-                        className="text-red-600 hover:text-red-800"
-                        aria-label={`Delete shop ${item.l_name}`}
-                      >
-                        <Trash2 size={18} />
-                      </button> */}
+
+                      {
+                        canShowEditLocationButton && (
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                            aria-label={`Edit shop ${item.l_name}`}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )
+                      }
+
+
+                      {/* {
+                        canShowDeleteLocationButton && (
+                          <button
+                            onClick={() => handleDelete(item?.l_id)}
+                            className="text-red-600 hover:text-red-800"
+                            aria-label={`Delete shop ${item.l_name}`}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )
+                      } */}
+
+
                     </TableCell>
                   </TableRow>
                 ))

@@ -9,7 +9,7 @@ const TableFilter = ({ query, setQuery, setCurrentPage, fetchSearchResults, item
     useEffect(() => {
         if(query && query.trim() !== '') {
             const timer = setTimeout(() => {
-                fetchSearchResults()
+                fetchSearchResults(query)
             }, 500)
 
             return () => clearTimeout(timer)

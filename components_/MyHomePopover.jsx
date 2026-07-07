@@ -1,17 +1,20 @@
 import React from 'react'
 import * as Popover from "@radix-ui/react-popover";
-import { LayoutDashboard, LogOut, ShoppingCart, User, UserPen } from 'lucide-react';
+import { Bell, LayoutDashboard, List, LogOut, ShoppingCart, User, UserPen } from 'lucide-react';
 import LoginService from '@/services/LoginService';
 import { useAppContext } from '@/context/AppContext';
 import { usePathname } from "next/navigation";
+import Link from 'next/link';
+import { hasPermission } from '@/lib/utils';
 // import { Cross2Icon } from "@radix-ui/react-icons";
 
-const MyHomePopover = ({ setLogout }) => {
-    const { router, user, setUser } = useAppContext();
+const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCount }) => {
+    const { router, user, setUser, permissionList } = useAppContext();
 
     const pathname = usePathname();
 
     const isActiveMyShop = pathname === '/my-shop/' || pathname === '/pb-home';
+    const isMyOrderList = pathname === '/my-order-list/' || pathname === '/my-order-list';
     const isActiveMemberShop = pathname === '/member-shop/' || pathname === '/member-shop';
     const isActiveCompanyShop = pathname === '/company-shop/' || pathname === '/company-shop';
     const isActiveUserShop = pathname === '/user-shop/' || pathname === '/user-shop';
@@ -24,6 +27,22 @@ const MyHomePopover = ({ setLogout }) => {
     } catch (error) {
         console.error("Failed to parse user data:", error);
     }
+    const displayName = parsedUser?.name || parsedUser?.username || parsedUser?.phone || "Login";
+
+    const canShowMemberShop =
+        parsedUser?.user_mode === 'supreme' ||
+        ((parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') &&
+            hasPermission(permissionList, 0, "Shop", "MemberShopMenuShow"));
+
+    const canShowUserShop =
+        parsedUser?.user_mode === 'supreme' ||
+        ((parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') &&
+            hasPermission(permissionList, 0, "Shop", "UserShopMenuShow"));
+
+    const canShowMyOrderList =
+        parsedUser?.user_mode === 'supreme' ||
+        ((parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') &&
+            hasPermission(permissionList, 0, "Order", "MyOrderListMenuShow"));
 
     // const setLogout = async () => {
     //     try {
@@ -54,19 +73,31 @@ const MyHomePopover = ({ setLogout }) => {
         <div>
             <Popover.Root>
                 <Popover.Trigger asChild>
-                    <button className="flex items-center gap-2 border px-4 py-1.5 rounded-full text-sm hover:bg-gray-100 transition">
-                        <User className="h-4 w-4" />
-                        <span>
-                            {(() => {
-                                try {
-                                    const parsedUser = JSON.parse(user);
-                                    return parsedUser?.name || "Login";
-                                } catch {
-                                    return "Login";
-                                }
-                            })()}
-                        </span>
-                    </button>
+                    <div className="relative inline-flex">
+                        <button className="flex items-center gap-2 border px-4 py-1.5 rounded-full text-sm hover:bg-gray-100 transition">
+                            <User className="h-4 w-4" />
+                            <span>{displayName}</span>
+                        </button>
+
+
+                        {
+                            unreadNotificationCount > 0 && (
+                                <span
+                                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white ring-2 ring-white"
+                                    aria-label="Notifications"
+                                >
+                                    <span>{unreadNotificationCount}</span>
+                                </span>
+                            )
+                        }
+
+
+
+
+
+
+
+                    </div>
                 </Popover.Trigger>
 
                 <Popover.Portal>
@@ -79,71 +110,128 @@ const MyHomePopover = ({ setLogout }) => {
                                 {/* Top Menu Items */}
 
                                 <li className={`${isActiveProfile ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                    <button
+                                    <Link
+                                        href="/profile"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/profile")}
                                     >
                                         <UserPen className="h-4 w-4" />
                                         Profile
-                                    </button>
+                                    </Link>
                                 </li>
 
-                                <li className={`${isActiveMyShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                    <button
+                                {/* <li className={`${isActiveProfile ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                    <Link
+                                        href="/conversation-list"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/my-shop")}
+                                    >
+                                        <UserPen className="h-4 w-4" />
+                                        Conversation List
+                                    </Link>
+                                </li> */}
+
+                                {
+                                    canShowMyOrderList && (
+                                        <li className={`${isMyOrderList ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                            <Link
+                                                href="/my-order-list"
+                                                className="flex items-center gap-2 hover:text-gray-900 transition"
+                                            >
+                                                <List className="h-4 w-4" />
+                                                Order List
+                                            </Link>
+                                        </li>
+                                    )
+                                }
+
+
+                                <li className={`${isActiveMyShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                    <Link
+                                        href="/my-shop"
+                                        className="flex items-center gap-2 hover:text-gray-900 transition"
                                     >
                                         <ShoppingCart className="h-4 w-4" />
                                         My Shop
-                                    </button>
+                                    </Link>
                                 </li>
 
                                 <li className={`${isActiveCompanyShop ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
-                                    <button
+                                    <Link
+                                        href="/company-shop"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/company-shop")}
                                     >
                                         <ShoppingCart className="h-4 w-4" />
                                         Company Shop
-                                    </button>
+                                    </Link>
                                 </li>
 
                                 {
-                                    (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'pbl') && (
+                                    (parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'admin') && (
                                         <>
-                                            <li className={`${isActiveMemberShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                                <button
-                                                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                                                    onClick={() => router.push("/member-shop")}
-                                                >
-                                                    <ShoppingCart className="h-4 w-4" />
-                                                    Member Shop
-                                                </button>
-                                            </li>
+                                            {canShowMemberShop && (
+                                                <li className={`${isActiveMemberShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                                    <Link
+                                                        href="/member-shop"
+                                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                                    >
+                                                        <ShoppingCart className="h-4 w-4" />
+                                                        Member Shop
+                                                    </Link>
+                                                </li>
+                                            )}
 
 
 
-                                            <li className={`${isActiveUserShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
-                                                <button
-                                                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                                                    onClick={() => router.push("/user-shop")}
-                                                >
-                                                    <ShoppingCart className="h-4 w-4" />
-                                                    User Shop
-                                                </button>
-                                            </li>
+                                            {canShowUserShop && (
+                                                <li className={`${isActiveUserShop ? "border-l-4 md:border-l-[6px] bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150`}>
+                                                    <Link
+                                                        href="/user-shop"
+                                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                                    >
+                                                        <ShoppingCart className="h-4 w-4" />
+                                                        User Shop
+                                                    </Link>
+                                                </li>
+                                            )}
                                         </>
                                     )
                                 }
 
                                 <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
-                                    <button
+                                    <Link
+                                        href="/dashboard"
                                         className="flex items-center gap-2 hover:text-gray-900 transition"
-                                        onClick={() => router.push("/dashboard")}
                                     >
                                         <LayoutDashboard className="h-4 w-4" />
                                         Dashboard
+                                    </Link>
+                                </li>
+
+
+                                <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
+                                    <button
+                                        onClick={() => {
+                                            setIsNotificationOpen(true);
+                                        }}
+                                        className="flex items-center gap-2 hover:text-gray-900 transition"
+                                    >
+                                        <Bell className="h-4 w-4" />
+                                        Notification
                                     </button>
+
+
+                                    {
+                                        unreadNotificationCount > 0 && (
+                                            <span
+                                                className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white ring-2 ring-white"
+                                                aria-label="Notifications"
+                                            >
+                                                <span>{unreadNotificationCount}</span>
+                                            </span>
+                                        )
+                                    }
+
+
+
                                 </li>
 
 

@@ -1,5 +1,5 @@
 'use client'
-import React, { useContext, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import HeaderSlider from "@/components/HeaderSlider";
 import NewsLetter from "@/components/NewsLetter";
 import Navbar from "@/components/Navbar";
@@ -7,17 +7,21 @@ import Footer from "@/components/Footer";
 import PblHomeProduct from "@/components/PblHomeProduct";
 import { PblHomeProductContextProvider } from "@/context/PblHomeProductContext";
 import Header from "@/components/Header";
+import { parseStoredUser } from "@/lib/parseStoredUser";
+import Loading from "@/components/Loading";
 
-const PblHome = () => {
+const PblHomeContent = () => {
   const [user, setUser] = useState();
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    const userInfo = userData && JSON.parse(userData);
+    const userInfo = parseStoredUser(localStorage.getItem("user"));
     if (userInfo) {
-      setUser(JSON.parse(userInfo));
+      setUser(userInfo);
     }
   }, []);
+
+
+  // console.log("useruseruseruseruseruseruseruser", user);
 
   return (
     <PblHomeProductContextProvider>
@@ -27,7 +31,7 @@ const PblHome = () => {
         <div className="hidden md:block">
           <HeaderSlider />
         </div>
-        <PblHomeProduct />
+        <PblHomeProduct user={user} />
         {/* <NewsLetter /> */}
       </div>
       {
@@ -37,6 +41,14 @@ const PblHome = () => {
       }
     
     </PblHomeProductContextProvider>
+  );
+};
+
+const PblHome = () => {
+  return (
+    <Suspense fallback={<Loading />}>
+      <PblHomeContent />
+    </Suspense>
   );
 };
 

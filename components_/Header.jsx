@@ -1,66 +1,42 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import { usePathname } from "next/navigation";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const Header = () => {
     const [user, setUser] = useState();
 
     const pathname = usePathname();
 
-    console.log("Path Name::::", pathname);
+    // ---------- Custom Helper ----------
+    let isMyShop = pathname.includes("my-shop");
+    let isCompanyShop = pathname.includes("company-shop");
+    let isPbHome = pathname === '/pb-home' || pathname === '/pb-home/';
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
+        const userInfo = parseStoredUser(localStorage.getItem("user"));
         if (userInfo) {
-            setUser(JSON.parse(userInfo));
+            setUser(userInfo);
         }
     }, []);
     
     return (
         <div>
             <div className="flex items-center gap-2 justify-center py-2 lg:py-3 md:px-16 lg:px-32 border-b border-gray-300 text-gray-700 bg-gray-800">
-                {/* {
-                    !user && (
-                        <h1 className='text-xl lg:text-4xl font-large font-bold text-white tracking-wider'>Click4Details</h1>
-                    )
-                } */}
-                
-                {/* <h1 className="text-xl lg:text-4xl font-large font-bold text-white tracking-wider animate-ring">
-                    📞 Hotline:&nbsp;
-                    {
-                        user ? (
-                            <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
-                        ) : (
-                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
-                        )
-                    }
-                </h1> */}
-
+               
 
                 <h1 className="text-xl lg:text-4xl font-large font-bold text-white tracking-wider animate-ring">
-                    📞 Hotline:&nbsp;
+                    &#128222; Hotline:&nbsp;
                     {
-                        user && pathname !== '/pb-home/' ? (
-                            <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
+                        
+                        user && (isPbHome || isMyShop || isCompanyShop) ? (
+                            <a href={`tel:+880${user?.phone}`} className="hover:text-blue-300 transition-colors">+880{user?.phone}</a>
                         ) : (
                             <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
                         )
                     }
                 </h1>
 
-
-                 
-                {/* <h1 className="text-xl lg:text-4xl font-large font-bold text-white tracking-wider animate-pulse-glow">
-                    Hotline:&nbsp;
-                    {
-                        user ? (
-                            <a href={`tel:${user?.phone}`} className="hover:text-blue-300 transition-colors">{user?.phone}</a>
-                        ) : (
-                            <a href="tel:+8809638660077" className="hover:text-blue-300 transition-colors">+8809638660077</a>
-                        )
-                    }
-                </h1> */}
 
 
                 <style jsx>{`

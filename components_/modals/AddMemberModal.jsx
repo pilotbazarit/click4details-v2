@@ -19,8 +19,81 @@ import PermissionService from '@/services/PermissionService';
 import { useAppContext } from '@/context/AppContext';
 import constData from "@/lib/constant";
 import MasterDataService from '@/services/MasterDataService';
+import { Plus } from 'lucide-react';
 
-const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
+const EMPTY_LIST = [''];
+
+const normalizeListValues = (value) => {
+    if (value === undefined || value === null) {
+        return EMPTY_LIST;
+    }
+
+    let rawItems = [];
+
+    if (Array.isArray(value)) {
+        rawItems = value;
+    } else if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+
+        if (!trimmedValue) {
+            rawItems = [];
+        } else {
+            try {
+                const parsedValue = JSON.parse(trimmedValue);
+                rawItems = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
+            } catch (error) {
+                rawItems = trimmedValue.includes(',') ? trimmedValue.split(',') : [trimmedValue];
+            }
+        }
+    } else if (typeof value === 'object') {
+        rawItems = Object.values(value);
+    } else {
+        rawItems = [value];
+    }
+
+    const normalizedItems = rawItems
+        .map((item) => {
+            if (item === undefined || item === null) {
+                return '';
+            }
+
+            if (typeof item === 'object') {
+                const resolvedValue =
+                    item.value ??
+                    item.email ??
+                    item.phone ??
+                    item.md_id ??
+                    item.id ??
+                    item.label ??
+                    item.name ??
+                    '';
+
+                return String(resolvedValue).trim();
+            }
+
+            return String(item).trim();
+        })
+        .filter(Boolean);
+
+    return normalizedItems.length > 0 ? normalizedItems : EMPTY_LIST;
+};
+
+const getListFromSources = (keys, ...sources) => {
+    for (const source of sources) {
+        if (!source) continue;
+
+        for (const key of keys) {
+            const value = source?.[key];
+            if (value !== undefined && value !== null && !(typeof value === 'string' && value.trim() === '')) {
+                return normalizeListValues(value);
+            }
+        }
+    }
+
+    return EMPTY_LIST;
+};
+
+const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopEmployee }) => {
     // if (!isOpen) return null;
 
     const { selectedShop } = useAppContext();
@@ -34,6 +107,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
     const [phones, setPhones] = useState(['']);
     const [designations, setDesignations] = useState([]);
     const [selectedDesignations, setSelectedDesignations] = useState(['']);
+    const [facebooks, setFacebooks] = useState(['']);
+    const [youtubes, setYoutubes] = useState(['']);
+    const [websites, setWebsites] = useState(['']);
+    const [googleMaps, setGoogleMaps] = useState(['']);
 
     // console.log("selectedUser", selectedUser);
 
@@ -52,13 +129,34 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
     const selectedUserId = watch('user_id');
 
 
+    const resetFormState = () => {
+        reset({
+            user_id: '',
+            role_id: '',
+        });
+        setSelectUser({});
+        setUsers([]);
+        setPermissionNames([]);
+        setEmails(EMPTY_LIST);
+        setPhones(EMPTY_LIST);
+        setSelectedDesignations(EMPTY_LIST);
+        setFacebooks(EMPTY_LIST);
+        setYoutubes(EMPTY_LIST);
+        setWebsites(EMPTY_LIST);
+        setGoogleMaps(EMPTY_LIST);
+    };
+
+    const closeModal = () => {
+        resetFormState();
+        setSelectedUser?.(null);
+        setOpen(false);
+    };
+
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen);
         if (!isOpen) {
-            reset(); // Reset form when dialog closes
-            setEmails(['']);
-            setPhones(['']);
-            setSelectedDesignations(['']);
+            resetFormState();
+            setSelectedUser?.(null);
         }
     };
 
@@ -73,13 +171,15 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
 
             if (response?.status == "success") {
                 setUsers(response?.data?.data)
-                setLoading(false);
             } else {
-                toast.error(response?.data?.message || "Failed to fetch models");
+                toast.error(response?.data?.message || "Failed to fetch users");
             }
 
         } catch (error) {
-            console.log("error", error);
+            console.log("Error fetching users:", error);
+            toast.error("Failed to fetch users");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -90,6 +190,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
     const getRoles = async (value = "") => {
         try {
             const response = await RoleService.Queries.getRoles({
+                _type: 'general',
                 _page: 1,
                 _perPage: 1000,
             });
@@ -114,7 +215,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
             setLoading(true);
             const response = await UserService.Queries.getUserPermissionName({
                 _use_id: selectedUserId,
-                _role_id: roleIdParam
+                _role_id: roleIdParam,
+                _type: 'general',
+                _page: 1,
+                _perPage: 1000
             });
 
 
@@ -123,8 +227,8 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                 setLoading(false);
             }
         } catch (error) {
-            setLoading(true);
-            console.log("error", error);
+            setLoading(false);
+            // console.log("error", error);
         }
     };
 
@@ -198,6 +302,90 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
         setPhones(newPhones);
     };
 
+    const handleAddFacebook = () => {
+        if (facebooks.length < 4) {
+            setFacebooks([...facebooks, '']);
+        } else {
+            toast.error('Maximum 4 facebook links allowed');
+        }
+    };
+
+    const handleRemoveFacebook = (index) => {
+        if (facebooks.length > 1) {
+            const newFacebooks = facebooks.filter((_, i) => i !== index);
+            setFacebooks(newFacebooks);
+        }
+    };
+
+    const handleFacebookChange = (index, value) => {
+        const newFacebooks = [...facebooks];
+        newFacebooks[index] = value;
+        setFacebooks(newFacebooks);
+    };
+
+    const handleAddYoutube = () => {
+        if (youtubes.length < 4) {
+            setYoutubes([...youtubes, '']);
+        } else {
+            toast.error('Maximum 4 youtube links allowed');
+        }
+    };
+
+    const handleRemoveYoutube = (index) => {
+        if (youtubes.length > 1) {
+            const newYoutubes = youtubes.filter((_, i) => i !== index);
+            setYoutubes(newYoutubes);
+        }
+    };
+
+    const handleYoutubeChange = (index, value) => {
+        const newYoutubes = [...youtubes];
+        newYoutubes[index] = value;
+        setYoutubes(newYoutubes);
+    };
+
+    const handleAddWebsite = () => {
+        if (websites.length < 4) {
+            setWebsites([...websites, '']);
+        } else {
+            toast.error('Maximum 4 website links allowed');
+        }
+    };
+
+    const handleRemoveWebsite = (index) => {
+        if (websites.length > 1) {
+            const newWebsites = websites.filter((_, i) => i !== index);
+            setWebsites(newWebsites);
+        }
+    };
+
+    const handleWebsiteChange = (index, value) => {
+        const newWebsites = [...websites];
+        newWebsites[index] = value;
+        setWebsites(newWebsites);
+    };
+
+    const handleAddGoogleMap = () => {
+        if (googleMaps.length < 4) {
+            setGoogleMaps([...googleMaps, '']);
+        } else {
+            toast.error('Maximum 4 Google Map links allowed');
+        }
+    };
+
+    const handleRemoveGoogleMap = (index) => {
+        if (googleMaps.length > 1) {
+            const newGoogleMaps = googleMaps.filter((_, i) => i !== index);
+            setGoogleMaps(newGoogleMaps);
+        }
+    };
+
+    const handleGoogleMapChange = (index, value) => {
+        const newGoogleMaps = [...googleMaps];
+        newGoogleMaps[index] = value;
+        setGoogleMaps(newGoogleMaps);
+    };
+
     // Designation handling function
     const handleRemoveDesignation = (index) => {
         const newDesignations = selectedDesignations.filter((_, i) => i !== index);
@@ -218,6 +406,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
         const validEmails = emails.filter(email => email.trim() !== '');
         const validPhones = phones.filter(phone => phone.trim() !== '');
         const validDesignations = selectedDesignations.filter(designation => designation.trim() !== '');
+        const validFacebooks = facebooks.filter((facebook) => facebook.trim() !== '');
+        const validYoutubes = youtubes.filter((youtube) => youtube.trim() !== '');
+        const validWebsites = websites.filter((website) => website.trim() !== '');
+        const validGoogleMaps = googleMaps.filter((googleMap) => googleMap.trim() !== '');
 
 
 
@@ -244,6 +436,22 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
             payload[`urp_com_dsg[${index}]`] = designation;
         });
 
+        validFacebooks.forEach((facebook, index) => {
+            payload[`urp_com_facebook[${index}]`] = facebook;
+        });
+
+        validYoutubes.forEach((youtube, index) => {
+            payload[`urp_com_youtube[${index}]`] = youtube;
+        });
+
+        validWebsites.forEach((website, index) => {
+            payload[`urp_com_web[${index}]`] = website;
+        });
+
+        validGoogleMaps.forEach((googleMap, index) => {
+            payload[`urp_com_map[${index}]`] = googleMap;
+        });
+
         // console.log("payload", payload);
 
         try {
@@ -261,17 +469,13 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
             if (response.status == "success") {
                 toast.success(selectedUser?.urp_id ? "Permission updated successfully!" : "Permission added successfully!");
                 getShopEmployee();
-                setOpen(false);
-                reset();
-                setEmails(['']);
-                setPhones(['']);
-                setSelectedDesignations(['']);
+                closeModal();
             } else {
                 toast.error(response?.data?.message);
             }
         } catch (error) {
             toast.error(error?.message);
-            console.log("error", error);
+            // console.log("error", error);
         }
     };
 
@@ -279,22 +483,182 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
         try {
             const response = await PermissionService.Queries.getSingleUserRolePermission(id);
             if (response.status == "success") {
-                setValue("user_id", selectedShop?.user?.id);
-                setValue("role_id", response?.data?.urp_role_id);
-                setSelectUser(selectedShop?.user);
-                setUsers([selectedShop.user]);
-                setPermissionNames(response?.data?.urp_permissions);
+                return response?.data || null;
             }
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
         }
-    }
+        return null;
+    };
 
     useEffect(() => {
-        if (selectedUser && selectedUser.urp_id) {
-            getUserRolePermission(selectedUser?.urp_id);
+        if (!open) {
+            return;
         }
-    }, [selectedUser]);
+
+        if (!selectedUser?.urp_id) {
+            resetFormState();
+            return;
+        }
+
+        let isActive = true;
+
+        const initialUser =
+            selectedUser?.user ||
+            selectedUser ||
+            {};
+
+        const initialUserId =
+            selectedUser?.urp_user_id ??
+            selectedUser?.user?.id ??
+            selectedUser?.user?.u_id ??
+            selectedUser?.id ??
+            selectedUser?.u_id ??
+            '';
+
+        const initialRoleId =
+            selectedUser?.urp_role_id ??
+            selectedUser?.role?.r_id ??
+            '';
+
+        setValue("user_id", initialUserId);
+        setValue("role_id", initialRoleId);
+        setSelectUser(initialUser);
+        setUsers([]);
+        setPermissionNames([]);
+        setEmails(
+            getListFromSources(
+                ['urp_com_email', 'urp_com_emails', 'com_email', 'emails'],
+                selectedUser
+            )
+        );
+        setPhones(
+            getListFromSources(
+                ['urp_com_phone', 'urp_com_phones', 'com_phone', 'phones'],
+                selectedUser
+            )
+        );
+        setSelectedDesignations(
+            getListFromSources(
+                ['urp_com_dsg', 'urp_com_designation', 'com_dsg', 'designations'],
+                selectedUser
+            )
+        );
+        setFacebooks(
+            getListFromSources(
+                ['urp_com_facebook', 'com_facebook', 'facebook', 'facebooks'],
+                selectedUser
+            )
+        );
+        setYoutubes(
+            getListFromSources(
+                ['urp_com_youtube', 'com_youtube', 'youtube', 'youtubes'],
+                selectedUser
+            )
+        );
+        setWebsites(
+            getListFromSources(
+                ['urp_com_web', 'urp_com_website', 'com_web', 'website', 'web'],
+                selectedUser
+            )
+        );
+        setGoogleMaps(
+            getListFromSources(
+                ['urp_com_map', 'urp_com_google_map', 'com_map', 'google_map', 'map'],
+                selectedUser
+            )
+        );
+
+        const hydrateEditForm = async () => {
+            const permissionData = await getUserRolePermission(selectedUser.urp_id);
+
+            if (!isActive || !permissionData) {
+                return;
+            }
+
+            const resolvedUser =
+                permissionData?.user ||
+                selectedUser?.user ||
+                selectedUser ||
+                {};
+
+            const resolvedUserId =
+                permissionData?.urp_user_id ??
+                selectedUser?.urp_user_id ??
+                selectedUser?.user?.id ??
+                selectedUser?.user?.u_id ??
+                selectedUser?.id ??
+                selectedUser?.u_id ??
+                '';
+
+            const resolvedRoleId =
+                permissionData?.urp_role_id ??
+                selectedUser?.urp_role_id ??
+                selectedUser?.role?.r_id ??
+                '';
+
+            setValue("user_id", resolvedUserId);
+            setValue("role_id", resolvedRoleId);
+            setSelectUser(resolvedUser);
+            setUsers([]);
+            setPermissionNames(Array.isArray(permissionData?.urp_permissions) ? permissionData.urp_permissions : []);
+            setEmails(
+                getListFromSources(
+                    ['urp_com_email', 'urp_com_emails', 'com_email', 'emails'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+            setPhones(
+                getListFromSources(
+                    ['urp_com_phone', 'urp_com_phones', 'com_phone', 'phones'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+            setSelectedDesignations(
+                getListFromSources(
+                    ['urp_com_dsg', 'urp_com_designation', 'com_dsg', 'designations'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+            setFacebooks(
+                getListFromSources(
+                    ['urp_com_facebook', 'com_facebook', 'facebook', 'facebooks'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+            setYoutubes(
+                getListFromSources(
+                    ['urp_com_youtube', 'com_youtube', 'youtube', 'youtubes'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+            setWebsites(
+                getListFromSources(
+                    ['urp_com_web', 'urp_com_website', 'com_web', 'website', 'web'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+            setGoogleMaps(
+                getListFromSources(
+                    ['urp_com_map', 'urp_com_google_map', 'com_map', 'google_map', 'map'],
+                    permissionData,
+                    selectedUser
+                )
+            );
+        };
+
+        hydrateEditForm();
+
+        return () => {
+            isActive = false;
+        };
+    }, [open, selectedUser, reset, setValue]);
 
 
     const getDesignation = async () => {
@@ -333,7 +697,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
     // console.log("designations", designations);
 
     return (
-        <Dialog open={open} onOpenChange={() => setOpen(false)}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:hidden">
 
                 <DialogTitle>
@@ -344,16 +708,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                         </h2>
 
                         <button
-                            onClick={() => {
-                                setOpen(false);
-                                // selectedUserId('');
-                                setUsers([]);
-                                setPermissionNames([]);
-                                setEmails(['']);
-                                setPhones(['']);
-                                setSelectedDesignations(['']);
-                                reset();
-                            }}
+                            onClick={closeModal}
                             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow hover:from-blue-700 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center"
                         >
                             {/* Left arrow SVG for Back */}
@@ -384,16 +739,26 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                     <div className="relative w-full">
                                         <input
                                             id="user_search"
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
                                             placeholder="Enter phone number"
                                             className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 w-full"
                                             autoComplete="off"
                                             onChange={e => {
-                                                const value = e.target.value;
-                                                if (value.length === 11) {
-                                                    getUsers(value);
+                                                const value = e.target.value.replace(/\D/g, "");
+
+                                                if (value.startsWith("0")) {
+                                                    if (value.length === 11) {
+                                                        getUsers(value.slice(1));
+                                                    } else {
+                                                        setUsers([]);
+                                                    }
                                                 } else {
-                                                    setUsers([]);
+                                                    if (value.length === 10) {
+                                                        getUsers(value);
+                                                    } else {
+                                                        setUsers([]);
+                                                    }
                                                 }
                                             }}
                                         />
@@ -406,8 +771,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                                         className="px-4 py-2 cursor-pointer hover:bg-blue-100 flex justify-between items-center"
                                                         onClick={() => {
                                                             setValue('user_id', user.id);
+                                                            setValue('role_id', '');
                                                             setSelectUser(user);
                                                             setUsers([]);
+                                                            setPermissionNames([]);
                                                         }}
                                                     >
                                                         <span>{user.name}</span>
@@ -451,8 +818,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                                 title="Clear selection"
                                                 onClick={() => {
                                                     setValue('user_id', '');
-                                                    // selectUser({});
+                                                    setValue('role_id', '');
+                                                    setSelectUser({});
                                                     setUsers([]);
+                                                    setPermissionNames([]);
                                                 }}
                                             >
                                                 &times;
@@ -466,9 +835,53 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                     </div>
 
 
+
+                    {/* Select Role - full row */}
+                    <div className="mb-6">
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="role_id" className="text-base font-medium">Select Role</label>
+                            <Controller
+                                name="role_id"
+                                control={control}
+                                rules={{ required: 'Role is required' }}
+                                render={({ field }) => (
+                                    <Select
+                                        {...field}
+                                        inputId="role_id"
+                                        options={roles.map(role => ({ value: role.r_id, label: role.r_name }))}
+                                        classNamePrefix="react-select"
+                                        className="w-full"
+                                        value={roles.map(role => ({ value: role.r_id, label: role.r_name })).find(option => option.value === field.value) || null}
+                                        onChange={option => {
+                                            if (!selectedUserId) {
+                                                toast.error('Please select a user first.');
+                                            } else {
+                                                field.onChange(option ? option.value : '');
+                                                if (option && option.value) {
+                                                    getUserPermissionName(option.value);
+                                                } else {
+                                                    setPermissionNames([]);
+                                                }
+                                            }
+                                        }}
+                                        placeholder="Select Role"
+                                        isClearable
+                                    // isDisabled={!selectedUserId}
+                                    />
+                                )}
+                            />
+                            {errors.role_id && <span className="text-red-500 text-xs mt-1">{errors.role_id.message}</span>}
+                        </div>
+                    </div>
+
+
+                    <h2 className='font-bold text-md mb-1'>Business Card Information</h2>
+                    <hr/>
+
+
                     {/* User Name - read only field */}
                     {selectedUserId && (
-                        <div className="mb-4">
+                        <div className="mb-4 mt-2">
                             <div className="flex flex-col gap-1">
                                 <label htmlFor="user_name" className="text-base font-medium">User Name</label>
                                 <input
@@ -485,7 +898,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
 
 
                     {/* Designation Section */}
-                    <div className="mb-4">
+                    <div className="mb-4 mt-2">
                         <div className="flex flex-col gap-1">
                             <label className="text-base font-medium">Designations</label>
 
@@ -553,9 +966,9 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
 
 
                     {/* Email Section */}
-                    <div className="mb-4">
+                    <div className="mb-1">
                         <div className="flex flex-col gap-1">
-                            <label className="text-base font-medium"></label>
+                            <label className="text-base font-medium">Emails</label>
                             <div className="flex flex-col gap-2">
                                 {emails.map((email, index) => (
                                     <div key={index} className="flex gap-2 items-center">
@@ -582,13 +995,13 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                     type="button"
                                     onClick={handleAddEmail}
                                     disabled={emails.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit ${
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${
                                         emails.length >= 4
                                             ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                             : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                 >
-                                    + Add Another Email {emails.length >= 4 && '(Max 4)'}
+                                    <Plus className="w-6 h-6" /> {emails.length >= 4 && '(Max 4)'}
                                 </button>
                             </div>
                         </div>
@@ -596,7 +1009,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
 
 
                     {/* Phone Section */}
-                    <div className="mb-4">
+                    <div className="mb-1">
                         <div className="flex flex-col gap-1">
                             <label className="text-base font-medium">Phone Numbers</label>
                             <div className="flex flex-col gap-2">
@@ -625,57 +1038,181 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                     type="button"
                                     onClick={handleAddPhone}
                                     disabled={phones.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit ${
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${
                                         phones.length >= 4
                                             ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                                             : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                 >
-                                    + Add Another Phone {phones.length >= 4 && '(Max 4)'}
+                                    <Plus className="w-6 h-6" /> {phones.length >= 4 && '(Max 4)'}
                                 </button>
                             </div>
                         </div>
                     </div>
 
-
-                    {/* Select Role - full row */}
-                    <div className="mb-6">
+                    <div className="mb-1">
                         <div className="flex flex-col gap-1">
-                            <label htmlFor="role_id" className="text-base font-medium">Select Role</label>
-                            <Controller
-                                name="role_id"
-                                control={control}
-                                rules={{ required: 'Role is required' }}
-                                render={({ field }) => (
-                                    <Select
-                                        {...field}
-                                        inputId="role_id"
-                                        options={roles.map(role => ({ value: role.r_id, label: role.r_name }))}
-                                        classNamePrefix="react-select"
-                                        className="w-full"
-                                        value={roles.map(role => ({ value: role.r_id, label: role.r_name })).find(option => option.value === field.value) || null}
-                                        onChange={option => {
-                                            if (!selectedUserId) {
-                                                toast.error('Please select a user first.');
-                                            } else {
-                                                field.onChange(option ? option.value : '');
-                                                if (option && option.value) {
-                                                    getUserPermissionName(option.value);
-                                                } else {
-                                                    setPermissionNames([]);
-                                                }
-                                            }
-                                        }}
-                                        placeholder="Select Role"
-                                        isClearable
-                                    // isDisabled={!selectedUserId}
-                                    />
-                                )}
-                            />
-                            {errors.role_id && <span className="text-red-500 text-xs mt-1">{errors.role_id.message}</span>}
+                            <label className="text-base font-medium">Facebook</label>
+                            <div className="flex flex-col gap-2">
+                                {facebooks.map((facebook, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Facebook link"
+                                            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1"
+                                            value={facebook}
+                                            onChange={(e) => handleFacebookChange(index, e.target.value)}
+                                        />
+                                        {facebooks.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveFacebook(index)}
+                                                className="text-red-600 hover:text-red-800 font-bold text-2xl px-2"
+                                                title="Remove Facebook"
+                                            >
+                                                &times;
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={handleAddFacebook}
+                                    disabled={facebooks.length >= 4}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${
+                                        facebooks.length >= 4
+                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                >
+                                    <Plus className="w-6 h-6" /> {facebooks.length >= 4 && '(Max 4)'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
+                    <div className="mb-1">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-base font-medium">YouTube</label>
+                            <div className="flex flex-col gap-2">
+                                {youtubes.map((youtube, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter YouTube link"
+                                            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1"
+                                            value={youtube}
+                                            onChange={(e) => handleYoutubeChange(index, e.target.value)}
+                                        />
+                                        {youtubes.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveYoutube(index)}
+                                                className="text-red-600 hover:text-red-800 font-bold text-2xl px-2"
+                                                title="Remove YouTube"
+                                            >
+                                                &times;
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={handleAddYoutube}
+                                    disabled={youtubes.length >= 4}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${
+                                        youtubes.length >= 4
+                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                >
+                                    <Plus className="w-6 h-6" /> {youtubes.length >= 4 && '(Max 4)'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-1">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-base font-medium">Website</label>
+                            <div className="flex flex-col gap-2">
+                                {websites.map((website, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter website link"
+                                            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1"
+                                            value={website}
+                                            onChange={(e) => handleWebsiteChange(index, e.target.value)}
+                                        />
+                                        {websites.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveWebsite(index)}
+                                                className="text-red-600 hover:text-red-800 font-bold text-2xl px-2"
+                                                title="Remove Website"
+                                            >
+                                                &times;
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={handleAddWebsite}
+                                    disabled={websites.length >= 4}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${
+                                        websites.length >= 4
+                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                >
+                                    <Plus className="w-6 h-6" /> {websites.length >= 4 && '(Max 4)'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-1">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-base font-medium">Google Map</label>
+                            <div className="flex flex-col gap-2">
+                                {googleMaps.map((googleMap, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Google Map link"
+                                            className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1"
+                                            value={googleMap}
+                                            onChange={(e) => handleGoogleMapChange(index, e.target.value)}
+                                        />
+                                        {googleMaps.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveGoogleMap(index)}
+                                                className="text-red-600 hover:text-red-800 font-bold text-2xl px-2"
+                                                title="Remove Google Map"
+                                            >
+                                                &times;
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={handleAddGoogleMap}
+                                    disabled={googleMaps.length >= 4}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${
+                                        googleMaps.length >= 4
+                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                >
+                                    <Plus className="w-6 h-6" /> {googleMaps.length >= 4 && '(Max 4)'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
 
                     {/* Permissions Section */}
@@ -694,7 +1231,6 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                                                     type="checkbox"
                                                     className="w-5 h-5 accent-blue-600"
                                                     checked={!!per?.p_is_selected}
-                                                    readOnly
                                                     onChange={(e) => handlePermissionChange(item?.name, per?.p_name, e)}
                                                 />
                                             </div>
@@ -706,16 +1242,7 @@ const AddMemberModal = ({ open, setOpen, selectedUser, getShopEmployee }) => {
                     </div>
 
                     <DialogFooter className="flex justify-end gap-2 mt-6">
-                        <DialogClose asChild onClick={() => {
-                            setOpen(false);
-                            // selectedUserId('');
-                            setUsers([]);
-                            setPermissionNames([]);
-                            setEmails(['']);
-                            setPhones(['']);
-                            setSelectedDesignations(['']);
-                            reset();
-                        }}>
+                        <DialogClose asChild onClick={closeModal}>
                             <Button variant="outline">Close</Button>
                         </DialogClose>
                         <button

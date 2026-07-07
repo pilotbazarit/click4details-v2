@@ -2,12 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'SolaimanLipi';
+  src: url('/fonts/SolaimanLipi.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-bangla: 'SolaimanLipi', Arial, sans-serif;
+}
+
+
 @layer utilities {
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -162,4 +184,52 @@
 .jodit-wysiwyg a {
   color: blue;
   text-decoration: underline;
+}
+
+/* SweetAlert2 z-index fix for modals */
+.swal2-container-high-z {
+  z-index: 99999 !important;
+}
+
+.swal2-popup-high-z {
+  z-index: 99999 !important;
+}
+
+.swal2-actions-visible {
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}
+
+.pb-product-slider .swiper-button-next,
+.pb-product-slider .swiper-button-prev {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.pb-product-slider .swiper-button-next::after,
+.pb-product-slider .swiper-button-prev::after {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.pb-product-slider .swiper-pagination {
+  bottom: 12px !important;
+  left: 12px !important;
+  width: auto !important;
+}
+
+.pb-product-slider .swiper-pagination-bullet {
+  width: 7px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.92);
+  opacity: 0.72;
+}
+
+.pb-product-slider .swiper-pagination-bullet-active {
+  opacity: 1;
+  background: #ffffff;
 }

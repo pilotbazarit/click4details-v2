@@ -2,8 +2,18 @@ import ConversationService from "@/services/ConversationService";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NotificationService from "@/services/NotificationService";
+import { Bell, Car, MessageCircle, Package, UserPlus, X } from "lucide-react";
 
 const PER_PAGE = 5;
+
+const NOTIFICATION_TYPE_META = {
+  Vehicle: { icon: Car, iconClass: "bg-blue-50 text-blue-600" },
+  Product: { icon: Package, iconClass: "bg-purple-50 text-purple-600" },
+  ConversationNotification: { icon: MessageCircle, iconClass: "bg-teal-50 text-teal-600" },
+  want_to_be_partner: { icon: UserPlus, iconClass: "bg-amber-50 text-amber-600" },
+};
+
+const getTypeMeta = (type) => NOTIFICATION_TYPE_META[type] || { icon: Bell, iconClass: "bg-gray-100 text-gray-500" };
 
 const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   const router = useRouter();
@@ -50,16 +60,23 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     const rawType = item?.type ? String(item.type) : "";
     const shortType = rawType.split("\\").pop() || rawType;
 
+    const description =
+      item?.data?.message ||
+      item?.data?.vehicle_title ||
+      item?.data?.product_title ||
+      (item?.data?.requested_by ? `Requested by ${item.data.requested_by}` : "");
+
     return {
       id: item.id,
       title: item.title,
-      description: item?.data?.message,
+      description,
       time: item?.created_at,
       unreadCount: item.read_at || 0,
+      priority: item?.priority || "normal",
       conversationId: item?.data?.conversation_id || 0,
-      product: { v_user_id: item?.data?.product_id } || null,
       userInfo: item?.data || null,
       vehicleId: item?.data?.vehicle_id || null,
+      productId: item?.data?.product_id || null,
       type: shortType
     };
   }, []);
@@ -225,7 +242,11 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       onClose && onClose();
       await NotificationService.Commands.vehicleNotificationRead(item?.id);
       router.push(`/dashboard/requested-product/${item?.vehicleId}/`);
-    }else if (item?.type === "want_to_be_partner") {
+    } else if (item?.type === "Product") {
+      onClose && onClose();
+      await NotificationService.Commands.vehicleNotificationRead(item?.id);
+      router.push(`/dashboard/requested-general-product/${item?.productId}/`);
+    } else if (item?.type === "want_to_be_partner") {
 
       onClose && onClose();
       await NotificationService.Commands.vehicleNotificationRead(item?.id);
@@ -235,84 +256,99 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
 
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-      <div className="relative bg-[#f6f4f8] w-full max-w-md h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 bg-[#f6f4f8] border-b border-gray-200/60">
-
-          <h3 className="text-lg font-semibold text-gray-900">Notification List </h3>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-[2px]">
+      <div className="relative flex h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+              <Bell className="h-4.5 w-4.5" />
+            </span>
+            <h3 className="text-base font-semibold text-gray-900">Notifications</h3>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="h-9 w-9 rounded-full hover:bg-white/80 text-gray-700"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
             aria-label="Close"
           >
-            {"x"}
+            <X className="h-4.5 w-4.5" />
           </button>
         </div>
 
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
+          className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto"
         >
           {notifications.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              {isLoading ? "Loading..." : "No notifications found."}
-            </p>
+            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50 text-gray-300">
+                <Bell className="h-6 w-6" />
+              </span>
+              <p className="text-sm text-gray-500">
+                {isLoading ? "Loading notifications..." : "No notifications found."}
+              </p>
+            </div>
           ) : (
             notifications.map((item, index) => {
               const unreadCount = Number(item.unreadCount || 0);
               const isUnread = unreadCount === 0;
-              const initial = (item.title || "U").trim().charAt(0).toUpperCase();
-
-              // {
-              //   console.log("item notification modal 211", item);
-              // }
+              const isHighPriority = item.priority === "high";
+              const { icon: TypeIcon, iconClass } = getTypeMeta(item.type);
 
               return (
                 <button
                   key={item.id || index}
                   type="button"
                   onClick={() => handleNotificationClick(item)}
-                  className="w-full text-left flex items-center gap-4"
+                  className={`group relative flex w-full items-start gap-3 px-5 py-3.5 text-left transition hover:bg-orange-50/60 ${
+                    isUnread ? "bg-orange-50/30" : "bg-white"
+                  }`}
                 >
-                  <div className="h-12 w-12 rounded-full bg-yellow-400 flex items-center justify-center text-white font-semibold shadow">
-                    {initial}
+                  {isUnread && (
+                    <span className="absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-orange-500" />
+                  )}
+
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconClass}`}
+                  >
+                    <TypeIcon className="h-5 w-5" />
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate text-sm font-semibold text-gray-900">{item.title}</p>
+                      {isHighPriority && (
+                        <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600">
+                          Urgent
+                        </span>
+                      )}
+                    </div>
+                    {item.description && (
+                      <p className="mt-0.5 truncate text-xs text-gray-500">{item.description}</p>
+                    )}
+                    <p className="mt-1 text-[11px] text-gray-400">{formatNotificationTime(item.time)}</p>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-base font-semibold text-gray-900">{item.title}</div>
-                    <div className="text-sm text-gray-600">{item.description}</div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="text-xs font-semibold text-gray-500">
-                      {formatNotificationTime(item.time)}
+
+                  {unreadCount > 0 && (
+                    <span className="mt-0.5 flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-semibold text-white">
+                      {unreadCount}
                     </span>
-                    {isUnread && (
-                      <span
-                        className="h-2.5 w-2.5 rounded-full bg-red-500"
-                        aria-label="Unread"
-                      />
-                    )}
-                    {unreadCount > 0 && (
-                      <span className="min-w-[24px] h-6 px-2 rounded-full bg-green-500 text-white text-xs flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </button>
               );
             })
           )}
 
           {!isLoading && !isLoadingMore && notifications.length > 0 && hasMore && canScroll && (
-            <div className="pt-2 text-center text-xs text-gray-500">Scroll to load more...</div>
+            <div className="py-3 text-center text-xs text-gray-400">Scroll to load more...</div>
           )}
           {isLoadingMore && (
-            <div className="pt-2 text-center text-xs text-gray-500">Loading more...</div>
+            <div className="py-3 text-center text-xs text-gray-400">Loading more...</div>
           )}
           {!isLoading && notifications.length > 0 && !hasMore && (
-            <div className="pt-2 text-center text-xs text-gray-500">No more notifications.</div>
+            <div className="py-3 text-center text-xs text-gray-400">No more notifications.</div>
           )}
         </div>
       </div>

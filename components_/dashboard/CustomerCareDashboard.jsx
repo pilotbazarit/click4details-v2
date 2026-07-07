@@ -2,15 +2,21 @@
 
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
-import { CheckCircle, Clipboard, Headset, MessageSquare, Plus, RefreshCcw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle, ChevronDown, Clipboard, Eye, Headset, MessageSquare, Phone, Plus, RefreshCcw, User } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import FeedbackListModal from "../modals/FeedbackListModal.jsx";
 import FeedbackModal from "../modals/FeedbackModal.jsx";
 import FollowupMessageListModal from "../modals/FollowupMessageListModal.jsx";
 import FollowupMessageModal from "../modals/FollowupMessageModal.jsx";
+import EditCustomerModal from "../modals/EditCustomerModal.jsx";
 import FollowupModal from "../modals/FollowupModal.jsx";
 import TransferFollowupModal from "../modals/TransferFollowupModal.jsx";
+
+const ACTIVITY_SCROLL_BATCH = 15;
+
+const TAB_FOLLOWUPS = "followups";
+const TAB_ACTIVITIES = "activities";
 
 const CustomerCareDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,6 +54,8 @@ const CustomerCareDashboard = () => {
   const [perPage, setPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
+  const [jobsTodayTotal, setJobsTodayTotal] = useState(0);
+  const [customersTodayTotal, setCustomersTodayTotal] = useState(0);
 
   // Sorting state
   const [sortBy, setSortBy] = useState("created_at");
@@ -56,7 +64,50 @@ const CustomerCareDashboard = () => {
   // Search state
   const [search, setSearch] = useState("");
 
+  const [dashboardTab, setDashboardTab] = useState(TAB_FOLLOWUPS);
+  const [salesActivities, setSalesActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [activityVisibleCount, setActivityVisibleCount] = useState(ACTIVITY_SCROLL_BATCH);
+  const [activityDetailOpen, setActivityDetailOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [editCustomerModalOpen, setEditCustomerModalOpen] = useState(false);
+  const [editModalCustomer, setEditModalCustomer] = useState(null);
+  const [loadingEditCustomerId, setLoadingEditCustomerId] = useState(null);
+  /** Full customer snapshot for the activity detail sidebar (parity with Edit customer modal fields). */
+  const [detailPanelCustomer, setDetailPanelCustomer] = useState(null);
+  const [detailPanelCustomerLoading, setDetailPanelCustomerLoading] = useState(false);
+  const activityScrollRootRef = useRef(null);
+  const activityLoadMoreSentinelRef = useRef(null);
+
   const commandApi = useMemo(() => createApiRequest(API_URL), []);
+
+  const handleEditCustomerFromActivity = async (row) => {
+    if (!row?.customer_id) {
+      toast.error("No linked customer to edit.");
+      return;
+    }
+    setLoadingEditCustomerId(row.id);
+    try {
+      const res = await commandApi.get(`api/customers/${row.customer_id}`);
+      if (res?.status === "success" && res.data) {
+        setEditModalCustomer(res.data);
+        setEditCustomerModalOpen(true);
+      } else {
+        toast.error(res?.message || "Could not load customer.");
+      }
+    } catch (error) {
+      const payload = error?.response?.data ?? error;
+      toast.error(payload?.message || "Could not load customer.");
+    } finally {
+      setLoadingEditCustomerId(null);
+    }
+  };
+
+  const closeEditCustomerModal = () => {
+    setEditCustomerModalOpen(false);
+    setEditModalCustomer(null);
+  };
 
   const handleCopyToClipboard = (text) => {
     navigator.clipboard
@@ -239,12 +290,22 @@ const CustomerCareDashboard = () => {
         setRecentFollowups(response.data?.data || []);
         setTotal(response.data.pagination.total);
         setLastPage(response.data.pagination.last_page);
+        const stats = response.data?.stats;
+        if (stats && typeof stats === "object") {
+          setJobsTodayTotal(Number(stats.jobs_today_total) || 0);
+          setCustomersTodayTotal(Number(stats.customers_today_total) || 0);
+        } else {
+          setJobsTodayTotal(response.data.pagination.total);
+          setCustomersTodayTotal(response.data.pagination.total);
+        }
       }
     } catch (error) {
       console.log("Error fetching recent followups:", error);
       setRecentFollowups([]);
       setTotal(0);
       setLastPage(1);
+      setJobsTodayTotal(0);
+      setCustomersTodayTotal(0);
     } finally {
       setLoading(false);
     }
@@ -287,6 +348,287 @@ const CustomerCareDashboard = () => {
     setCurrentPage(1);
   };
 
+  const fetchSalesActivities = useCallback(async () => {
+    setLoadingActivities(true);
+    try {
+      const body = await commandApi.get("/api/sales-team-activities");
+      const list = Array.isArray(body) ? body : body?.data?.data || body?.data || body?.rows || [];
+      setSalesActivities(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.log("Error fetching sales team activities:", err);
+      setSalesActivities([]);
+      toast.error("Failed to load sales team activities.");
+    } finally {
+      setLoadingActivities(false);
+    }
+  }, [commandApi]);
+
+  const handleEditCustomerModalSuccess = useCallback(() => {
+    closeEditCustomerModal();
+    fetchSalesActivities();
+  }, [fetchSalesActivities]);
+
+  useEffect(() => {
+    if (dashboardTab !== TAB_ACTIVITIES) {
+      return;
+    }
+    fetchSalesActivities();
+  }, [dashboardTab, fetchSalesActivities]);
+
+  useEffect(() => {
+    if (dashboardTab !== TAB_ACTIVITIES) {
+      setActivityDetailOpen(false);
+      setSelectedActivity(null);
+    }
+  }, [dashboardTab]);
+
+  useEffect(() => {
+    if (!activityDetailOpen) {
+      setDetailPanelCustomer(null);
+      setDetailPanelCustomerLoading(false);
+      return;
+    }
+    const cid = selectedActivity?.customer_id;
+    if (!cid) {
+      setDetailPanelCustomer(null);
+      setDetailPanelCustomerLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setDetailPanelCustomerLoading(true);
+    setDetailPanelCustomer(null);
+    commandApi
+      .get(`api/customers/${cid}`)
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.status === "success" && res.data) {
+          setDetailPanelCustomer(res.data);
+        } else {
+          setDetailPanelCustomer(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDetailPanelCustomer(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDetailPanelCustomerLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activityDetailOpen, selectedActivity?.customer_id, commandApi]);
+
+  const filteredActivities = useMemo(() => {
+    const q = activitySearch.trim().toLowerCase();
+    if (!q) {
+      return salesActivities;
+    }
+    return salesActivities.filter((row) => {
+      const parts = [
+        row.client_name,
+        row.phone_number,
+        row.seriousness_level_display,
+        masterDataLabel(row.customer?.client_seriousness),
+        row.customer?.name,
+        row.customer?.search,
+        row.customer_updated_by_name,
+        row.note,
+      ];
+      return parts.some((v) => String(v ?? "").toLowerCase().includes(q));
+    });
+  }, [salesActivities, activitySearch]);
+
+  const displayedActivities = useMemo(
+    () => filteredActivities.slice(0, activityVisibleCount),
+    [filteredActivities, activityVisibleCount]
+  );
+
+  const activityHasMoreToScroll = activityVisibleCount < filteredActivities.length;
+
+  useEffect(() => {
+    setActivityVisibleCount(Math.min(ACTIVITY_SCROLL_BATCH, filteredActivities.length));
+  }, [filteredActivities]);
+
+  useEffect(() => {
+    if (dashboardTab !== TAB_ACTIVITIES) {
+      return;
+    }
+    const root = activityScrollRootRef.current;
+    const sentinel = activityLoadMoreSentinelRef.current;
+    if (!root || !sentinel || !activityHasMoreToScroll) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setActivityVisibleCount((n) => Math.min(n + ACTIVITY_SCROLL_BATCH, filteredActivities.length));
+        }
+      },
+      { root, rootMargin: "100px", threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [dashboardTab, activityHasMoreToScroll, filteredActivities.length, activityVisibleCount]);
+
+  const handleActivitySearchChange = (e) => {
+    setActivitySearch(e.target.value);
+  };
+
+  /**
+   * Seriousness label from customers.client_seriousness (via API nested customer or seriousness_level_display).
+   */
+  const displayActivitySeriousness = (row) => {
+    const fromCustomer = masterDataLabel(row?.customer?.client_seriousness);
+    if (fromCustomer !== "—") {
+      return fromCustomer;
+    }
+    const resolved = row?.seriousness_level_display;
+    if (resolved != null && String(resolved).trim() !== "") {
+      return String(resolved).trim();
+    }
+    return "—";
+  };
+
+  const getInitials = (name) => {
+    if (!name || !String(name).trim()) {
+      return "?";
+    }
+    const parts = String(name).trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const formatMessageTimestamp = (value) => {
+    if (!value) {
+      return "";
+    }
+    try {
+      return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    } catch {
+      return String(value);
+    }
+  };
+
+  const getCustomerSearchText = (row) => String(row?.customer?.search ?? "").trim();
+
+  const getActivityNoteText = (row) => String(row?.note ?? "").trim();
+
+  /** Both DB columns: `customers.search` + `sales_team_activities.note` */
+  const buildActivityCopyText = (row) => {
+    if (!row) return "";
+    const customerSearch = getCustomerSearchText(row);
+    const noteText = getActivityNoteText(row);
+    const parts = [];
+    if (customerSearch) parts.push(`Customer search:\n${customerSearch}`);
+    if (noteText) parts.push(`Activity note:\n${noteText}`);
+    return parts.join("\n\n");
+  };
+
+  const formatDetailDateOnly = (value) => {
+    if (!value) {
+      return "—";
+    }
+    try {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) {
+        return String(value);
+      }
+      return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return String(value);
+    }
+  };
+
+  const masterDataLabel = (field, relationAlt) => {
+    const rel = relationAlt ?? (typeof field === "object" && field !== null ? field : null);
+    if (rel != null && typeof rel === "object" && rel.md_title != null && String(rel.md_title).trim() !== "") {
+      return String(rel.md_title);
+    }
+    if (field == null || field === "") {
+      return "—";
+    }
+    if (typeof field === "object" && field !== null && field.md_title != null && String(field.md_title).trim() !== "") {
+      return String(field.md_title);
+    }
+    return String(field);
+  };
+
+  const displayClientLevel = (customer) => {
+    if (!customer) return "—";
+    const fromDisplay = customer.client_level_display;
+    if (fromDisplay != null && String(fromDisplay).trim() !== "") {
+      return String(fromDisplay).trim();
+    }
+    return masterDataLabel(customer.client_level, customer.clientLevel);
+  };
+
+  const displayOrDash = (v) => (v != null && String(v).trim() !== "" ? String(v).trim() : "—");
+
+  const formatVisitSummary = (dateValue, nameValue) => {
+    const datePart = formatDetailDateOnly(dateValue);
+    const namePart = displayOrDash(nameValue);
+    if (datePart === "—" && namePart === "—") {
+      return "—";
+    }
+    return `${datePart} · ${namePart}`;
+  };
+
+  const formatYesNo = (v) => (v ? "Yes" : "No");
+
+  const formatReadyBudgetRange = (raw) => {
+    if (raw == null || raw === "") {
+      return "—";
+    }
+    try {
+      const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (Array.isArray(arr) && arr.length >= 2) {
+        return `${Number(arr[0]).toLocaleString()} – ${Number(arr[1]).toLocaleString()}`;
+      }
+    } catch {
+      /* ignore */
+    }
+    return String(raw);
+  };
+
+  /** Two-column dense layout: each cell keeps label | value on one line. */
+  const DetailDl = ({ children }) => (
+    <dl className="grid grid-cols-1 gap-x-4 gap-y-0 md:grid-cols-2 md:gap-x-5">{children}</dl>
+  );
+
+  /** `fullWidth` spans both columns on md+ for long text (address, description, …). */
+  const DetailField = ({ label, value, fullWidth = false, className = "" }) => (
+    <div
+      className={`flex flex-row items-start gap-2 border-b border-gray-100 py-2 md:gap-2.5 ${
+        fullWidth ? "md:col-span-2" : ""
+      } ${className}`}
+    >
+      <dt className="w-[36%] max-w-[9.5rem] shrink-0 pt-px text-[11px] font-medium leading-snug text-gray-500 md:max-w-[7.75rem]">
+        {label}
+      </dt>
+      <dd className="min-w-0 flex-1 text-xs leading-snug text-gray-900 break-words [&_a]:font-medium">{value}</dd>
+    </div>
+  );
+
+  const maybeLink = (href, label) => {
+    if (!href || String(href).trim() === "") {
+      return displayOrDash(null);
+    }
+    const raw = String(href).trim();
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    return (
+      <a href={normalized} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
+        {label || raw}
+      </a>
+    );
+  };
+
   return (
     <div className="w-full  p-6 space-y-6 ">
       {/* Next.js and Tailwind CSS implementation */}
@@ -298,14 +640,15 @@ const CustomerCareDashboard = () => {
       <div className="pt-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold">Today's Tasks</h3>
-          {/* Add New Followup Button */}
-          <button
-            onClick={() => handleOpenFollowupModal()}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Followup
-          </button>
+          {dashboardTab === TAB_FOLLOWUPS && (
+            <button
+              onClick={() => handleOpenFollowupModal()}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Followup
+            </button>
+          )}
         </div>
       </div>
 
@@ -318,7 +661,7 @@ const CustomerCareDashboard = () => {
           </div>
           <div>
             <p className="text-gray-500 text-sm">Total Customers Today</p>
-            <h2 className="text-2xl font-bold text-gray-800">{total}</h2>
+            <h2 className="text-2xl font-bold text-gray-800">{customersTodayTotal}</h2>
           </div>
         </div>
 
@@ -336,48 +679,82 @@ const CustomerCareDashboard = () => {
           </div>
           <div>
             <p className="text-gray-500 text-sm">Total Jobs Today</p>
-            <h2 className="text-2xl font-bold text-gray-800">320</h2>
+            <h2 className="text-2xl font-bold text-gray-800">{jobsTodayTotal}</h2>
           </div>
         </div>
       </div>
 
-      {/* Recent Followups Section */}
+      {/* Follow-ups / Sales activities */}
       <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <a href="/dashboard/followups" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-              View All →
+        <div className="px-4 pt-4 flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
+          <div className="flex gap-6" role="tablist" aria-label="Dashboard section">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={dashboardTab === TAB_FOLLOWUPS}
+              onClick={() => setDashboardTab(TAB_FOLLOWUPS)}
+              className={`pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                dashboardTab === TAB_FOLLOWUPS
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              Today&apos;s follow-ups
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={dashboardTab === TAB_ACTIVITIES}
+              onClick={() => setDashboardTab(TAB_ACTIVITIES)}
+              className={`pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                dashboardTab === TAB_ACTIVITIES
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              Team sales activities
+            </button>
+          </div>
+          {dashboardTab === TAB_FOLLOWUPS ? (
+            <a href="/dashboard/followups" className="pb-3 text-sm text-blue-600 hover:text-blue-800 shrink-0">
+              View all follow-ups →
             </a>
-          </div>
+          ) : (
+            <a href="/dashboard/sales-team-activity" className="pb-3 text-sm text-blue-600 hover:text-blue-800 shrink-0">
+              Full sales activity →
+            </a>
+          )}
         </div>
 
-        {/* Search and Controls */}
-        <div className="p-4 flex items-center justify-between space-x-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search followups..."
-              value={search}
-              onChange={handleSearchChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-600">Show:</label>
-            <select value={perPage} onChange={(e) => handlePerPageChange(Number(e.target.value))} className="px-2 py-1 border border-gray-300 rounded text-sm">
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <span className="text-sm text-gray-600">
-              Showing {(currentPage - 1) * perPage + 1} to {Math.min(currentPage * perPage, total)} of {total} entries
-            </span>
-          </div>
-        </div>
+        {dashboardTab === TAB_FOLLOWUPS && (
+          <>
+            {/* Search and Controls */}
+            <div className="p-4 flex items-center justify-between space-x-4">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Search followups..."
+                  value={search}
+                  onChange={handleSearchChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-600">Show:</label>
+                <select value={perPage} onChange={(e) => handlePerPageChange(Number(e.target.value))} className="px-2 py-1 border border-gray-300 rounded text-sm">
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+                <span className="text-sm text-gray-600">
+                  Showing {(currentPage - 1) * perPage + 1} to {Math.min(currentPage * perPage, total)} of {total} entries
+                </span>
+              </div>
+            </div>
 
-        <div className="p-4 w-full">
-          {loading ? (
+            <div className="p-4 w-full">
+              {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               <span className="ml-2 text-gray-600">Loading recent followups...</span>
@@ -579,8 +956,486 @@ const CustomerCareDashboard = () => {
               <p className="text-sm text-gray-400 mt-1">Followups will appear here once created</p>
             </div>
           )}
-        </div>
+            </div>
+          </>
+        )}
+
+        {dashboardTab === TAB_ACTIVITIES && (
+          <div className="grid grid-cols-12 gap-0 md:gap-3">
+            <div className="col-span-12 md:col-span-5 min-w-0">
+              <div className="border-b border-gray-200 bg-slate-50/80 px-2.5 py-2">
+                <div className="min-w-0">
+                  <h3 className="text-xs font-semibold text-gray-900">Team sales activities</h3>
+                  <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                    Recent activity for your team. Click the view icon on a row to open details on the right.
+                  </p>
+                </div>
+              </div>
+              <div className="p-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white border-b border-gray-100">
+                <div className="flex-1 min-w-0">
+                  <label htmlFor="team-messages-search" className="sr-only">
+                    Search activities
+                  </label>
+                  <input
+                    id="team-messages-search"
+                    type="search"
+                    placeholder="Search by customer, phone, teammate, or note…"
+                    value={activitySearch}
+                    onChange={handleActivitySearchChange}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-gray-50/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-400"
+                  />
+                </div>
+                <div className="shrink-0 text-[11px] text-gray-500 tabular-nums">
+                  {filteredActivities.length > 0
+                    ? `Showing ${displayedActivities.length} of ${filteredActivities.length}`
+                    : "0 activities"}
+                </div>
+              </div>
+              <div className="p-0 sm:p-2 w-full bg-slate-50/60 md:pr-0">
+              {loadingActivities ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-7 w-7 border-2 border-gray-200 border-t-blue-600"></div>
+                  <span className="ml-2 text-xs text-gray-600">Loading team activities…</span>
+                </div>
+              ) : displayedActivities.length > 0 ? (
+                <>
+                  <div className="flex flex-col rounded-none sm:rounded-xl border-0 sm:border border-gray-200 bg-white sm:shadow-sm overflow-hidden">
+                    <div
+                      ref={activityScrollRootRef}
+                      className="max-h-[min(52vh,440px)] overflow-y-auto overscroll-y-contain"
+                    >
+                  <ul className="divide-y divide-gray-200/90">
+                    {displayedActivities.map((row) => {
+                      const customerLabel = row.client_name || row.customer?.name || "Unknown customer";
+                      const senderName = row.customer_updated_by_name?.trim() || "Team member";
+                      const customerSearch = getCustomerSearchText(row);
+                      const noteText = getActivityNoteText(row);
+                      const copyText = buildActivityCopyText(row);
+                      const ts = formatMessageTimestamp(row.updated_at);
+
+                      const isSelected = selectedActivity?.id === row.id;
+
+                      return (
+                        <li
+                          key={row.id}
+                          className={`group px-2.5 py-3 sm:px-3 transition-colors ${
+                            isSelected ? "bg-blue-50/60 hover:bg-blue-50/80" : "hover:bg-slate-50/70"
+                          }`}
+                        >
+                          <div className="flex min-w-0 gap-2">
+                            <div
+                              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-[10px] font-semibold text-white ring-1 ring-white"
+                              aria-hidden
+                            >
+                              {getInitials(senderName)}
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex min-w-0 items-center justify-between gap-2">
+                                <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                  <p className="truncate text-sm font-semibold text-gray-900 leading-tight">{senderName}</p>
+                                  {ts ? (
+                                    <time dateTime={row.updated_at} className="shrink-0 text-[10px] text-gray-400 tabular-nums">
+                                      {ts}
+                                    </time>
+                                  ) : null}
+                                </div>
+                                <span className="inline-flex shrink-0 items-center gap-0.5" role="group" aria-label="Row actions">
+                                  <button
+                                    type="button"
+                                    disabled={!row.customer_id || loadingEditCustomerId === row.id}
+                                    onClick={() => handleEditCustomerFromActivity(row)}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-slate-200 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:pointer-events-none disabled:opacity-35"
+                                    title={
+                                      row.customer_id ? "Edit customer & activity" : "No linked customer — cannot edit"
+                                    }
+                                    aria-label="Edit customer and activity"
+                                  >
+                                    {loadingEditCustomerId === row.id ? (
+                                      <span
+                                        className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"
+                                        aria-hidden
+                                      />
+                                    ) : (
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedActivity(row);
+                                      setActivityDetailOpen(true);
+                                    }}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-blue-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                    title="View details"
+                                    aria-label="View message details"
+                                  >
+                                    <Eye className="h-4 w-4" aria-hidden />
+                                  </button>
+                                </span>
+                              </div>
+
+                              <div className="flex min-w-0 items-center justify-between gap-2 text-[11px] text-gray-600 leading-tight">
+                                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
+                                  <span className="inline-flex items-center gap-1 min-w-0 text-gray-500" title="Customer">
+                                    <User className="w-3 h-3 shrink-0 text-gray-400" aria-hidden />
+                                    {row.customer_id ? (
+                                      <a
+                                        href={`/dashboard/customers/${row.customer_id}`}
+                                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[min(100%,220px)]"
+                                      >
+                                        {customerLabel}
+                                      </a>
+                                    ) : (
+                                      <span className="font-medium text-gray-800 truncate max-w-[min(100%,220px)]">{customerLabel}</span>
+                                    )}
+                                  </span>
+                                  {row.phone_number ? (
+                                    <>
+                                      <span className="text-gray-300 shrink-0" aria-hidden>
+                                        ·
+                                      </span>
+                                      <span className="inline-flex shrink-0 items-center gap-1 tabular-nums text-gray-700">
+                                        <Phone className="w-3 h-3 shrink-0 text-gray-400" aria-hidden />
+                                        {row.phone_number}
+                                      </span>
+                                    </>
+                                  ) : null}
+                                </div>
+                                <span
+                                  className="inline-flex max-w-[min(100%,10rem)] shrink-0 items-center justify-center self-center rounded-full bg-slate-100 px-2 py-0.5 text-center text-[10px] font-semibold leading-tight text-slate-800 ring-1 ring-slate-200/90"
+                                  title={`Seriousness: ${displayActivitySeriousness(row)}`}
+                                >
+                                  <span className="truncate">{displayActivitySeriousness(row)}</span>
+                                </span>
+                              </div>
+
+                              <div className="rounded border border-slate-200/90 bg-slate-50/90 px-2 py-1.5">
+                                <div className="flex items-start justify-between gap-1.5">
+                                  <div className="min-w-0 flex-1 space-y-2">
+                                    {customerSearch ? (
+                                      <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-0.5">
+                                          Customer search
+                                        </p>
+                                        <p
+                                          className={`text-xs leading-snug break-words text-gray-900 ${
+                                            activityDetailOpen ? "line-clamp-2" : "whitespace-pre-wrap"
+                                          }`}
+                                        >
+                                          {customerSearch}
+                                        </p>
+                                      </div>
+                                    ) : null}
+                                    {noteText ? (
+                                      <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-0.5">
+                                          Activity note
+                                        </p>
+                                        <p
+                                          className={`text-xs leading-snug break-words text-gray-900 ${
+                                            activityDetailOpen ? "line-clamp-3" : "whitespace-pre-wrap"
+                                          }`}
+                                        >
+                                          {noteText}
+                                        </p>
+                                      </div>
+                                    ) : null}
+                                    {!customerSearch && !noteText ? (
+                                      <p className="text-xs leading-snug text-gray-400 italic">No customer search or activity note</p>
+                                    ) : null}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={!copyText}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyToClipboard(copyText);
+                                    }}
+                                    className="shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-700 hover:bg-slate-200/80 focus:outline-none focus:ring-1 focus:ring-blue-500/40 disabled:pointer-events-none disabled:opacity-35"
+                                    title={copyText ? "Copy customer search & activity note" : "Nothing to copy"}
+                                    aria-label="Copy customer search and activity note to clipboard"
+                                  >
+                                    <Clipboard className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                    {activityHasMoreToScroll ? (
+                      <div ref={activityLoadMoreSentinelRef} className="h-8 w-full shrink-0" aria-hidden />
+                    ) : null}
+                    </div>
+                    {!loadingActivities && filteredActivities.length > 0 ? (
+                      <div className="border-t border-gray-100 bg-slate-50/95 px-2 py-1.5">
+                        {activityHasMoreToScroll ? (
+                          <p className="flex items-center justify-center gap-1.5 text-[11px] text-gray-600">
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden />
+                            <span>
+                              More activities — scroll the list to load ({filteredActivities.length - displayedActivities.length}{" "}
+                              more)
+                            </span>
+                          </p>
+                        ) : (
+                          <p className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
+                            <CheckCircle className="h-3.5 w-3.5 shrink-0 text-green-600" aria-hidden />
+                            <span>End of list — all {filteredActivities.length} activit{filteredActivities.length === 1 ? "y" : "ies"} loaded</span>
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-8 text-center mx-2 sm:mx-0">
+                  <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+                    <MessageSquare className="h-5 w-5 text-slate-400" aria-hidden />
+                  </div>
+                  <p className="text-xs font-medium text-gray-900">No activities yet</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 max-w-sm mx-auto leading-snug">
+                    Nothing matches your search, or there are no sales team activities for your team. Entries use the same access rules as Sales Team Activity.
+                  </p>
+                </div>
+              )}
+              </div>
+            </div>
+            {activityDetailOpen && (
+              <aside className="col-span-12 md:col-span-7 min-w-0 flex flex-col border-t md:border-t-0 md:border-l border-gray-200 bg-white shadow-sm md:rounded-lg overflow-hidden max-h-[min(70vh,560px)] md:max-h-[min(85vh,720px)]">
+                <div className="shrink-0 flex items-center justify-between gap-2 border-b border-gray-200 bg-slate-50 px-3 py-2">
+                  <span className="text-xs font-semibold text-gray-900">Message detail</span>
+                  <button
+                    type="button"
+                    onClick={() => setActivityDetailOpen(false)}
+                    className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                  {!selectedActivity ? (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                      <Eye className="w-10 h-10 text-gray-200 mb-2" aria-hidden />
+                      <p className="text-sm font-medium text-gray-700">Nothing selected</p>
+                      <p className="text-xs text-gray-500 mt-1 max-w-xs leading-snug">
+                        Click the view icon on a message row to see full details here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      <div className="flex gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-semibold text-white">
+                          {getInitials(selectedActivity.customer_updated_by_name?.trim() || "Team member")}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900">Last updated by</p>
+                          <p className="text-sm font-medium text-gray-800">
+                            {selectedActivity.customer_updated_by_name?.trim() || "Team member"}
+                          </p>
+                          {selectedActivity.updated_at ? (
+                            <time dateTime={selectedActivity.updated_at} className="text-xs text-gray-500">
+                              {formatMessageTimestamp(selectedActivity.updated_at)}
+                            </time>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <section className="rounded-lg border border-gray-100 bg-gray-50/80 p-3 space-y-3">
+                        <div>
+                          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-1">
+                            Customer search
+                          </h4>
+                          <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words">
+                            {String(
+                              detailPanelCustomer?.search ?? selectedActivity.customer?.search ?? ""
+                            ).trim() || "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-1">
+                            Activity note
+                          </h4>
+                          <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-wrap break-words">
+                            {selectedActivity.note?.trim() || "—"}
+                          </p>
+                        </div>
+                        <div className="flex justify-end pt-0.5">
+                          <button
+                            type="button"
+                            disabled={!buildActivityCopyText(selectedActivity)}
+                            onClick={() => handleCopyToClipboard(buildActivityCopyText(selectedActivity))}
+                            className="inline-flex items-center gap-1.5 shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-white hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:pointer-events-none disabled:opacity-40"
+                            title={
+                              buildActivityCopyText(selectedActivity)
+                                ? "Copy customer search & activity note"
+                                : "Nothing to copy"
+                            }
+                            aria-label="Copy customer search and activity note to clipboard"
+                          >
+                            <Clipboard className="w-4 h-4" />
+                            Copy both
+                          </button>
+                        </div>
+                      </section>
+
+                      <section>
+                        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2 border-b border-gray-100 pb-1">
+                          Sales activity (this record)
+                        </h4>
+                        <DetailDl>
+                          <DetailField label="Collect by" value={displayOrDash(selectedActivity.data_collect_by_name)} />
+                          <DetailField label="Visit 1" value={formatVisitSummary(selectedActivity.first_visit_date, selectedActivity.first_visit_by_name)} />
+                          <DetailField label="Visit 2" value={formatVisitSummary(selectedActivity.second_visit_date, selectedActivity.second_visit_by_name)} />
+                          <DetailField label="Visit 3" value={formatVisitSummary(selectedActivity.third_visit_date, selectedActivity.third_visit_by_name)} />
+                          <DetailField label="Sold" value={formatVisitSummary(selectedActivity.sold_date, selectedActivity.sold_by_name)} />
+                          <DetailField label="Follow-ups linked" value={selectedActivity.followups_count != null ? String(selectedActivity.followups_count) : "—"} />
+                          <DetailField label="Bot message" value={formatYesNo(selectedActivity.bot_message)} />
+                          <DetailField
+                            label="Interested"
+                            value={
+                              selectedActivity.not_interested == null
+                                ? "—"
+                                : selectedActivity.not_interested
+                                  ? "Not interested"
+                                  : "Interested"
+                            }
+                          />
+                          <DetailField label="Sale done" value={formatYesNo(selectedActivity.sale_done)} />
+                        </DetailDl>
+                      </section>
+
+                      {detailPanelCustomerLoading ? (
+                        <p className="text-xs text-gray-500 py-4">Loading customer profile…</p>
+                      ) : selectedActivity.customer_id ? (
+                        detailPanelCustomer ? (
+                          <section>
+                            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2 border-b border-gray-100 pb-1">
+                              Customer profile (same fields as edit customer)
+                            </h4>
+                            <DetailDl>
+                              <DetailField label="Customer name" value={displayOrDash(detailPanelCustomer.name)} />
+                              <DetailField label="Mobile" value={displayOrDash(detailPanelCustomer.mobile)} />
+                              <DetailField label="Email" value={displayOrDash(detailPanelCustomer.email)} />
+                              <DetailField label="Address" fullWidth value={displayOrDash(detailPanelCustomer.address)} />
+                              <DetailField label="Date of birth" value={formatDetailDateOnly(detailPanelCustomer.date_of_birth)} />
+                              <DetailField label="Anniversary" value={formatDetailDateOnly(detailPanelCustomer.anniversary_date)} />
+                              <DetailField label="Purchase reason" value={masterDataLabel(detailPanelCustomer.purchase_reason)} />
+                              <DetailField label="Ready budget (range)" value={formatReadyBudgetRange(detailPanelCustomer.ready_budget)} />
+                              <DetailField label="Interested for loan" value={displayOrDash(detailPanelCustomer.interested_for_loan)} />
+                              <DetailField label="Bank loan amount" value={masterDataLabel(detailPanelCustomer.bank_loan_amount)} />
+                              <DetailField label="Car available" value={masterDataLabel(detailPanelCustomer.car_available)} />
+                              <DetailField label="Client attitude (ids)" value={displayOrDash(detailPanelCustomer.client_attitude)} />
+                              <DetailField label="Client profession" value={masterDataLabel(detailPanelCustomer.client_profession)} />
+                              <DetailField label="Client income / month" value={masterDataLabel(detailPanelCustomer.client_income_per_month)} />
+                              <DetailField
+                                label="Client company transaction / year"
+                                value={masterDataLabel(detailPanelCustomer.client_company_transaction)}
+                              />
+                              <DetailField
+                                label="Facebook ID link"
+                                fullWidth
+                                value={maybeLink(detailPanelCustomer.facebook_id_link, displayOrDash(detailPanelCustomer.facebook_id_link))}
+                              />
+                              <DetailField
+                                label="Messenger link"
+                                fullWidth
+                                value={maybeLink(detailPanelCustomer.facebook_messenger_link, displayOrDash(detailPanelCustomer.facebook_messenger_link))}
+                              />
+                              <DetailField label="Client level" value={displayClientLevel(detailPanelCustomer)} />
+                              <DetailField
+                                label="Client seriousness"
+                                value={masterDataLabel(
+                                  detailPanelCustomer.client_seriousness_display ?? detailPanelCustomer.client_seriousness,
+                                  detailPanelCustomer.clientSeriousness
+                                )}
+                              />
+                              <DetailField
+                                label="Car exchange category / year"
+                                value={masterDataLabel(detailPanelCustomer.car_exchange_category_per_year)}
+                              />
+                              <DetailField label="Last purchase date" value={formatDetailDateOnly(detailPanelCustomer.client_last_purchase_date)} />
+                              <DetailField label="Description" fullWidth value={displayOrDash(detailPanelCustomer.description)} />
+                            </DetailDl>
+
+                              <div className="mt-3 border-t border-gray-100 pt-3">
+                                {(() => {
+                                  const urlish =
+                                    detailPanelCustomer.visiting_card_image_url ?? detailPanelCustomer.visiting_card_image;
+                                  const cardSrc =
+                                    typeof urlish === "string" && /^https?:\/\//i.test(urlish.trim())
+                                      ? urlish.trim()
+                                      : null;
+                                  return cardSrc ? (
+                                    <div>
+                                      <h5 className="text-[11px] font-medium text-gray-500 mb-1">Visiting card</h5>
+                                      <img
+                                        src={cardSrc}
+                                        alt=""
+                                        className="max-h-36 max-w-full rounded border border-gray-200 object-contain"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="text-[11px] text-gray-400">No visiting card image (or URL not absolute).</p>
+                                  );
+                                })()}
+                              </div>
+                          </section>
+                        ) : (
+                          <p className="text-xs text-amber-700">Customer record could not be loaded.</p>
+                        )
+                      ) : (
+                        <p className="text-xs text-gray-500">No customer linked — only activity fields apply.</p>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-100 pt-3">
+                        {selectedActivity.customer_id ? (
+                          <button
+                            type="button"
+                            onClick={() => handleEditCustomerFromActivity(selectedActivity)}
+                            disabled={loadingEditCustomerId === selectedActivity.id}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                          >
+                            Edit customer & activity →
+                          </button>
+                        ) : null}
+                        <a
+                          href="/dashboard/sales-team-activity"
+                          className="inline-block text-xs font-medium text-gray-600 hover:text-gray-900"
+                        >
+                          Open sales team activity grid →
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            )}
+          </div>
+        )}
       </div>
+
+      {editCustomerModalOpen && editModalCustomer ? (
+        <EditCustomerModal
+          isOpen={editCustomerModalOpen}
+          onClose={closeEditCustomerModal}
+          customer={editModalCustomer}
+          onSuccess={handleEditCustomerModalSuccess}
+        />
+      ) : null}
 
       <FollowupMessageModal
         isOpen={isModalOpen}

@@ -283,191 +283,6 @@ const NavbarContent = () => {
   const categoryRef = useRef(null);
 
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  // const notifications = [
-  //   { id: 1, title: "New message", description: "You have a new message in chat.", time: "2m ago" },
-  //   { id: 2, title: "Order update", description: "Your order has been shipped.", time: "1h ago" },
-  //   { id: 3, title: "Promo", description: "Check out the latest deals today.", time: "3h ago" },
-  // ];
-
-  // Demo category data with unlimited nested structure
-  const categoriesOld = [
-    {
-      id: 1,
-      name: "Electronics",
-      subcategories: [
-        {
-          id: 11,
-          name: "Mobile Phones",
-          subcategories: [
-            {
-              id: 111,
-              name: "Smartphones",
-              subcategories: [
-                {
-                  id: 1111,
-                  name: "Android",
-                  subcategories: [
-                    { id: 11111, name: "Samsung" },
-                    { id: 11112, name: "Xiaomi" },
-                    { id: 11113, name: "OnePlus" }
-                  ]
-                },
-                {
-                  id: 1112,
-                  name: "iOS",
-                  subcategories: [
-                    { id: 11121, name: "iPhone 15 Series" },
-                    { id: 11122, name: "iPhone 14 Series" },
-                    { id: 11123, name: "iPhone 13 Series" }
-                  ]
-                }
-              ]
-            },
-            { id: 112, name: "Feature Phones" },
-            {
-              id: 113,
-              name: "Accessories",
-              subcategories: [
-                { id: 1131, name: "Cases & Covers" },
-                { id: 1132, name: "Screen Protectors" },
-                { id: 1133, name: "Chargers" }
-              ]
-            }
-          ]
-        },
-        {
-          id: 12,
-          name: "Computers",
-          subcategories: [
-            {
-              id: 121,
-              name: "Laptops",
-              subcategories: [
-                { id: 1211, name: "Gaming Laptops" },
-                { id: 1212, name: "Business Laptops" },
-                { id: 1213, name: "Ultrabooks" }
-              ]
-            },
-            { id: 122, name: "Desktops" },
-            { id: 123, name: "Tablets" }
-          ]
-        },
-        {
-          id: 13,
-          name: "TV & Audio",
-          subcategories: [
-            { id: 131, name: "Smart TV" },
-            { id: 132, name: "Speakers" }
-          ]
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: "Vehicles",
-      subcategories: [
-        {
-          id: 21,
-          name: "Cars",
-          subcategories: [
-            {
-              id: 211,
-              name: "Sedan",
-              subcategories: [
-                { id: 2111, name: "Toyota Sedan" },
-                { id: 2112, name: "Honda Sedan" },
-                { id: 2113, name: "BMW Sedan" }
-              ]
-            },
-            { id: 212, name: "SUV" },
-            { id: 213, name: "Hatchback" }
-          ]
-        },
-        {
-          id: 22,
-          name: "Motorcycles",
-          subcategories: [
-            { id: 221, name: "Sports Bike" },
-            { id: 222, name: "Cruiser" },
-            { id: 223, name: "Scooter" }
-          ]
-        }
-      ]
-    },
-    {
-      id: 3,
-      name: "Fashion",
-      subcategories: [
-        {
-          id: 31,
-          name: "Men's Fashion",
-          subcategories: [
-            { id: 311, name: "Shirts" },
-            { id: 312, name: "Pants" },
-            { id: 313, name: "Shoes" }
-          ]
-        },
-        {
-          id: 32,
-          name: "Women's Fashion",
-          subcategories: [
-            { id: 321, name: "Dresses" },
-            { id: 322, name: "Sarees" },
-            { id: 323, name: "Accessories" }
-          ]
-        }
-      ]
-    },
-    {
-      id: 4,
-      name: "Home & Living",
-      subcategories: [
-        {
-          id: 41,
-          name: "Furniture",
-          subcategories: [
-            { id: 411, name: "Sofa" },
-            { id: 412, name: "Bed" },
-            { id: 413, name: "Dining Table" }
-          ]
-        },
-        {
-          id: 42,
-          name: "Kitchen",
-          subcategories: [
-            { id: 421, name: "Cookware" },
-            { id: 422, name: "Appliances" }
-          ]
-        }
-      ]
-    }
-  ];
-
-
-
-  const categories_data = [
-    {
-      id: 1,
-      name: "Electronics",
-
-    },
-    {
-      id: 2,
-      name: "Vehicles",
-
-    },
-    {
-      id: 3,
-      name: "Fashion",
-
-    },
-    {
-      id: 4,
-      name: "Home & Living",
-
-    }
-  ];
-
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -584,6 +399,10 @@ const NavbarContent = () => {
     setIsCategoryOpen(false);
     const categoryType = String(category?.type || "").toLowerCase();
 
+    console.log("category:::::::::::::::::::", category);
+    console.log("categoryType", categoryType);
+    console.log("isActiveMyShop", isActiveMyShop);
+
     if (isActiveMyShop) {
       const productType = categoryType === "vehicle" ? "vehicle" : "general";
       router.push(`/my-shop?product_type=${productType}&category_id=${category.id}`);
@@ -591,8 +410,20 @@ const NavbarContent = () => {
     }
 
     if (categoryType === "vehicle") {
-      router.push("/");
-      return;
+      console.log("category type vehicle", category?.name);
+      if(category.name === 'Vehicle'){
+        router.push('/');
+        return;
+      }else{
+        // console.log("Else--------", category?.name);
+
+        const categoryId = category?.id;
+        const isLoggedIn = Boolean(user || (typeof window !== "undefined" && localStorage.getItem("auth_token")));
+        const vehiclePath = isLoggedIn ? "/pb-home" : "/";
+        router.push(categoryId ? `${vehiclePath}?_category_id=${encodeURIComponent(categoryId)}` : vehiclePath);
+        return;
+      }
+
     }
 
     // Navigate to general-products page with category ID
@@ -641,7 +472,6 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
-  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -695,15 +525,8 @@ const NavbarContent = () => {
     const currentShopId = searchParams.get('_shop_id');
 
     // If user is on my-shop page and is logged in, add user ID parameter
-    if (isActiveMyShop && user) {
-      try {
-        const parsedUser = JSON.parse(user);
-        if (parsedUser && parsedUser.id) {
-          searchUrl += `&user_id=${parsedUser.id}`;
-        }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
+    if (isActiveMyShop && parsedUser?.id) {
+      searchUrl += `&user_id=${parsedUser.id}`;
     }
     // If we're on search-results page and there's already a user_id, preserve it
     else if (pathname.includes('/search-results') && currentUserId) {
@@ -1051,17 +874,6 @@ const NavbarContent = () => {
                   </button>
                 )
             }
-
-
-            <Link
-              href="/how-to-use"
-              className={`transition duration-300 ${isActiveHowToUse
-                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
-                : 'hover:text-gray-900'
-                }`}
-            >
-              How to Use
-            </Link>
 
 
 
@@ -1561,17 +1373,6 @@ const NavbarContent = () => {
                   >
                     <ListFilterPlus className="h-4 w-4" />
                     Filter Products
-                  </button>
-                </li>
-
-                
-                <li className={`${isActiveHowToUse ? "border-l-4 md:border-l-[6px] w-full bg-orange-600/10 border-orange-500/90" : ""} flex items-center gap-2 px-3 py-2 hover:bg-gray-100 hover:w-full rounded cursor-pointer transition-colors duration-150`}>
-                  <button
-                    className="flex items-center gap-2 hover:text-gray-900 transition"
-                    onClick={() => router.push("/how-to-use")}
-                  >
-                    <PhoneCall className="h-4 w-4" />
-                    How to Use
                   </button>
                 </li>
               </div>

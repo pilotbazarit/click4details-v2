@@ -1,4 +1,5 @@
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { Ban, CheckCircle, Eye, EyeOff, Plus, StopCircle } from "lucide-react";
 import { useState } from "react";
 
@@ -48,7 +49,7 @@ const FollowupsSection = ({ followups, handleOpenFollowupModal, formatDate, open
   const [showFollowupDetails, setShowFollowupDetails] = useState(false);
   const [showViewDetailsConfirmation, setShowViewDetailsConfirmation] = useState(false);
   const { user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
   const handleViewDetailsConfirm = () => {
     setShowFollowupDetails(true);

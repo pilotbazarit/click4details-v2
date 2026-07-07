@@ -57,9 +57,13 @@ const emptyBasic = {
   locationId: "",
   videoLink: "",
   shortDescription: "",
+  pblTest: "",
   productDetails: "",
   saleByPbl: false,
+  showSellerMobile: false,
   status: "active",
+  secretText: "",
+  secretVideoLink: "",
 };
 
 const emptyInventory = {
@@ -583,6 +587,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
   const [existingFeaturedImage, setExistingFeaturedImage] = useState("");
   const [existingGalleryImages, setExistingGalleryImages] = useState([]);
   const [existingPblImage, setExistingPblImage] = useState("");
+  const [secretDocs, setSecretDocs] = useState([]);
+  const [existingSecretDocs, setExistingSecretDocs] = useState([]);
   const [attributes, setAttributes] = useState(cloneInitialAttributes);
   const [variants, setVariants] = useState([]);
   const [variantMedia, setVariantMedia] = useState({});
@@ -672,9 +678,13 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
           locationId: stringValue(product?.p_location_id ?? product?.location?.id ?? product?.location?.l_id),
           videoLink: product?.p_video_link || "",
           shortDescription: description?.pbl || description?.meta || "",
+          pblTest: description?.pbl_test || "",
           productDetails: description?.user || "",
           saleByPbl: Number(product?.p_is_saleBy_pbl) === 1,
+          showSellerMobile: Number(product?.p_show_seller_mobile) === 1,
           status: product?.p_status || "active",
+          secretText: product?.p_secret_text || "",
+          secretVideoLink: product?.p_secret_video_link || "",
         });
         if (product?.p_category_id && product?.category?.c_name) {
           const selectedCategory = {
@@ -690,6 +700,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
         setExistingFeaturedImage(imageUrl(product?.p_primary_image || product?.p_default_image));
         setExistingGalleryImages(arrayValue(product?.p_images).map(imageUrl).filter(Boolean));
         setExistingPblImage(imageUrl(product?.p_pbl_image));
+        setSecretDocs([]);
+        setExistingSecretDocs(arrayValue(product?.p_secret_docs).map(imageUrl).filter(Boolean));
         setVariants(productVariants);
         setVariantMedia(variantMediaById);
         setAttributes(attributesFromVariants(productVariants));
@@ -1171,10 +1183,17 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
     formData.append("p_status", basic.status);
     formData.append("p_video_link", basic.videoLink);
     formData.append("p_is_saleBy_pbl", basic.saleByPbl ? 1 : 0);
+    formData.append("p_show_seller_mobile", basic.showSellerMobile ? 1 : 0);
     formData.append("p_description[pbl]", basic.shortDescription);
     formData.append("p_description[meta]", basic.shortDescription);
+    formData.append("p_description[pbl_test]", basic.pblTest);
     formData.append("p_description[user]", basic.productDetails);
     formData.append("extended_data_clear", "1");
+    if (canApprovePblSale) {
+      formData.append("p_secret_text", basic.secretText || "");
+      formData.append("p_secret_video_link", basic.secretVideoLink || "");
+      secretDocs.forEach((file, index) => formData.append(`p_secret_docs[${index}]`, file));
+    }
 
     validMoreInformation(moreInformation).forEach((item) => {
       formData.append("ed_entity[]", "product");
@@ -1483,6 +1502,22 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                       onChange={(event) => setBasicValue("saleByPbl", event.target.checked)}
                     />
                   </label>
+                  <label className="flex items-center justify-between rounded-md border border-slate-200 p-4 md:col-span-2">
+                    <span className="flex items-center gap-3">
+                      <ShieldCheck className="h-5 w-5 text-slate-700" />
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-800">Show Seller Mobile Number</span>
+                        <span className="block text-xs text-slate-500">
+                          Highlights the seller&apos;s mobile number with an animation on the product details page.
+                        </span>
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={basic.showSellerMobile}
+                      onChange={(event) => setBasicValue("showSellerMobile", event.target.checked)}
+                    />
+                  </label>
                   <label className="block md:col-span-2">
                     <span className="mb-1 block text-sm font-medium text-slate-700">PBL Description</span>
                     <textarea
@@ -1492,6 +1527,35 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
                     />
                   </label>
+                  <label className="block md:col-span-2">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">PBL Test</span>
+                    <textarea
+                      value={basic.pblTest}
+                      onChange={(event) => setBasicValue("pblTest", event.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                    />
+                  </label>
+                  {canApprovePblSale && (
+                    <>
+                      <label className="block md:col-span-2">
+                        <span className="mb-1 block text-sm font-medium text-slate-700">Secret Text</span>
+                        <textarea
+                          value={basic.secretText}
+                          onChange={(event) => setBasicValue("secretText", event.target.value)}
+                          rows={3}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                        />
+                      </label>
+                      <TextInput
+                        label="Secret Video Link"
+                        type="url"
+                        value={basic.secretVideoLink}
+                        placeholder="https://example.com/video"
+                        onChange={(event) => setBasicValue("secretVideoLink", event.target.value)}
+                      />
+                    </>
+                  )}
                   <label className="block md:col-span-2">
                     <span className="mb-1 block text-sm font-medium text-slate-700">User Description</span>
                     <textarea
@@ -1614,6 +1678,22 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                           existingCount={existingPblImage ? 1 : 0}
                           previewUrl={existingPblImage}
                           onClear={() => setExistingPblImage("")}
+                        />
+                      </div>
+                    )}
+                    {canApprovePblSale && (
+                      <div className="md:col-span-2 rounded-md border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                          <ShieldCheck className="h-4 w-4" />
+                          Secret Documents
+                        </div>
+                        <FileDrop
+                          label="Secret Documents"
+                          multiple
+                          accept="image/*,.pdf,.doc,.docx"
+                          value={secretDocs}
+                          onChange={setSecretDocs}
+                          existingCount={existingSecretDocs.length}
                         />
                       </div>
                     )}

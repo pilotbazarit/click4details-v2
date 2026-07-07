@@ -3,10 +3,12 @@ import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductSkeleton";
 import { usePblHomeProductContext } from "@/context/PblHomeProductContext";
 
-const PblHomeProduct = () => {
+const PblHomeProduct = ({ user }) => {
   const { products, loading, hasMore, getAllProduct } = usePblHomeProductContext();
   const observerRef = useRef();
   const [loadingNewData, setLoadingNewData] = useState(false);
+
+  // console.log("useruseruseruseruseruseruseruser", user);
 
   const lastProductRef = useCallback(
     (node) => {
@@ -53,17 +55,17 @@ const PblHomeProduct = () => {
           if (index === products.length - 1) {
             return (
               <div ref={lastProductRef} key={index}>
-                <ProductCard product={product} className="pb-20" />
+                <ProductCard product={product} parsedUser={user} className="pb-20" />
               </div>
             );
           }
-          return <ProductCard key={index} product={product} />;
+          return <ProductCard key={index} product={product} parsedUser={user} />;
         })}
 
-        {/* {loading &&
-          Array.from({ length: 4 }).map((_, i) => (
+        {loading && products.length === 0 &&
+          Array.from({ length: 10 }).map((_, i) => (
             <ProductCardSkeleton key={`skeleton-${i}`} />
-          ))} */}
+          ))}
       </div>
       {/* Footer section with loading indicator */}
       <div className="w-full flex justify-center pb-10 min-h-[50px]">

@@ -2,19 +2,18 @@
 import CustomDatePicker from "@/components/CustomDatePicker";
 import RangeSlider from "@/components/RangeSlider";
 import { Button } from "@/components/ui/button";
+import { API_URL } from "@/helpers/apiUrl";
+import { createApiRequest } from "@/helpers/axios";
 import constData from "@/lib/constant";
 import CustomerService from "@/services/CustomerService";
 import MasterDataService from "@/services/MasterDataService";
+import UserService from "@/services/UserService";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import Select from "react-select";
+import SelectBase from "react-select";
 
 const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
-  if (!isOpen) return null;
-
-  console.log(customer);
-
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
@@ -37,7 +36,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
   const [customerMobile, setCustomerMobile] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState(null);
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [anniversaryDate, setAnniversaryDate] = useState("");
   const [purchaseReason, setPurchaseReason] = useState("");
   const [interestedLoan, setInterestedLoan] = useState("");
@@ -58,51 +57,127 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
   const [visitingCardImage, setVisitingCardImage] = useState(null);
   const [displayVisitingCardImage, setDisplayVisitingCardImage] = useState(null);
   const [readyBudgetInputInFocus, setReadyBudgetInputInFocus] = useState(null);
+  const [activityRecordId, setActivityRecordId] = useState(null);
+  const [activityUsers, setActivityUsers] = useState([]);
+  const [activityDraft, setActivityDraft] = useState({
+    collectById: "",
+    firstVisitDate: "",
+    firstVisitById: "",
+    secondVisitDate: "",
+    secondVisitById: "",
+    thirdVisitDate: "",
+    thirdVisitById: "",
+    soldDate: "",
+    soldById: "",
+    botMessage: false,
+    interested: false,
+    saleDone: false,
+    note: "",
+  });
 
-  const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDropdownsLoading, setIsDropdownsLoading] = useState(false);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const api = useMemo(() => createApiRequest(API_URL), []);
+  const selectMenuPortalTarget = typeof window !== "undefined" ? document.body : null;
+  const sharedSelectStyles = useMemo(
+    () => ({
+      menuPortal: (base) => ({
+        ...base,
+        zIndex: 9999,
+      }),
+      menu: (base) => ({
+        ...base,
+        zIndex: 9999,
+      }),
+      option: (base, state) => ({
+        ...base,
+        backgroundColor: state.isSelected ? "#2563eb" : state.isFocused ? "#eff6ff" : "#ffffff",
+        color: state.isSelected ? "#ffffff" : "#1f2937",
+      }),
+    }),
+    []
+  );
+  const Select = useCallback(
+    ({ styles, menuPortalTarget, menuPosition, ...props }) => (
+      <SelectBase
+        {...props}
+        menuPortalTarget={menuPortalTarget ?? selectMenuPortalTarget}
+        menuPosition={menuPosition ?? "fixed"}
+        styles={styles ?? sharedSelectStyles}
+      />
+    ),
+    [selectMenuPortalTarget, sharedSelectStyles]
+  );
 
-  // Populate form with customer data on open
+  // Populate form with customer data on open, or reset for create
   useEffect(() => {
-    if (customer) {
-      const formatDateForInput = (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "");
-
-      const getValue = (field) => {
-        if (field === null || field === undefined) return "";
-        const id = typeof field === "object" ? field.md_id : field;
-        const numId = parseInt(id, 10);
-        return isNaN(numId) ? "" : numId;
-      };
-
-      setCustomerName(customer.name || "");
-      setCustomerMobile(customer.mobile || "");
-      setCustomerEmail(customer.email || "");
-      setCustomerAddress(customer.address || "");
-      setDateOfBirth(formatDateForInput(customer.date_of_birth));
-      setAnniversaryDate(formatDateForInput(customer.anniversary_date));
-      setPurchaseReason(getValue(customer.purchase_reason));
-      setInterestedLoan(customer.interested_for_loan || "");
-      setFacebookIdLink(customer.facebook_id_link || "");
-      setFacebookMessengerLink(customer.facebook_messenger_link || "");
-      setClientCompanyTransaction(getValue(customer.client_company_transaction));
-      setBankLoanAmount(getValue(customer.bank_loan_amount));
-      setClientIncome(getValue(customer.client_income_per_month));
-      setClientLevel(getValue(customer.client_level));
-      setClientSeriousness(getValue(customer.client_seriousness));
-      setCarExchangeCategory(getValue(customer.car_exchange_category_per_year));
-      setDescription(customer.description || "");
-      setCarAvailable(getValue(customer.car_available));
-      setClientAttitude(customer.client_attitude ? String(customer.client_attitude).split(",").map(Number) : []);
-      setClientProfession(getValue(customer.client_profession));
-      setClientLastPurchaseDate(customer.client_last_purchase_date || null);
-      setReadyBudget(customer.ready_budget ? JSON.parse(customer.ready_budget) : [0, 500000000]);
-      setDisplayVisitingCardImage(customer.visiting_card_image_url || null);
+    if (!customer?.id) {
+      setCustomerName("");
+      setCustomerMobile("");
+      setCustomerEmail("");
+      setCustomerAddress("");
+      setDateOfBirth("");
+      setAnniversaryDate("");
+      setPurchaseReason("");
+      setInterestedLoan("");
+      setFacebookIdLink("");
+      setFacebookMessengerLink("");
+      setClientCompanyTransaction("");
+      setBankLoanAmount("");
+      setClientIncome("");
+      setClientLevel("");
+      setClientSeriousness("");
+      setCarExchangeCategory("");
+      setDescription("");
+      setCarAvailable("");
+      setClientAttitude([]);
+      setClientProfession("");
+      setClientLastPurchaseDate(null);
+      setReadyBudget([0, 500000000]);
+      setVisitingCardImage(null);
+      setDisplayVisitingCardImage(null);
+      return;
     }
+
+    const formatDateForInput = (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "");
+
+    const getValue = (field) => {
+      if (field === null || field === undefined) return "";
+      const id = typeof field === "object" ? field.md_id : field;
+      const numId = parseInt(id, 10);
+      return isNaN(numId) ? "" : numId;
+    };
+
+    setCustomerName(customer.name || "");
+    setCustomerMobile(customer.mobile || "");
+    setCustomerEmail(customer.email || "");
+    setCustomerAddress(customer.address || "");
+    setDateOfBirth(formatDateForInput(customer.date_of_birth));
+    setAnniversaryDate(formatDateForInput(customer.anniversary_date));
+    setPurchaseReason(getValue(customer.purchase_reason));
+    setInterestedLoan(customer.interested_for_loan || "");
+    setFacebookIdLink(customer.facebook_id_link || "");
+    setFacebookMessengerLink(customer.facebook_messenger_link || "");
+    setClientCompanyTransaction(getValue(customer.client_company_transaction));
+    setBankLoanAmount(getValue(customer.bank_loan_amount));
+    setClientIncome(getValue(customer.client_income_per_month));
+    setClientLevel(getValue(customer.client_level));
+    setClientSeriousness(getValue(customer.client_seriousness));
+    setCarExchangeCategory(getValue(customer.car_exchange_category_per_year));
+    setDescription(customer.description || "");
+    setCarAvailable(getValue(customer.car_available));
+    setClientAttitude(customer.client_attitude ? String(customer.client_attitude).split(",").map(Number) : []);
+    setClientProfession(getValue(customer.client_profession));
+    setClientLastPurchaseDate(customer.client_last_purchase_date || null);
+    setReadyBudget(customer.ready_budget ? JSON.parse(customer.ready_budget) : [0, 500000000]);
+    setDisplayVisitingCardImage(customer.visiting_card_image_url || null);
   }, [customer]);
 
   // Fetch data for dropdowns
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      setIsDropdownsLoading(true);
       try {
         const services = [
           MasterDataService.Queries.getMasterDataByTypeCode(constData.PURCHASE_REASON_MD_CODE),
@@ -135,11 +210,96 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
       } catch (error) {
         toast.error("Failed to load selection data.");
       } finally {
-        setLoading(false);
+        setIsDropdownsLoading(false);
       }
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchActivityContext = async () => {
+      setIsActivityLoading(true);
+      try {
+        const usersResponse = await UserService.Queries.getUserList();
+        const users = Array.isArray(usersResponse?.data) ? usersResponse.data : [];
+        setActivityUsers(users);
+
+        if (!customer?.id) {
+          setActivityRecordId(null);
+          setActivityDraft({
+            collectById: "",
+            firstVisitDate: "",
+            firstVisitById: "",
+            secondVisitDate: "",
+            secondVisitById: "",
+            thirdVisitDate: "",
+            thirdVisitById: "",
+            soldDate: "",
+            soldById: "",
+            botMessage: false,
+            interested: false,
+            saleDone: false,
+            note: "",
+          });
+          return;
+        }
+
+        const activitiesResponse = await api.get(`api/sales-team-activities?customer_id=${customer.id}`);
+        const activities = Array.isArray(activitiesResponse?.data)
+          ? activitiesResponse.data
+          : Array.isArray(activitiesResponse?.data?.data)
+            ? activitiesResponse.data.data
+            : [];
+        const selected = activities[0];
+        if (!selected) {
+          setActivityRecordId(null);
+          return;
+        }
+
+        const toDateInputValue = (value) => {
+          if (!value) return "";
+          const text = String(value);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+          const date = new Date(value);
+          if (Number.isNaN(date.getTime())) return "";
+          return date.toISOString().slice(0, 10);
+        };
+        const resolveUserId = (idOrName) => {
+          if (idOrName !== null && idOrName !== undefined && idOrName !== "") {
+            const numeric = Number(idOrName);
+            if (!Number.isNaN(numeric)) return String(numeric);
+            const byName = users.find((item) => String(item?.name ?? "").trim() === String(idOrName).trim());
+            return byName?.id != null ? String(byName.id) : "";
+          }
+          return "";
+        };
+
+        setActivityRecordId(selected.id);
+        setActivityDraft({
+          collectById: resolveUserId(selected?.data_collect_by ?? selected?.data_collect_by_name),
+          firstVisitDate: toDateInputValue(selected?.first_visit_date),
+          firstVisitById: resolveUserId(selected?.first_visit_by ?? selected?.first_visit_by_name),
+          secondVisitDate: toDateInputValue(selected?.second_visit_date),
+          secondVisitById: resolveUserId(selected?.second_visit_by ?? selected?.second_visit_by_name),
+          thirdVisitDate: toDateInputValue(selected?.third_visit_date),
+          thirdVisitById: resolveUserId(selected?.third_visit_by ?? selected?.third_visit_by_name),
+          soldDate: toDateInputValue(selected?.sold_date),
+          soldById: resolveUserId(selected?.sold_by ?? selected?.sold_by_name),
+          botMessage: Boolean(selected?.bot_message),
+          interested: Boolean(selected?.not_interested),
+          saleDone: Boolean(selected?.sale_done),
+          note: String(selected?.note ?? ""),
+        });
+      } catch {
+        setActivityUsers([]);
+        setActivityRecordId(null);
+      } finally {
+        setIsActivityLoading(false);
+      }
+    };
+
+    fetchActivityContext();
+  }, [customer?.id, api]);
 
   const handleSaveCustomer = async () => {
     if (!customerName) {
@@ -148,7 +308,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
     }
 
     const customerData = {
-      id: customer.id, // Important for update
+      ...(customer?.id ? { id: customer.id } : {}),
       name: customerName,
       mobile: customerMobile,
       email: customerEmail,
@@ -169,26 +329,95 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
       description: description,
       ready_budget: JSON.stringify(readyBudget),
       client_last_purchase_date: clientLastPurchaseDate ? dayjs(clientLastPurchaseDate).format("YYYY-MM-DD") : null,
-      visiting_card_image: visitingCardImage, // This is the new file if any
+      visiting_card_image: visitingCardImage,
       client_attitude: Array.isArray(clientAttitude) ? clientAttitude.join(",") : String(clientAttitude),
       client_profession: String(clientProfession),
     };
 
-    setLoading(true);
+    const buildActivityPayload = (customerId) => {
+      const normalizedMobile = customerMobile.replace(/\D/g, "").slice(-11);
+      return {
+        customer_id: Number(customerId),
+        client_name: customerName.trim(),
+        phone_number: normalizedMobile || null,
+        data_collect_by: activityDraft.collectById ? Number(activityDraft.collectById) : null,
+        facebook_id_link: facebookIdLink.trim() || null,
+        chat_link: facebookMessengerLink.trim() || null,
+        profile_level: String(clientLevel || "").trim() || null,
+        seriousness_level: String(clientSeriousness || "").trim() || null,
+        first_visit_date: activityDraft.firstVisitDate || null,
+        first_visit_by: activityDraft.firstVisitById ? Number(activityDraft.firstVisitById) : null,
+        second_visit_date: activityDraft.secondVisitDate || null,
+        second_visit_by: activityDraft.secondVisitById ? Number(activityDraft.secondVisitById) : null,
+        third_visit_date: activityDraft.thirdVisitDate || null,
+        third_visit_by: activityDraft.thirdVisitById ? Number(activityDraft.thirdVisitById) : null,
+        sold_date: activityDraft.soldDate || null,
+        sold_by: activityDraft.soldById ? Number(activityDraft.soldById) : null,
+        bot_message: Boolean(activityDraft.botMessage),
+        not_interested: Boolean(activityDraft.interested),
+        sale_done: Boolean(activityDraft.saleDone),
+        note: activityDraft.note.trim() || null,
+      };
+    };
+
+    const syncActivityForCustomer = async (customerId) => {
+      if (!customerId) return;
+      try {
+        if (activityRecordId) {
+          await api.put(`api/sales-team-activities/${activityRecordId}`, buildActivityPayload(customerId));
+          return;
+        }
+        const listRes = await api.get(`api/sales-team-activities`, { params: { customer_id: customerId } });
+        const list = Array.isArray(listRes?.data) ? listRes.data : [];
+        const first = list[0];
+        if (first?.id) {
+          await api.put(`api/sales-team-activities/${first.id}`, buildActivityPayload(customerId));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    setIsSaving(true);
+    let saveSucceeded = false;
+    let savedCustomerRow = null;
     try {
       const response = await CustomerService.Commands.saveCustomerInfo(customerData);
       if (response.status === "success") {
-        toast.success("Customer information saved successfully!");
+        savedCustomerRow = response.data ?? null;
+        const effectiveCustomerId = savedCustomerRow?.id ?? customer?.id;
+        await syncActivityForCustomer(effectiveCustomerId);
+        saveSucceeded = true;
+        toast.success(isCreateMode ? "Customer created successfully!" : "Customer information saved successfully!");
         onClose();
       } else {
-        toast.error(response.message || "Failed to save customer information. 1");
+        toast.error(response.message || "Failed to save customer information.");
       }
     } catch (error) {
       console.error("Failed to save customer information:", error);
-      toast.error("An error occurred while saving customer information. 2");
+      const errorPayload =
+        error?.response?.data && typeof error.response.data === "object"
+          ? error.response.data
+          : error && typeof error === "object"
+            ? error
+            : null;
+      const validationErrors = errorPayload?.errors;
+      const firstValidationMessage =
+        validationErrors && typeof validationErrors === "object"
+          ? Object.values(validationErrors).flat().find((message) => typeof message === "string" && message.trim() !== "")
+          : null;
+      const backendMessage =
+        firstValidationMessage ||
+        errorPayload?.message ||
+        errorPayload?.error ||
+        error?.message ||
+        "An error occurred while saving customer information.";
+      toast.error(backendMessage);
     } finally {
-      setLoading(false);
-      onSuccess();
+      setIsSaving(false);
+      if (saveSucceeded) {
+        onSuccess?.(savedCustomerRow);
+      }
     }
   };
 
@@ -200,30 +429,47 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
     }
   };
 
+  const isInitializing = isDropdownsLoading || isActivityLoading;
+  const isCreateMode = !customer?.id;
+
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 border w-full max-w-7xl shadow-lg rounded-md bg-white">
         <div className="flex justify-between items-center">
-          <h3 className="text-2xl font-bold">Edit Customer</h3>
+          <h3 className="text-2xl font-bold">{isCreateMode ? "Add New Customer" : "Edit Customer"}</h3>
           <button onClick={onClose} className="text-black">
             &times;
           </button>
         </div>
+        {isInitializing ? (
+          <div className="mt-4 flex min-h-[360px] items-center justify-center">
+            <div className="flex items-center gap-3 text-gray-700">
+              <svg className="h-6 w-6 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-90" />
+              </svg>
+              <span className="text-sm font-medium">{isCreateMode ? "Loading form…" : "Loading customer edit data..."}</span>
+            </div>
+          </div>
+        ) : (
         <div className="mt-4 max-h-[65vh] overflow-y-auto p-4">
           {/* Customer Info  */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             {/* Customer Mobile */}
             <div className="flex flex-col gap-1">
               <label className="text-base font-medium" htmlFor="customer-mobile">
-                Mobile Number <span className="text-red-500">*</span>
+                Mobile Number
               </label>
               <div className="relative">
                 <input
-                  disabled={true}
                   id="customer-mobile"
                   type="tel"
                   placeholder="Enter mobile number"
-                  className="outline-none py-2 px-3 rounded border border-gray-500/40 w-full hover:cursor-not-allowed bg-gray-100"
+                  className="outline-none py-2 px-3 rounded border border-gray-500/40 w-full"
                   value={customerMobile}
                   onChange={(e) => setCustomerMobile(e.target.value)}
                 />
@@ -233,7 +479,7 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
             {/* Customer Name */}
             <div className="flex flex-col gap-1">
               <label className="text-base font-medium" htmlFor="customer-name">
-                Customer Name <span className="text-red-500">*</span>
+                Customer Name
               </label>
               <input
                 id="customer-name"
@@ -593,7 +839,91 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
               )}
             </div>
           </div>
+
+          <div className="mt-10 border-t border-gray-200 pt-6">
+            <h4 className="text-xl font-semibold mb-4">Activity Update Fields</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Collect By</label>
+                <Select
+                  options={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).filter((o) => o.value && o.label)}
+                  value={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).find((o) => o.value === activityDraft.collectById) || null}
+                  onChange={(option) => setActivityDraft((p) => ({ ...p, collectById: option?.value || "" }))}
+                  isClearable
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Sold By</label>
+                <Select
+                  options={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).filter((o) => o.value && o.label)}
+                  value={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).find((o) => o.value === activityDraft.soldById) || null}
+                  onChange={(option) => setActivityDraft((p) => ({ ...p, soldById: option?.value || "" }))}
+                  isClearable
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Visit 1 Date</label>
+                <input type="date" className="outline-none py-2 px-3 rounded border border-gray-500/40" value={activityDraft.firstVisitDate} onChange={(e) => setActivityDraft((p) => ({ ...p, firstVisitDate: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Visit 1 By</label>
+                <Select
+                  options={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).filter((o) => o.value && o.label)}
+                  value={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).find((o) => o.value === activityDraft.firstVisitById) || null}
+                  onChange={(option) => setActivityDraft((p) => ({ ...p, firstVisitById: option?.value || "" }))}
+                  isClearable
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Visit 2 Date</label>
+                <input type="date" className="outline-none py-2 px-3 rounded border border-gray-500/40" value={activityDraft.secondVisitDate} onChange={(e) => setActivityDraft((p) => ({ ...p, secondVisitDate: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Visit 2 By</label>
+                <Select
+                  options={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).filter((o) => o.value && o.label)}
+                  value={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).find((o) => o.value === activityDraft.secondVisitById) || null}
+                  onChange={(option) => setActivityDraft((p) => ({ ...p, secondVisitById: option?.value || "" }))}
+                  isClearable
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Visit 3 Date</label>
+                <input type="date" className="outline-none py-2 px-3 rounded border border-gray-500/40" value={activityDraft.thirdVisitDate} onChange={(e) => setActivityDraft((p) => ({ ...p, thirdVisitDate: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Visit 3 By</label>
+                <Select
+                  options={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).filter((o) => o.value && o.label)}
+                  value={activityUsers.map((u) => ({ value: String(u?.id ?? ""), label: String(u?.name ?? u?.email ?? "") })).find((o) => o.value === activityDraft.thirdVisitById) || null}
+                  onChange={(option) => setActivityDraft((p) => ({ ...p, thirdVisitById: option?.value || "" }))}
+                  isClearable
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-base font-medium">Sold Date</label>
+                <input type="date" className="outline-none py-2 px-3 rounded border border-gray-500/40" value={activityDraft.soldDate} onChange={(e) => setActivityDraft((p) => ({ ...p, soldDate: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1 lg:col-span-4">
+                <label className="text-base font-medium">Note</label>
+                <textarea rows={3} className="outline-none py-2 px-3 rounded border border-gray-500/40 resize-y" value={activityDraft.note} onChange={(e) => setActivityDraft((p) => ({ ...p, note: e.target.value }))} />
+              </div>
+              <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                <input type="checkbox" checked={activityDraft.botMessage} onChange={(e) => setActivityDraft((p) => ({ ...p, botMessage: e.target.checked }))} />
+                Bot Message
+              </label>
+              <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                <input type="checkbox" checked={activityDraft.interested} onChange={(e) => setActivityDraft((p) => ({ ...p, interested: e.target.checked }))} />
+                Interested
+              </label>
+              <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                <input type="checkbox" checked={activityDraft.saleDone} onChange={(e) => setActivityDraft((p) => ({ ...p, saleDone: e.target.checked }))} />
+                Sale Done
+              </label>
+            </div>
+          </div>
         </div>
+        )}
         <div className="flex justify-end mt-4 space-x-2">
           <button
             type="button"
@@ -604,11 +934,11 @@ const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
           </button>
           <button
             type="button"
-            disabled={loading}
+            disabled={isSaving || isInitializing}
             onClick={() => handleSaveCustomer()}
             className="relative inline-flex items-center px-4 py-2 text-sm font-medium transition-colors border rounded-md bg-orange-500 text-white border-orange-500 disabled:cursor-not-allowed  hover:bg-orange-600"
           >
-            Save Changes
+            {isCreateMode ? "Create Customer" : "Save Changes"}
           </button>
         </div>
       </div>

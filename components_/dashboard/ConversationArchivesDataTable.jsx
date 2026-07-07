@@ -5,17 +5,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import JoditEditor from "../ui/JoditEditor";
 import LoadingSpinner from "../ui/LoadingSpinner";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const getAuthToken = () => {
   let access_token = localStorage.getItem("auth_token");
   if (!access_token) {
     try {
-      const userString = localStorage.getItem("user");
-      if (userString) {
-        const user = JSON.parse(userString);
-        if (user && user.token) {
-          access_token = user.token;
-        }
+      const user = parseStoredUser(localStorage.getItem("user"));
+      if (user?.token) {
+        access_token = user.token;
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage:", error);
@@ -66,6 +66,33 @@ const ConversationArchivesDataTable = () => {
   const chapterInputRef = useRef(null); // New ref for chapter input
   const conversationInputRef = useRef(null); // New ref for conversation input
   const optionInputRef = useRef(null); // New ref for option input
+  const { permissionList, user } = useAppContext();
+
+
+  const showAddChapterButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "ConversationArchive", "ShowChapterAddButton");
+
+  const showEditChapterButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "ConversationArchive", "ShowChapterEditButton");
+
+  const showDeleteChapterButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "ConversationArchive", "ShowChapterDeleteButton");
+
+  const showAddArchiveButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "ConversationArchive", "ShowConversationArchiveAddButton");
+
+
+  const showEditArchiveButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "ConversationArchive", "ShowConversationArchiveEditButton");
+
+  const showDeleteArchiveButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "ConversationArchive", "ShowConversationArchiveDeleteButton");
 
   const fetchChapters = useCallback(async () => {
     setLoadingChapters(true);
@@ -527,17 +554,23 @@ const ConversationArchivesDataTable = () => {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <button
-                    onClick={() => {
-                      setEditingChapter(null);
-                      setNewChapterTitle("");
-                      setShowChapterModal(true);
-                    }}
-                    className="flex items-center text-sm bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                  >
-                    <PlusCircle size={16} className="mr-2" />
-                    Add Chapter
-                  </button>
+
+                  {
+                    showAddChapterButton && (
+                      <button
+                        onClick={() => {
+                          setEditingChapter(null);
+                          setNewChapterTitle("");
+                          setShowChapterModal(true);
+                        }}
+                        className="flex items-center text-sm bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                      >
+                        <PlusCircle size={16} className="mr-2" />
+                        Add Chapter
+                      </button>
+                    )
+                  }
+
                 </div>
 
                 <div className="rounded-lg overflow-hidden">
@@ -546,36 +579,54 @@ const ConversationArchivesDataTable = () => {
                       <div className="px-6 py-4 bg-gray-200 flex justify-between items-start">
                         <h3 className="text-lg font-bold">{chapter.title}</h3>
                         <div className="flex items-center space-x-2">
-                          <button
-                            className="text-blue-500 hover:text-blue-700"
-                            onClick={() => {
-                              setEditingChapter(chapter);
-                              setNewChapterTitle(chapter.title);
-                              setShowChapterModal(true);
-                            }}
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => {
-                              setChapterToDelete(chapter);
-                              setShowChapterDeleteConfirm(true);
-                            }}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                          <button
-                            className="flex items-center text-sm bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600"
-                            onClick={() => {
-                              setShowNewArchiveModal(true);
-                              setAddingToChapterId(chapter.id);
-                              setInsertionPointSlNo(null);
-                            }}
-                          >
-                            <PlusCircle size={16} className="mr-1" />
-                            Add Archive
-                          </button>
+
+                          {
+                            showDeleteArchiveButton && (
+                              <button
+                                className="text-blue-500 hover:text-blue-700"
+                                onClick={() => {
+                                  setEditingChapter(chapter);
+                                  setNewChapterTitle(chapter.title);
+                                  setShowChapterModal(true);
+                                }}
+                              >
+                                <Edit size={18} />
+                              </button>
+                            )
+                          }
+
+
+                          {
+                            showEditArchiveButton && (
+                              <button
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => {
+                                  setChapterToDelete(chapter);
+                                  setShowChapterDeleteConfirm(true);
+                                }}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            )
+                          }
+
+
+                          {
+                            showAddArchiveButton && (
+                              <button
+                                className="flex items-center text-sm bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600"
+                                onClick={() => {
+                                  setShowNewArchiveModal(true);
+                                  setAddingToChapterId(chapter.id);
+                                  setInsertionPointSlNo(null);
+                                }}
+                              >
+                                <PlusCircle size={16} className="mr-1" />
+                                Add Archive
+                              </button>
+                            )
+                          }
+
                         </div>
                       </div>
                       <div>
@@ -598,6 +649,9 @@ const ConversationArchivesDataTable = () => {
                                     ></textarea>
                                   </div>
                                   <div className="col-span-3 flex items-center space-x-4 justify-end">
+                                    {
+
+                                    }
                                     <button
                                       className="text-white bg-green-500 hover:bg-green-700 px-3 py-1 rounded-md"
                                       onClick={() => handleUpdateConversation(archive.id)}
@@ -628,34 +682,49 @@ const ConversationArchivesDataTable = () => {
                                     </div>
                                   </div>
                                   <div className="col-span-3 flex items-center space-x-4 justify-end">
-                                    <button
-                                      className="text-blue-500 hover:text-blue-700"
-                                      onClick={() => {
-                                        setEditingConversationId(archive.id);
-                                        setCurrentConversationTitle(archive.title);
-                                      }}
-                                    >
-                                      <Edit size={18} />
-                                    </button>
-                                    <button
-                                      className="text-green-500 hover:text-green-700"
-                                      onClick={() => {
-                                        setShowNewArchiveModal(true);
-                                        setAddingToChapterId(archive.chapter_id);
-                                        setInsertionPointSlNo(archive.sl_no);
-                                      }}
-                                    >
-                                      <PlusCircle size={18} />
-                                    </button>
-                                    <button
-                                      className="text-red-500 hover:text-red-700"
-                                      onClick={() => {
-                                        setConversationToDelete(archive.id);
-                                        setShowConversationDeleteConfirm(true);
-                                      }}
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
+                                    {
+                                      showEditChapterButton && (
+                                        <button
+                                          className="text-blue-500 hover:text-blue-700"
+                                          onClick={() => {
+                                            setEditingConversationId(archive.id);
+                                            setCurrentConversationTitle(archive.title);
+                                          }}
+                                        >
+                                          <Edit size={18} />
+                                        </button>
+                                      )
+                                    }
+
+                                    {
+                                      showAddChapterButton && (
+                                        <button
+                                          className="text-green-500 hover:text-green-700"
+                                          onClick={() => {
+                                            setShowNewArchiveModal(true);
+                                            setAddingToChapterId(archive.chapter_id);
+                                            setInsertionPointSlNo(archive.sl_no);
+                                          }}
+                                        >
+                                          <PlusCircle size={18} />
+                                        </button>
+                                      )
+                                    }
+
+                                    {
+                                      showDeleteChapterButton && (
+                                        <button
+                                          className="text-red-500 hover:text-red-700"
+                                          onClick={() => {
+                                            setConversationToDelete(archive.id);
+                                            setShowConversationDeleteConfirm(true);
+                                          }}
+                                        >
+                                          <Trash2 size={18} />
+                                        </button>
+                                      )
+                                    }
+
                                     <button onClick={() => toggleExpand(archive.id)} className="text-gray-500 hover:text-gray-800">
                                       {archive.isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                                     </button>

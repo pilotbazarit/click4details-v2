@@ -501,7 +501,10 @@ const ProductDetails = ({ productDetails }) => {
         (user && ["supreme", "admin", "pbl"].includes(user.user_type));
 
     const sellerMobileNumber = formatLocalMobile(productDetails?.user?.phone);
-    const showSellerMobile = Number(productDetails?.v_show_seller_mobile) === 1 && Boolean(sellerMobileNumber);
+    const sellerInfoList = (Array.isArray(productDetails?.v_seller_info) ? productDetails.v_seller_info : [])
+        .map((seller) => ({ name: seller?.name || "", phone: formatLocalMobile(seller?.phone) }))
+        .filter((seller) => seller.phone);
+    const showSellerMobile = Number(productDetails?.v_show_seller_mobile) === 1 && (sellerInfoList.length > 0 || Boolean(sellerMobileNumber));
 
     const handleCopy = (e) => {
         e.preventDefault();
@@ -1155,7 +1158,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8801969944400";
+        const phoneNumber = user?.phone || "+8809638660077";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1287,7 +1290,7 @@ const ProductDetails = ({ productDetails }) => {
                                                     user ? (
                                                         <a href={`tel:${user?.phone}`}>{user?.phone}</a>
                                                     ) : (
-                                                        <a href="tel:+8801969944400">+8801969944400</a>
+                                                        <a href="tel:+8809638660077">+8809638660077</a>
                                                     )
                                                 }
                                             </p>
@@ -1594,7 +1597,30 @@ const ProductDetails = ({ productDetails }) => {
 
 
                 <div className="md:col-span-2 md:col-start-4 md:h-full md:min-h-0 md:overflow-y-scroll md:pl-2 md:overscroll-contain">
-                    {showSellerMobile && (
+                    {showSellerMobile && sellerInfoList.length > 0 && (
+                        sellerInfoList.map((seller, index) => (
+                            <a
+                                key={index}
+                                href={`tel:${seller.phone}`}
+                                title="Call seller"
+                                className="relative flex items-center gap-3 rounded-lg border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-4 shadow-sm animate-pulse hover:shadow-md hover:animate-none transition-shadow mb-4"
+                            >
+                                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                                    <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+                                        <PhoneOutgoing className="h-5 w-5 text-white" />
+                                    </span>
+                                </span>
+                                <span>
+                                    <span className="block text-xs font-medium text-green-700">
+                                        {seller.name ? `Seller Name: ${seller.name}` : "Seller Mobile Number"}
+                                    </span>
+                                    <span className="block text-lg font-bold tracking-wide text-green-800">{seller.phone}</span>
+                                </span>
+                            </a>
+                        ))
+                    )}
+                    {showSellerMobile && sellerInfoList.length === 0 && (
                         <a
                             href={`tel:${sellerMobileNumber}`}
                             title="Call seller"

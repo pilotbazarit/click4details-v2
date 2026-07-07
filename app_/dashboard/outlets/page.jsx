@@ -1,53 +1,50 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Loading from '@/components/Loading';
 import Footer from "@/components/dashboard/Footer";
 import { Button } from "@/components/ui/button";
-import TableFilter from "@/components/TableFilter";
-import Pagination from "@/components/Pagination";
-import ShopModal from "@/components/modals/ShopModal";
-import StoreService from "@/services/ShopService";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
-import constData from "@/lib/constant";
-import api from "@/lib/api";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
 import toast from "react-hot-toast";
-import VehicleModelModal from "@/components/modals/VehicleModelModal";
-import VehicleModelService from "@/services/VehicleModelService";
 import Swal from "sweetalert2";
-import MasterDataService from "@/services/MasterDataService";
 import OutletModal from "@/components/modals/OutletModal";
 import DragDropTable from "@/components/drag-drop-table/DragDropTable";
 import OutletService from "@/services/OutletService";
 import ShopService from "@/services/ShopService";
-import { orderBy } from "lodash";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
+
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const Model = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [open, setOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalItems, setTotalItems] = useState();
-  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [rows, setRows] = useState([]);
   const [shopData, setShopData] = useState([]);
+  const { permissionList, user } = useAppContext();
 
-  const getOutlets = async (value = "") => {
+
+  const canShowAddUserOutletButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "UserOutlet", "ShowUserOutletAddButton")
+
+
+  const canShowEditUserOutletButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "UserOutlet", "ShowUserOutletEditButton")
+
+  const canShowDeleteUserOutletButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "UserOutlet", "ShowUserOutletDeleteButton")
+
+  const getOutlets = async (value = searchQuery) => {
     try {
+      setLoading(true);
 
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
       const params = {
         _page: 1,
@@ -65,17 +62,14 @@ const Model = () => {
       const response = await OutletService.Queries.getAllOutlets(params);
 
       if (response?.status === 'success') {
-        setTotalItems(response?.data?.total)
         setRows(response?.data?.data)
       }
     } catch (error) {
       console.log("Error fetching brand data:", error);
+    } finally {
+      setLoading(false);
     }
   }
-
-  const fetchSearchResults = (value) => {
-    getOutlets(value);
-  };
 
   const handleEdit = (item) => {
     setSelectedModel(item);
@@ -119,9 +113,7 @@ const Model = () => {
 
   const getShopData = async () => {
     try {
-      const userData = localStorage.getItem("user");
-      const userInfo = userData && JSON.parse(userData);
-      const user = JSON.parse(userInfo);
+      const user = parseStoredUser(localStorage.getItem("user"));
 
       const response = await ShopService.Queries.getShops(
         {
@@ -151,13 +143,20 @@ const Model = () => {
   }
 
   useEffect(() => {
-    getOutlets();
     getShopData();
   }, []);
 
   useEffect(() => {
-    getOutlets();
-  }, [currentPage, itemsPerPage]);
+    getOutlets(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(query.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [query]);
 
 
   // const [rows, setRows] = useState([
@@ -169,8 +168,19 @@ const Model = () => {
 
   const columns = [
     { key: "serial", header: "SL", width: "5%" },
-    { key: "uo_country_id", header: "Country", width: "15%" },
-    { key: "uo_location", header: "Location", width: "15%" },
+    { key: "uo_id", header: "Outlet ID", width: "15%" },
+    {
+      key: "uo_country_id",
+      header: "Country",
+      width: "15%",
+      render: (row) => row?.country?.md_title || "N/A",
+    },
+    {
+      key: "uo_location",
+      header: "Location",
+      width: "15%",
+      render: (row) => row?.location?.l_name || "N/A",
+    },
     { key: "uo_name", header: "Name", width: "15%" },
     { key: "uo_address", header: "Address", width: "15%" },
     { key: "uo_map_link", header: "Map Link", width: "15%" },
@@ -180,20 +190,30 @@ const Model = () => {
       width: "10%",
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleEdit(row)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="destructive"
-            size="icon"
-            onClick={() => handleDelete(row.uo_id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {
+            canShowEditUserOutletButton && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleEdit(row)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )
+          }
+
+          {
+            canShowDeleteUserOutletButton && (
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() => handleDelete(row.uo_id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )
+          }
+
         </div>
       ),
     },
@@ -208,50 +228,89 @@ const Model = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <h2 className="text-xl text-gray-800">All Outlets</h2>
-          <Button
-            onClick={() => {
-              setOpen(true);
-              setSelectedModel(null);
-            }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <svg
-              className="w-5 h-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Outlet
-          </Button>
+
+          {
+            canShowAddUserOutletButton && (
+              <Button
+                onClick={() => {
+                  setOpen(true);
+                  setSelectedModel(null);
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Outlet
+              </Button>
+            )
+          }
+
         </div>
 
         {/* Search Filter */}
-        <TableFilter query={query} setQuery={setQuery} setCurrentPage={setCurrentPage} fetchSearchResults={fetchSearchResults} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} placeholder="Search by name..." />
+        <div className="mb-4">
+          <div className="w-full md:w-1/3 relative">
+            <Input
+              type="text"
+              placeholder="Search by name..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full pr-10"
+            />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  setSearchQuery("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                aria-label="Clear search"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Table Container */}
         <div className="overflow-x-auto rounded-md border border-gray-300 mt-4">
-          {/* <div className="max-w-3xl mx-auto p-4"> */}
-          {/* <h2 className="text-xl font-semibold mb-3">Drag & Drop Table (Demo)</h2>
-            <p className="text-sm text-gray-500 mb-4">Drag the handle on the left to reorder rows.</p> */}
-          <DragDropTable
-            columns={columns}
-            rows={rows}
-            onReorder={(next) => setRows(next)}
-          />
-
-          {/* Pagination */}
-          {/* <Pagination
-            currentPage={currentPage}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={(page) => setCurrentPage(page)}
-          /> */}
-          {/* <pre className="mt-4 text-xs bg-gray-50 p-3 rounded border">{JSON.stringify(rows, null, 2)}</pre> */}
+          {!loading && rows.length > 0 ? (
+            <DragDropTable
+              columns={columns}
+              rows={rows}
+              onReorder={(next) => setRows(next)}
+            />
+          ) : (
+            <div className="h-[300px] md:h-[300px] lg:h-[400px] xl:h-[600px] flex items-center justify-center text-center py-4 text-gray-500">
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
+                  <span className="text-gray-500 font-semibold">Loading...</span>
+                </div>
+              ) : (
+                <div>No outlets found.</div>
+              )}
+            </div>
+          )}
         </div>
-        {/* </div> */}
       </main>
       <Footer />
 

@@ -25,6 +25,8 @@ import "react-phone-input-2/lib/style.css";
 import UserService from "@/services/UserService";
 import { method } from "lodash";
 
+import { parseStoredUser } from "@/lib/parseStoredUser";
+
 const partnerButtonStyles = `
   @keyframes pulse-glow {
     0%, 100% {
@@ -94,9 +96,7 @@ const Profile = () => {
     // console.log("upDocs 74", upDocs);
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
-        const user = JSON.parse(userInfo);
+        const user = parseStoredUser(localStorage.getItem("user"));
 
         if (user) {
             getUserById(user.id);
@@ -676,7 +676,7 @@ const Profile = () => {
                                 </button>
 
                                 <h2 className="text-[22px] font-extrabold leading-tight text-gray-900">
-                                    Become a Click4Details Partner
+                                    Become a PilotBazar Partner
                                 </h2>
 
                                 <p className="mt-6 text-base leading-relaxed text-gray-500">

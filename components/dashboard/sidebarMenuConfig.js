@@ -12,6 +12,7 @@ import {
   LayoutList,
   List,
   ListChecks,
+  Lock,
   MessageSquare,
   MessageSquareText,
   MessageSquareWarning,
@@ -397,6 +398,18 @@ export const dashboardMenuItems = [
     requiredPermission: {
       section: "Cart",
       action: "CartListMenuShow",
+      appliesToModes: [ADMIN, PBL],
+      pblShopId: 0,
+    },
+  },
+  {
+    name: "Secret Information",
+    path: "/dashboard/secret-information",
+    icon: Lock,
+    allowedModes: [ADMIN, SUPREME, PBL],
+    requiredPermission: {
+      section: "Vehicle",
+      action: "SecretData",
       appliesToModes: [ADMIN, PBL],
       pblShopId: 0,
     },

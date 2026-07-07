@@ -9,15 +9,12 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Hello")
     setLoading(true);
     setSuccessMsg("");
     setErrorMsg("");
 
     try {
       const res = await LoginService.Commands.forgotPassword({ email });
-
-      console.log("Forgot Password Response:", res);
 
       if (res.status === "success") {
         setSuccessMsg("Password token has been sent to your email.");
@@ -28,8 +25,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
         setErrorMsg("Failed to send password reset link. Please try again.");
       }
     } catch (error) {
-      console.log("Forgot Password Error:", error);
-      setErrorMsg(error || "An error occurred. Please try again.");
+      setErrorMsg("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -100,16 +96,6 @@ export default function ForgotPasswordModal({ isOpen, onClose, openResetPassword
               >
                 {loading ? "Sending..." : "Submit"}
               </button>
-
-              <p className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                📞 কোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন:{" "}
-                <a
-                  href="tel:+8809638660077"
-                  className="font-semibold text-blue-700 hover:underline dark:text-blue-400"
-                >
-                  +8809638660077
-                </a>
-              </p>
             </form>
           </div>
         </div>

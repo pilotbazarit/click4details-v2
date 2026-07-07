@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Footer from "@/components/dashboard/Footer";
 import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
-import { Eye, Funnel, KeyRound, Loader2, Pencil, Search } from "lucide-react";
+import { Eye, Funnel, KeyRound, Loader2, LogIn, Pencil, Search, SmilePlus, Star } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -20,6 +20,12 @@ import UserShopListModel from "@/components/modals/UserShopListModel";
 import UserEditModel from "@/components/modals/UserEditModel";
 import ShopService from "@/services/ShopService";
 import PasswordChangeModal from "@/components/modals/PasswordChangeModal";
+import UserPermissionModal from "@/components/modals/UserPermissionModal";
+import UserRatingModal from "@/components/modals/UserRatingModal";
+import useUserModeGuard from "@/hooks/useUserModeGuard";
+import { useRouter } from "next/navigation";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 
 // ✅ Toggle Switch Component
 const StatusToggle = ({ item, onToggle }) => {
@@ -40,6 +46,8 @@ const StatusToggle = ({ item, onToggle }) => {
 };
 
 const User = () => {
+  const router = useRouter();
+  const { setUser, permissionList, user } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -77,6 +85,41 @@ const User = () => {
   const [showCodeSearch, setShowCodeSearch] = useState(false);
   const codeButtonRef = useRef(null);
   const codeTooltipRef = useRef(null);
+  const [openPermissionModal, setOpenPermissionModal] = useState(false);
+  const [selectedPermissionUser, setSelectedPermissionUser] = useState(null);
+  const [masterLoginUserId, setMasterLoginUserId] = useState(null);
+  const [openRatingModal, setOpenRatingModal] = useState(false);
+  const [selectedRatingUser, setSelectedRatingUser] = useState(null);
+
+  const {
+    hasAccess: canAccessUserPage,
+    isCheckingAccess: isAccessLoading,
+  } = useUserModeGuard(["supreme"]);
+
+  const canShowUserRatingButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "User", "ShowUserRatingButton")
+
+  const canEditUserButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "User", "ShowUserEditButton")
+
+  const canShowUserPasswordButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "User", "ShowUserPasswordButton")
+
+  const canShowLoginAsUserButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "User", "ShowLoginAsUserButton")
+
+
+  const canShowAddPermissionButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "User", "ShowAddPermissionButton")
+
+  const canStatusChangeButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "User", "ChangeStatusButton")
 
   const getUsers = async (value = query, modeValue = modeQuery, mobileValue = mobileQuery, emailValue = emailQuery, codeValue = codeQuery) => {
     try {
@@ -105,8 +148,6 @@ const User = () => {
       setLoading(false);
     }
   };
-
-
   const handleModeChange = async (userId) => {
     try {
       const response = await UserService.Commands.updateUser(userId, {
@@ -166,30 +207,41 @@ const User = () => {
   };
 
   const handleToggleStatus = async (user) => {
-    const prevStatus = user.status;
-    const newStatus = prevStatus === "active" ? "inactive" : "active";
 
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, status: newStatus } : u))
-    );
-
-    try {
-      const response = await UserService.Commands.updateUser(user.id, {
-        _method: "PUT",
-        status: newStatus,
+    if (!canStatusChangeButton) {
+      Swal.fire({
+        icon: "error",
+        title: "Permission Denied",
+        text: "You are not allowed to change user status."
       });
+      return;
+    } else {
+      const prevStatus = user.status;
+      const newStatus = prevStatus === "active" ? "inactive" : "active";
 
-      if (response.status === "success") {
-        toast.success(`User ${newStatus} successfully!`);
-      } else {
-        throw new Error("Failed to update");
-      }
-    } catch (error) {
       setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, status: prevStatus } : u))
+        prev.map((u) => (u.id === user.id ? { ...u, status: newStatus } : u))
       );
-      toast.error("Something went wrong while updating status.");
+
+      try {
+        const response = await UserService.Commands.updateUser(user.id, {
+          _method: "PUT",
+          status: newStatus,
+        });
+
+        if (response.status === "success") {
+          toast.success(`User ${newStatus} successfully!`);
+        } else {
+          throw new Error("Failed to update");
+        }
+      } catch (error) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: prevStatus } : u))
+        );
+        toast.error("Something went wrong while updating status.");
+      }
     }
+
   };
 
   const handleEdit = (item) => {
@@ -202,6 +254,115 @@ const User = () => {
     // Handle password change logic here
     setPasswordModalOpen(true);
     setSelectedModel(item);
+  };
+
+  const handlePermissionOpen = (item) => {
+    setSelectedPermissionUser(item);
+    setOpenPermissionModal(true);
+  };
+
+  const handlePermissionModalClose = (isOpen) => {
+    setOpenPermissionModal(isOpen);
+    if (!isOpen) {
+      setSelectedPermissionUser(null);
+    }
+  };
+
+  const handleRatingOpen = (item) => {
+    setSelectedRatingUser(item);
+    setOpenRatingModal(true);
+  };
+
+  const handleRatingModalClose = (isOpen) => {
+    setOpenRatingModal(isOpen);
+
+    if (!isOpen) {
+      setSelectedRatingUser(null);
+    }
+  };
+
+  const handleRatingSaved = ({ up_rating, up_rating_description }) => {
+    if (!selectedRatingUser?.id) {
+      return;
+    }
+
+    setUsers((prevUsers) =>
+      Array.isArray(prevUsers)
+        ? prevUsers.map((user) =>
+          user.id === selectedRatingUser.id
+            ? {
+              ...user,
+              profile: {
+                ...(user.profile || {}),
+                up_rating,
+                up_rating_description,
+              },
+            }
+            : user
+        )
+        : prevUsers
+    );
+  };
+
+  const getMasterLoginValue = (user) => {
+    const rawValue = String(user?.phone || user?.email || "").trim();
+    if (!rawValue) return "";
+
+    const isPhoneLike = /^[+\d\s()-]+$/.test(rawValue);
+    if (!isPhoneLike) {
+      return rawValue;
+    }
+
+    const normalizedDigits = rawValue.replace(/\D+/g, "");
+    if (normalizedDigits.startsWith("880")) {
+      return normalizedDigits.slice(3);
+    }
+
+    return normalizedDigits || rawValue;
+  };
+
+  const handleMasterLogin = async (item) => {
+    if (!item?.id || masterLoginUserId === item.id) return;
+
+    const loginValue = getMasterLoginValue(item);
+    if (!loginValue) {
+      toast.error("User login value not found.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("login", loginValue);
+    formData.append("password", "11111111");
+
+    try {
+      setMasterLoginUserId(item.id);
+      toast.loading("Signing in as user...", { id: "master-login" });
+
+      const res = await UserService.Commands.masterLogin(item.id);
+
+      if (res?.status !== "success" || !res?.token) {
+        throw new Error(res?.message || "Master login failed.");
+      }
+
+      localStorage.setItem("auth_token", res.token);
+
+      const response = await UserService.Queries.getUserById(res?.data?.id || item.id);
+
+      localStorage.setItem("user", JSON.stringify(response.data));
+      setUser(response.data);
+
+      toast.success("Signed in successfully.", { id: "master-login" });
+      router.push("/my-shop");
+    } catch (error) {
+      toast.error(
+        error?.message ||
+        error?.response?.data?.message ||
+        "Master login failed.",
+        { id: "master-login" }
+      );
+    } finally {
+      setMasterLoginUserId(null);
+    }
   };
 
   useEffect(() => {
@@ -242,8 +403,34 @@ const User = () => {
   }, []);
 
   useEffect(() => {
+    if (isAccessLoading || !canAccessUserPage) {
+      return;
+    }
+
     getUsers();
-  }, [currentPage, itemsPerPage, query, modeQuery, mobileQuery, emailQuery, codeQuery]);
+  }, [isAccessLoading, canAccessUserPage, currentPage, itemsPerPage, query, modeQuery, mobileQuery, emailQuery, codeQuery]);
+
+  if (isAccessLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="flex items-center gap-2 text-gray-600">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+          <span>Checking access...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canAccessUserPage) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="flex items-center gap-2 text-gray-600">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+          <span>Redirecting...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen w-full justify-between bg-gray-50 px-6">
@@ -324,6 +511,7 @@ const User = () => {
                 </TableHead>
                 <TableHead className="relative border-r border-gray-300">Name</TableHead>
                 <TableHead className="relative border-r border-gray-300">Company Name</TableHead>
+                <TableHead className="relative border-r border-gray-300">Country Code</TableHead>
                 <TableHead className="relative border-r border-gray-300">
                   <div className="flex items-center justify-between relative">
                     <span>Mobile</span>
@@ -460,11 +648,12 @@ const User = () => {
                             onChange={(e) => setModeQuery(e.target.value)}
                           >
                             <option value="">All Modes</option>
+                            <option value="admin">System Admin</option>
                             <option value="supreme">Admin</option>
                             <option value="pbl">PBL</option>
                             <option value="partner">Partner</option>
+                            <option value="member">Member</option>
                             <option value="user">User</option>
-                            <option value="admin">System Admin</option>
                           </select>
                           {modeQuery && (
                             <button
@@ -553,6 +742,7 @@ const User = () => {
                     </TableCell>
                     <TableCell className="border-r border-gray-200">{item?.name}</TableCell>
                     <TableCell className="border-r border-gray-200">{item?.profile?.up_company || "N/A"}</TableCell>
+                    <TableCell className="border-r border-gray-200">+880</TableCell>
                     <TableCell className="border-r border-gray-200">{item?.phone}</TableCell>
                     <TableCell className="border-r border-gray-200">{item?.email}</TableCell>
 
@@ -636,20 +826,85 @@ const User = () => {
                     </TableCell>
 
                     {/* Action buttons */}
-                    <TableCell className="space-x-3">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <Pencil size={18} />
-                      </button>
+                    <TableCell className="space-x-2">
 
-                      <button
-                        onClick={() => handlePasswordChange(item)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <KeyRound size={18} />
-                      </button>
+
+
+                      {
+                        canShowUserRatingButton && (
+                          <button
+                            onClick={() => handleRatingOpen(item)}
+                            className="text-amber-500 hover:text-amber-700"
+                            title="User Rating"
+                            aria-label={`Rate ${item.name || "user"}`}
+                          >
+                            <Star size={18} />
+                          </button>
+                        )
+                      }
+
+                      {
+                        canEditUserButton && (
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )
+                      }
+
+
+
+                      {
+                        canShowUserPasswordButton && (
+                          <button
+                            onClick={() => handlePasswordChange(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <KeyRound size={18} />
+                          </button>
+                        )
+                      }
+
+
+                      {
+                        canShowLoginAsUserButton && (
+                          <button
+                            onClick={() => handleMasterLogin(item)}
+                            disabled={masterLoginUserId === item.id}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Login as User"
+                          >
+                            {masterLoginUserId === item.id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <LogIn size={18} />
+                            )}
+                          </button>
+                        )
+                      }
+
+
+
+                      {
+                        canShowAddPermissionButton && (
+                          (item?.user_mode == 'admin' || item?.user_mode == 'pbl') && (
+                            <button
+                              onClick={() => handlePermissionOpen(item)}
+                              className="text-orange-600 hover:text-orange-800"
+                              aria-label={`Add Permission`}
+                              title="Add Permission"
+                            >
+                              <SmilePlus size={18} />
+                            </button>
+                          )
+
+                        )
+                      }
+
+
+
                     </TableCell>
                   </TableRow>
                 ))
@@ -702,6 +957,20 @@ const User = () => {
         selectedData={selectedEditData}
         users={users}
         setUsers={setUsers}
+      />
+
+      <UserPermissionModal
+        open={openPermissionModal}
+        setOpen={handlePermissionModalClose}
+        selectedUser={selectedPermissionUser}
+        onSuccess={getUsers}
+      />
+
+      <UserRatingModal
+        open={openRatingModal}
+        setOpen={handleRatingModalClose}
+        selectedData={selectedRatingUser}
+        onSaved={handleRatingSaved}
       />
     </div>
   );

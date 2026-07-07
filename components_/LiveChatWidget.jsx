@@ -57,15 +57,15 @@ export default function LiveChatWidget() {
       window.chatId = chatId;
       setCurrentChatId(chatId);
       
-      console.log('🔄 LiveChatWidget: Dynamic Chat ID Updated');
-      console.log('- Chat ID:', chatId);
-      console.log('- User ID:', user?.id);
-      console.log('- User Role:', user?.role);
-      console.log('- Selected Shop:', selectedShop);
-      console.log('- Selected Company Shop:', selectedCompanyShop);
-      console.log('- Current Path:', pathname);
-      console.log('- API URL:', process.env.NEXT_PUBLIC_LIVECHAT_API_URL || 'NOT SET (using default: http://localhost:5000)');
-      console.log('- Socket URL:', process.env.NEXT_PUBLIC_LIVECHAT_SOCKET_URL || 'NOT SET (using default: http://localhost:5000)');
+      // console.log('🔄 LiveChatWidget: Dynamic Chat ID Updated');
+      // console.log('- Chat ID:', chatId);
+      // console.log('- User ID:', user?.id);
+      // console.log('- User Role:', user?.role);
+      // console.log('- Selected Shop:', selectedShop);
+      // console.log('- Selected Company Shop:', selectedCompanyShop);
+      // console.log('- Current Path:', pathname);
+      // console.log('- API URL:', process.env.NEXT_PUBLIC_LIVECHAT_API_URL || 'NOT SET (using default: http://localhost:5000)');
+      // console.log('- Socket URL:', process.env.NEXT_PUBLIC_LIVECHAT_SOCKET_URL || 'NOT SET (using default: http://localhost:5000)');
       
       // Dispatch event to notify widget of chat ID change
       window.dispatchEvent(new CustomEvent('chatIdChanged', { detail: { chatId } }));

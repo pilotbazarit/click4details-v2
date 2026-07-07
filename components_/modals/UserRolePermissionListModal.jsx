@@ -65,6 +65,7 @@ const UserRolePermissionListModal = ({ open, setOpen, selectedShop, employees, s
                             onClick={() => {
                                 setOpen(false)
                                 setOpenUser(true)
+                                setSelectedUser(null)
                             }}
                             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow hover:from-blue-700 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         >
@@ -93,8 +94,8 @@ const UserRolePermissionListModal = ({ open, setOpen, selectedShop, employees, s
                                     </tr>
                                 </thead>
                                 <tbody className="text-gray-700">
-                                    {
-                                        employees.length > 0 && employees.map((item, index) => (
+                                    {employees.length > 0 ? (
+                                        employees.map((item, index) => (
                                             <tr key={index} className="border-b hover:bg-gray-50">
                                                 <td className="py-3 px-4">{item?.user?.name}</td>
                                                 <td className="py-3 px-4">{item?.user?.phone}</td>
@@ -114,7 +115,13 @@ const UserRolePermissionListModal = ({ open, setOpen, selectedShop, employees, s
                                                 </td>
                                             </tr>
                                         ))
-                                    }
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="py-6 text-center text-gray-500">
+                                                No users found for this shop.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

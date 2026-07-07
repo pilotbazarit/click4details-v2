@@ -17,6 +17,7 @@ import CategoryService from '@/services/CategoryService';
 import { ChevronRight, Home, ArrowLeft, FolderTree } from 'lucide-react';
 
 const schema = yup.object().shape({
+    c_type: yup.string().required("Type is required"),
     c_name: yup.string().required("Name is required"),
     c_status: yup.string().required("Status is required"),
     c_parent_id: yup.number().nullable()
@@ -33,6 +34,7 @@ const CategoryModal = ({ open, setOpen, categories, getCategories, initialData }
     } = useForm({
         resolver: yupResolver(schema),
         defaultValues: {
+            c_type: 'vehicle',
             c_parent_id: null,
             c_name: '',
             c_status: 'active'
@@ -51,11 +53,13 @@ const CategoryModal = ({ open, setOpen, categories, getCategories, initialData }
     // Set form values when initialData changes
     useEffect(() => {
         if (initialData) {
+            setValue('c_type', initialData.c_type || 'vehicle');
             setValue('c_parent_id', initialData.c_parent_id || null);
             setValue('c_name', initialData.c_name);
             setValue('c_status', initialData.c_status);
         } else {
             reset({
+                c_type: 'vehicle',
                 c_parent_id: null,
                 c_name: '',
                 c_status: 'active'
@@ -117,12 +121,10 @@ const CategoryModal = ({ open, setOpen, categories, getCategories, initialData }
         setValue('c_parent_id', null, { shouldValidate: true });
     };
 
-
-    console.log("initialData", initialData);
-
     const onSubmit = async (data) => {
         console.log("Form Data Submitted: ", data);
         const payload = {
+            c_type: data.c_type,
             c_name: data.c_name,
             c_parent_id: data.c_parent_id || 0,
             c_status: data.c_status
@@ -181,6 +183,24 @@ const CategoryModal = ({ open, setOpen, categories, getCategories, initialData }
                 <hr className="my-2" />
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                    {/* Type */}
+                    <div className="space-y-2">
+                        <Label htmlFor="c_type" className="text-base font-semibold">
+                            Type <span className="text-red-500">*</span>
+                        </Label>
+                        <select
+                            id="c_type"
+                            className="w-full outline-none py-2.5 px-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition h-11 text-base"
+                            {...register("c_type")}
+                        >
+                            <option value="vehicle">Vehicle</option>
+                            <option value="gProduct">General Product</option>
+                        </select>
+                        {errors.c_type && (
+                            <p className="text-red-500 text-sm font-medium">{errors.c_type.message}</p>
+                        )}
+                    </div>
+
                     {/* Parent Category Selection */}
                     <div className="space-y-2">
                         <Label className="text-sm font-semibold flex items-center gap-2">

@@ -1,25 +1,507 @@
 'use client'
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ProductDetailsSlider from "@/components/frontend/ProductDetailsSlider";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Download, Edit, ExternalLink, Eye, FileText, GitCompare, Image as ImageIcon, PhoneOutgoing, Share2, ShoppingCart, X } from "lucide-react";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import ProductDetailsDescription from "@/components/frontend/ProductDetailsDescription";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { formatPrice } from "@/helpers/functions";
+import { FaWhatsapp } from "react-icons/fa";
+import ProductShareModal from "@/components/modals/ProductShareModal";
+import ShopSelectModal from "@/components/modals/ShopSelectModal";
+import { useAppContext } from "@/context/AppContext";
+import { getSessionId, hasPermission } from "@/lib/utils";
+import ModalSlider from "./ModalSlider";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 
 dayjs.extend(relativeTime);
 
+const formatProductDetailsDate = (date) => {
+    if (!date) return "N/A";
+
+    const parsedDate = dayjs(date);
+    if (!parsedDate.isValid()) return "N/A";
+
+    return parsedDate.format("YYYY-MM-DD");
+};
+
+const formatLocalMobile = (value) => {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return "";
+    return trimmed.startsWith("0") ? trimmed : `0${trimmed}`;
+};
+
+const getDocumentUrl = (doc) => {
+    if (typeof doc === "string") return doc;
+    return doc?.url || doc?.secure_url || doc?.resource_url || "";
+};
+
+const getDocumentFormat = (doc, url) => {
+    const explicitFormat = typeof doc === "object" ? doc?.format : "";
+    if (explicitFormat) return String(explicitFormat).toLowerCase();
+
+    const cleanUrl = String(url || "").split(/[?#]/)[0];
+    const extension = cleanUrl.includes(".") ? cleanUrl.split(".").pop() : "";
+    return String(extension || "").toLowerCase();
+};
+
+const getDocumentFileName = (doc, index = 0) => {
+    const url = getDocumentUrl(doc);
+    const publicId = typeof doc === "object" ? doc?.public_id : "";
+    const cleanSource = String(publicId || url || `Document ${index + 1}`).split(/[?#]/)[0];
+    const fileName = cleanSource.split("/").pop() || `Document ${index + 1}`;
+
+    try {
+        return decodeURIComponent(fileName);
+    } catch (error) {
+        return fileName;
+    }
+};
+
+const isPdfDocument = (doc, url) => {
+    const format = getDocumentFormat(doc, url);
+    return format === "pdf" || /\.pdf(?:[?#].*)?$/i.test(String(url || ""));
+};
+
+const isImageDocument = (doc, url) => {
+    const resourceType = typeof doc === "object" ? String(doc?.resource_type || "").toLowerCase() : "";
+    const format = getDocumentFormat(doc, url);
+
+    return (
+        resourceType === "image" ||
+        /^(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(format) ||
+        /\.(jpg|jpeg|png|gif|webp|bmp|svg)(?:[?#].*)?$/i.test(String(url || ""))
+    );
+};
+
+const getCloudinaryPdfPreviewUrls = (doc, url) => {
+    const sourceUrl = String(url || "");
+    if (!sourceUrl.includes("res.cloudinary.com") || !sourceUrl.includes("/raw/upload/")) {
+        return [];
+    }
+
+    const [cloudinaryBase, uploadPathWithQuery] = sourceUrl.split("/raw/upload/");
+    const uploadPath = String(uploadPathWithQuery || "").split(/[?#]/)[0];
+    if (!cloudinaryBase || !uploadPath) return [];
+
+    const withoutPdfExtension = uploadPath.replace(/\.pdf$/i, "");
+    const publicId = typeof doc === "object" ? String(doc?.public_id || "").replace(/^\/+/, "") : "";
+    const versionMatch = uploadPath.match(/^(v\d+)\//);
+    const versionPrefix = versionMatch?.[1] ? `${versionMatch[1]}/` : "";
+    const publicIdPath = publicId ? `${versionPrefix}${publicId}` : "";
+    const publicIdWithoutPdfExtension = publicIdPath.replace(/\.pdf$/i, "");
+    const imageBase = `${cloudinaryBase}/image/upload`;
+
+    return Array.from(new Set([
+        `${imageBase}/pg_1,f_jpg,q_auto/${uploadPath}`,
+        `${imageBase}/pg_1,f_png,q_auto/${uploadPath}`,
+        `${imageBase}/pg_1,f_jpg,q_auto/${withoutPdfExtension}.jpg`,
+        `${imageBase}/pg_1,f_png,q_auto/${withoutPdfExtension}.png`,
+        publicIdPath ? `${imageBase}/pg_1,f_jpg,q_auto/${publicIdPath}` : "",
+        publicIdPath ? `${imageBase}/pg_1,f_png,q_auto/${publicIdPath}` : "",
+        publicIdWithoutPdfExtension ? `${imageBase}/pg_1,f_jpg,q_auto/${publicIdWithoutPdfExtension}.jpg` : "",
+        publicIdWithoutPdfExtension ? `${imageBase}/pg_1,f_png,q_auto/${publicIdWithoutPdfExtension}.png` : "",
+    ].filter(Boolean)));
+};
+
+const normalizeSecretDocuments = (docs = []) => (
+    docs
+        .map((doc, index) => {
+            const url = getDocumentUrl(doc);
+            if (!url) return null;
+
+            const type = isPdfDocument(doc, url)
+                ? "pdf"
+                : isImageDocument(doc, url)
+                    ? "image"
+                    : "document";
+
+            return {
+                url,
+                type,
+                name: getDocumentFileName(doc, index),
+                format: getDocumentFormat(doc, url),
+                pdfPreviewUrls: type === "pdf" ? getCloudinaryPdfPreviewUrls(doc, url) : [],
+            };
+        })
+        .filter(Boolean)
+);
+
+const PdfDocumentPreview = ({ url, title, previewUrls = [] }) => {
+    const [previewUrl, setPreviewUrl] = useState("");
+    const [status, setStatus] = useState(previewUrls.length ? "image-preview" : "loading");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [imagePreviewIndex, setImagePreviewIndex] = useState(0);
+    const [tryDirectPdf, setTryDirectPdf] = useState(false);
+
+    useEffect(() => {
+        setPreviewUrl("");
+        setErrorMessage("");
+        setImagePreviewIndex(0);
+        setTryDirectPdf(false);
+        setStatus(previewUrls.length ? "image-preview" : "loading");
+    }, [url, previewUrls.length]);
+
+    useEffect(() => {
+        if (previewUrls.length && !tryDirectPdf) {
+            setStatus("image-preview");
+            return;
+        }
+
+        let isMounted = true;
+        let objectUrl = "";
+
+        const loadPdf = async () => {
+            setStatus("loading");
+            setPreviewUrl("");
+            setErrorMessage("");
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const statusText = response.status === 401
+                        ? "PDF URL is unauthorized (401)."
+                        : `PDF request failed (${response.status}).`;
+                    throw new Error(statusText);
+                }
+
+                const buffer = await response.arrayBuffer();
+                const signature = String.fromCharCode(...new Uint8Array(buffer.slice(0, 5)));
+                if (signature !== "%PDF-") {
+                    throw new Error("Response is not a valid PDF file.");
+                }
+
+                const nextObjectUrl = URL.createObjectURL(new Blob([buffer], { type: "application/pdf" }));
+
+                if (isMounted) {
+                    objectUrl = nextObjectUrl;
+                    setPreviewUrl(nextObjectUrl);
+                    setStatus("ready");
+                } else {
+                    URL.revokeObjectURL(nextObjectUrl);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    setErrorMessage(error?.message || "PDF preview is not available.");
+                    setStatus("failed");
+                }
+            }
+        };
+
+        loadPdf();
+
+        return () => {
+            isMounted = false;
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [url, previewUrls.length, tryDirectPdf]);
+
+    if (status === "image-preview" && previewUrls.length) {
+        return (
+            <div className="flex h-full min-h-[320px] w-full flex-col">
+                <div className="border-b border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
+                    Showing PDF first page preview.
+                </div>
+                <div className="min-h-0 flex-1 bg-slate-100">
+                    <img
+                        src={previewUrls[imagePreviewIndex]}
+                        alt={title}
+                        className="h-full w-full object-contain"
+                        onError={() => {
+                            if (imagePreviewIndex < previewUrls.length - 1) {
+                                setImagePreviewIndex((currentIndex) => currentIndex + 1);
+                            } else {
+                                setTryDirectPdf(true);
+                            }
+                        }}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (status === "loading") {
+        return (
+            <div className="flex h-full min-h-[320px] w-full items-center justify-center p-6 text-center">
+                <div>
+                    <FileText className="mx-auto mb-3 h-10 w-10 text-blue-600" />
+                    <p className="text-sm font-bold text-slate-900">Loading PDF...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (status === "failed") {
+        return (
+            <div className="flex h-full min-h-[320px] w-full items-center justify-center p-6 text-center">
+                <div className="max-w-md">
+                    <FileText className="mx-auto mb-3 h-10 w-10 text-amber-600" />
+                    <p className="text-sm font-bold text-slate-900">PDF preview is blocked</p>
+                    <p className="mt-2 text-xs font-medium text-slate-500">
+                        {errorMessage || "This PDF cannot be loaded from the current document URL."}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-slate-500">
+                        Cloudinary raw PDF delivery needs to be public, signed, or proxied by the backend.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <iframe
+            src={previewUrl}
+            title={title}
+            className="h-full min-h-[320px] w-full"
+        />
+    );
+};
+const SecretDocumentsModal = ({ documents, onClose }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const activeDocument = documents[activeIndex] || documents[0];
+
+    useEffect(() => {
+        const originalOverflow = document.body.style.overflow;
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        };
+
+        document.body.style.overflow = "hidden";
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener("keydown", handleEscape);
+        };
+    }, [onClose]);
+
+    useEffect(() => {
+        if (activeIndex >= documents.length) {
+            setActiveIndex(0);
+        }
+    }, [activeIndex, documents.length]);
+
+    if (!activeDocument) return null;
+
+    const activeTypeLabel = activeDocument.type === "pdf"
+        ? "PDF"
+        : activeDocument.type === "image"
+            ? "Image"
+            : "Document";
+
+    return (
+        <div
+            className="fixed inset-0 z-50 bg-slate-950/80 p-2 sm:p-4"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
+            <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                    <div>
+                        <h2 className="text-base font-bold text-slate-900">Secret Documents</h2>
+                        <p className="text-xs font-medium text-slate-500">
+                            {documents.length} file{documents.length > 1 ? "s" : ""}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-label="Close secret documents"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)]">
+                    <aside className="max-h-44 overflow-y-auto border-b border-slate-200 bg-slate-50 p-3 md:max-h-none md:border-b-0 md:border-r">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1">
+                            {documents.map((doc, index) => {
+                                const isActive = index === activeIndex;
+                                const label = doc.type === "pdf" ? "PDF" : doc.type === "image" ? "Image" : "Document";
+
+                                return (
+                                    <button
+                                        key={`${doc.url}-${index}`}
+                                        type="button"
+                                        onClick={() => setActiveIndex(index)}
+                                        className={`flex min-w-0 items-center gap-3 rounded-lg border p-3 text-left transition ${isActive
+                                            ? "border-blue-500 bg-blue-50 text-blue-900"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-blue-300"}`}
+                                    >
+                                        <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${doc.type === "image"
+                                            ? "bg-emerald-50 text-emerald-600"
+                                            : "bg-blue-50 text-blue-600"}`}
+                                        >
+                                            {doc.type === "image" ? (
+                                                <ImageIcon className="h-5 w-5" />
+                                            ) : (
+                                                <FileText className="h-5 w-5" />
+                                            )}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm font-semibold">{doc.name}</span>
+                                            <span className="block text-xs font-bold uppercase text-slate-400">{label}</span>
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </aside>
+
+                    <section className="flex min-h-0 flex-1 flex-col bg-slate-100">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-slate-900">{activeDocument.name}</p>
+                                <p className="text-xs font-medium text-slate-500">{activeTypeLabel}</p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <a
+                                    href={activeDocument.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                                    title="Open in new tab"
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                </a>
+                                <a
+                                    href={activeDocument.url}
+                                    download={activeDocument.name}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                                    title="Download document"
+                                >
+                                    <Download className="h-4 w-4" />
+                                </a>
+                            </div>
+                        </div>
+
+                        <div className="min-h-0 flex-1 p-3">
+                            <div className="flex h-full min-h-[320px] items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                {activeDocument.type === "pdf" ? (
+                                    <PdfDocumentPreview
+                                        url={activeDocument.url}
+                                        title={activeDocument.name}
+                                        previewUrls={activeDocument.pdfPreviewUrls}
+                                    />
+                                ) : activeDocument.type === "image" ? (
+                                    <img
+                                        src={activeDocument.url}
+                                        alt={activeDocument.name}
+                                        className="h-full max-h-full w-full object-contain"
+                                    />
+                                ) : (
+                                    <div className="max-w-sm p-6 text-center">
+                                        <FileText className="mx-auto mb-3 h-10 w-10 text-blue-600" />
+                                        <p className="text-sm font-bold text-slate-900">{activeDocument.name}</p>
+                                        <p className="mt-1 text-xs font-medium text-slate-500">
+                                            Preview is not available for this file type.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    );
+};
 const ProductDetails = ({ productDetails }) => {
     const [sliderImage, setSliderImage] = useState([])
     const [user, setUser] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [folderName, setFolderName] = useState("");
     const pathname = usePathname();
+    const router = useRouter();
+    const { addToCart, toggleCompare, isInCompare, permissionList } = useAppContext();
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shopModalOpen, setShopModalOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showDocumentModal, setShowDocumentModal] = useState(false);
+    const [showSecretDocumentSlider, setShowSecretDocumentSlider] = useState(false);
+
+
+    const additionalDocumentImages = useMemo(() => (
+        Array.isArray(productDetails?.data?.v_docs)
+            ? productDetails.data.v_docs
+            : Array.isArray(productDetails?.v_docs)
+                ? productDetails.v_docs
+                : []
+    )
+        .map((doc) => doc?.url || doc?.secure_url)
+        .filter(Boolean), [productDetails]);
+
+    
+
+    const additionalSecretDocuments = useMemo(() => {
+        const docs = Array.isArray(productDetails?.data?.v_secret_docs)
+            ? productDetails.data.v_secret_docs
+            : Array.isArray(productDetails?.v_secret_docs)
+                ? productDetails.v_secret_docs
+                : [];
+
+        return normalizeSecretDocuments(docs);
+    }, [productDetails]);
+
+    const additionalSecretDocumentImages = useMemo(
+        () => additionalSecretDocuments.map((doc) => doc.url),
+        [additionalSecretDocuments]
+    );
+
+
+    // console.log("productDetails?.data-----------------------", productDetails);
+
+    // ---------- Custom Helper ----------
+    let isMyShop = pathname.includes("my-shop");
+    let isCompanyShop = pathname.includes("company-shop");
+    const userMode = String(user?.user_mode || "").toLowerCase();
+
+
+
+    const canShowAdditionalDocument =
+        additionalDocumentImages.length > 0 &&
+        (
+            userMode === "supreme" ||
+            (
+                (userMode === "pbl" || userMode === "admin") &&
+                hasPermission(permissionList, 0, "Vehicle", "AdditionalDocumentShow")
+            )
+        );
+
+
+    const canShowAdditionalSecretDocument =
+        additionalSecretDocuments.length > 0 &&
+        !isMyShop &&
+        !isCompanyShop &&
+        (
+            userMode === "supreme" ||
+            (
+                (userMode === "pbl" || userMode === "admin") &&
+                hasPermission(permissionList, 0, "Vehicle", "AdditionalSecretDocumentShow")
+            )
+        );
+
+
+
+    const canShowChassisNumber =
+        isMyShop ||
+        isCompanyShop ||
+        (user && ["supreme", "admin", "pbl"].includes(user.user_type));
+
+    const sellerMobileNumber = formatLocalMobile(productDetails?.user?.phone);
+    const showSellerMobile = Number(productDetails?.v_show_seller_mobile) === 1 && Boolean(sellerMobileNumber);
 
     const handleCopy = (e) => {
         e.preventDefault();
@@ -45,7 +527,10 @@ const ProductDetails = ({ productDetails }) => {
             .slice(0, -1) // শেষের ID বাদ দেবে
             .join("/");
 
-    console.log("basePath===========", basePath);
+    const isPublicProductDetails = basePath === "/product";
+    const isMyOrCompanyDetails = basePath === "/product/my-shop" || basePath === "/product/company-shop";
+
+    // console.log("basePath===========", basePath);
 
     useEffect(() => {
         if (productDetails) {
@@ -55,16 +540,16 @@ const ProductDetails = ({ productDetails }) => {
                     sliderImages.push(img.url);
                 });
             }
+            if (canShowAdditionalDocument) {
+                sliderImages.push(...additionalDocumentImages);
+            }
             setSliderImage(sliderImages);
         }
-    }, [productDetails]);
+    }, [productDetails, canShowAdditionalDocument, additionalDocumentImages]);
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        const userInfo = userData && JSON.parse(userData);
-        if (userInfo) {
-            setUser(JSON.parse(userInfo));
-        }
+        const storedUser = parseStoredUser(localStorage.getItem("user"));
+        setUser(storedUser);
     }, []);
 
 
@@ -98,11 +583,168 @@ const ProductDetails = ({ productDetails }) => {
         saveAs(content, `${folderName}.zip`);
     };
 
-    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.app';
+    const downloadAsUnzip = async () => {
+        // if (!folderName.trim()) {
+        //     alert("Please enter a folder name");
+        //     return;
+        // }
+
+        setShowModal(false);
+
+        for (let i = 0; i < sliderImage.length; i++) {
+            try {
+                const response = await fetch(sliderImage[i]);
+                const blob = await response.blob();
+                const fileName = `${folderName}-image-${i + 1}.${blob.type.split("/")[1]}`;
+                saveAs(blob, fileName);
+            } catch (error) {
+                console.error(`Error downloading image ${i + 1}:`, error);
+            }
+        }
+    };
+
+    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
+
+    const getYouTubeVideoId = (url = "") => {
+        const rawUrl = String(url || "").trim();
+        if (!rawUrl) return "";
+
+        const shortsMatch = rawUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+        if (shortsMatch?.[1]) return shortsMatch[1];
+
+        const embedMatch = rawUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+        if (embedMatch?.[1]) return embedMatch[1];
+
+        const shortLinkMatch = rawUrl.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+        if (shortLinkMatch?.[1]) return shortLinkMatch[1];
+
+        try {
+            const parsedUrl = new URL(rawUrl);
+            if (parsedUrl.hostname.includes("youtube.com")) {
+                const videoId = parsedUrl.searchParams.get("v");
+                if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) return videoId;
+            }
+        } catch (error) {
+            return "";
+        }
+
+        return "";
+    };
 
     if (!productDetails) {
         return <div>Loading...</div>; // Or some other loading state
     }
+
+    let userVideoLink = "";
+    let pblVideoLink = "";
+    let genericVideoLink = "";
+    let gdocPblLink = "";
+    let gdocUserLink = "";
+    const rawVideoData = productDetails?.v_video;
+
+    if (rawVideoData && typeof rawVideoData === "object") {
+        userVideoLink = rawVideoData?.user ? String(rawVideoData.user).trim() : "";
+        pblVideoLink = rawVideoData?.pbl ? String(rawVideoData.pbl).trim() : "";
+        gdocPblLink = rawVideoData?.gdocpbl
+            ? String(rawVideoData.gdocpbl).trim()
+            : (rawVideoData?.gdoc ? String(rawVideoData.gdoc).trim() : "");
+        gdocUserLink = rawVideoData?.gdocuser ? String(rawVideoData.gdocuser).trim() : "";
+    } else if (typeof rawVideoData === "string") {
+        const trimmedVideo = rawVideoData.trim();
+        if (trimmedVideo.startsWith("{") && trimmedVideo.endsWith("}")) {
+            try {
+                const parsedVideo = JSON.parse(trimmedVideo);
+                if (parsedVideo && typeof parsedVideo === "object") {
+                    userVideoLink = parsedVideo?.user ? String(parsedVideo.user).trim() : "";
+                    pblVideoLink = parsedVideo?.pbl ? String(parsedVideo.pbl).trim() : "";
+                    gdocPblLink = parsedVideo?.gdocpbl
+                        ? String(parsedVideo.gdocpbl).trim()
+                        : (parsedVideo?.gdoc ? String(parsedVideo.gdoc).trim() : "");
+                    gdocUserLink = parsedVideo?.gdocuser ? String(parsedVideo.gdocuser).trim() : "";
+                }
+            } catch (error) {
+                genericVideoLink = trimmedVideo;
+            }
+        } else if (trimmedVideo) {
+            genericVideoLink = trimmedVideo;
+        }
+    }
+
+    if (!userVideoLink && productDetails?.v_video_user) {
+        userVideoLink = String(productDetails.v_video_user).trim();
+    }
+    if (!pblVideoLink && productDetails?.v_video_pbl) {
+        pblVideoLink = String(productDetails.v_video_pbl).trim();
+    }
+    if (!gdocPblLink && productDetails?.v_video_gdocpbl) {
+        gdocPblLink = String(productDetails.v_video_gdocpbl).trim();
+    }
+    if (!gdocPblLink && productDetails?.v_video_gdoc) {
+        gdocPblLink = String(productDetails.v_video_gdoc).trim();
+    }
+    if (!gdocUserLink && productDetails?.v_video_gdocuser) {
+        gdocUserLink = String(productDetails.v_video_gdocuser).trim();
+    }
+
+    const videoSources = [];
+    if (userVideoLink) {
+        videoSources.push({ label: "User Video", url: userVideoLink });
+    } else if (genericVideoLink) {
+        videoSources.push({ label: "Video", url: genericVideoLink });
+    }
+    if (pblVideoLink) {
+        videoSources.push({ label: "PBL Video", url: pblVideoLink });
+    }
+
+    const youtubeVideos = videoSources
+        .map((video) => {
+            const videoId = getYouTubeVideoId(video.url);
+            if (!videoId) return null;
+            return {
+                ...video,
+                embedUrl: `https://www.youtube.com/embed/${videoId}`,
+            };
+        })
+        .filter(Boolean);
+
+    const userYoutubeVideo =
+        youtubeVideos.find((video) => video.label === "User Video") ||
+        youtubeVideos.find((video) => video.label === "Video") ||
+        null;
+    const pblYoutubeVideo = youtubeVideos.find((video) => video.label === "PBL Video") || null;
+    const selectedYoutubeVideo = (isMyShop || isCompanyShop) ? userYoutubeVideo : pblYoutubeVideo;
+
+    const selectedGdocLink = (isMyShop || isCompanyShop)
+        ? (gdocUserLink || gdocPblLink || "")
+        : (gdocPblLink || "");
+    const shouldShowGdocButton = Boolean(selectedGdocLink);
+
+    const handleGdocOpen = () => {
+        if (!selectedGdocLink) {
+            toast.error("Document link not available.");
+            return;
+        }
+
+        const normalizedLink = /^https?:\/\//i.test(selectedGdocLink) ? selectedGdocLink : `https://${selectedGdocLink}`;
+        window.open(normalizedLink, "_blank", "noopener,noreferrer");
+    };
+
+    const handleOpenAdditionalSecretDocumentSlider = () => {
+        if (additionalSecretDocumentImages.length === 0) {
+            toast.error("Additional secret document not available.");
+            return;
+        }
+
+        setShowSecretDocumentSlider(true);
+    };
+    const handleOpenAdditionalSecretDocumentModal = () => {
+        if (additionalSecretDocuments.length === 0) {
+            toast.error("Additional secret document not available.");
+            return;
+        }
+
+        setShowDocumentModal(true);
+    };
 
 
 
@@ -189,6 +831,10 @@ const ProductDetails = ({ productDetails }) => {
         if (productDetails?.v_fitness_exp_date) {
             detailsToCopy += `Fitness : ${productDetails?.v_fitness_exp_date}\n`;
         }
+        // Auction type
+        if (!isMyShop && !isCompanyShop && productDetails?.v_auction_type) {
+            detailsToCopy += `Auction Type : ${productDetails?.v_auction_type}\n`;
+        }
 
         try {
             await navigator.clipboard.writeText(detailsToCopy);
@@ -232,7 +878,7 @@ const ProductDetails = ({ productDetails }) => {
         let allDetails = '';
 
         // Features সেকশন
-          allDetails += `\nFeatures:\n`;
+        allDetails += `\nFeatures:\n`;
 
         // Brand
         if (productDetails?.v_brand_name) {
@@ -355,7 +1001,20 @@ const ProductDetails = ({ productDetails }) => {
             return;
         }
 
-        const productUrl = `${domain}/product/${productDetails.v_id}`;
+        const domain = 'https://click4details.app';
+
+        const shouldUseShopProductUrl =
+            pathname.startsWith("/my-shop/") ||
+            pathname.startsWith("/company-shop/") ||
+            pathname.startsWith("/member-shop/") ||
+            pathname.startsWith("/user-shop/") ||
+            pathname.startsWith("/product/my-shop") ||
+            pathname.startsWith("/product/company-shop");
+        const productPath = shouldUseShopProductUrl
+            ? `/product/my-shop/${productDetails?.v_id}`
+            : `/product/${productDetails?.v_id}`;
+        const productUrl = `${domain}${productPath}`;
+
         const text = `Check out this product: ${productUrl}`;
         const title = productDetails?.v_title || 'Product Images';
 
@@ -459,6 +1118,57 @@ const ProductDetails = ({ productDetails }) => {
         //     window.open(whatsappUrl, '_blank');
         // }
     };
+
+    const handleEditProduct = (item) => {
+        if (!item?.v_id) return;
+        router.push(`/dashboard/products/vehicle/edit/${item.v_id}`);
+    };
+
+    const handleAddToCart = (item) => {
+        if (!item?.v_id) return;
+
+        let price = 0;
+        const rawPrice = isMyOrCompanyDetails
+            ? item?.vehicle_price?.user_price
+            : item?.vehicle_price?.pbl_price;
+
+        if (rawPrice !== "Call for Price") {
+            price = rawPrice;
+        }
+
+        const priceId = item?.vehicle_price?.v_price_id;
+
+        const cartItem = {
+            c_user_id: user?.id || null,
+            c_session_id: user?.id ? null : getSessionId(),
+            ci_product_id: item.v_id,
+            ci_type_id: item?.v_category?.c_id,
+            ci_qty: 1,
+            ci_price: price || 0,
+            ci_url: item?.vehicle_front_image?.url || "",
+            ci_name: item.v_title,
+            ci_subtotal: price * 1,
+            ci_product_price_id: priceId,
+        };
+
+        addToCart(item.v_id, cartItem);
+    };
+
+    const handleCallClick = () => {
+        const phoneNumber = user?.phone || "+8809638660077";
+        window.location.href = `tel:${phoneNumber}`;
+    };
+
+    const handleWhatsappClick = () => {
+        const rawPhoneNumber = "+8801407054400";
+        const phoneNumber = rawPhoneNumber.replace("+", "");
+        const productDetailsUrl = window.location.href;
+        const message = `Hello,\nI am interested about this product. Please give me more information.\n${productDetailsUrl}`;
+        const whatsappText = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${whatsappText}`;
+        window.open(whatsappUrl, "_blank");
+    };
+
     return (
         <div className="px-4">
             <div>
@@ -468,13 +1178,98 @@ const ProductDetails = ({ productDetails }) => {
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
                     </div>
 
-                    <div>
+                    <div className="hidden md:flex md:items-center md:justify-end gap-2 flex-wrap">
+                        <div className="flex gap-2">
+                            {isPublicProductDetails && (
+                                <button
+                                    onClick={() => setShopModalOpen(true)}
+                                    className="flex-1 border border-blue-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Copy className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                </button>
+                            )}
+
+                            <button
+                                onClick={() => setShareModalOpen(true)}
+                                className="flex-1 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Share2 className="h-4 w-4 text-green-600" />
+                                </div>
+                            </button>
+
+                            {
+                                (!isMyShop && !isCompanyShop) && (
+                                    <button
+                                        onClick={handleCallClick}
+                                        className="flex-1 border border-purple-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    >
+                                        <div className="flex items-center justify-center gap-2">
+                                            <PhoneOutgoing className="h-4 w-4 text-purple-600" />
+                                        </div>
+                                    </button>
+                                )
+                            }
+
+                            {isPublicProductDetails && (
+                                <button
+                                    onClick={handleWhatsappClick}
+                                    className="flex-1 border-2 border-green-600 font-bold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <FaWhatsapp className="h-6 w-6 text-green-600" />
+                                    </div>
+                                </button>
+                            )}
+
+                            {
+                                (!isMyShop && !isCompanyShop) && (
+                                    <button
+                                        onClick={() => handleAddToCart(productDetails)}
+                                        className="flex-1 border border-orange-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    >
+                                        <div className="flex items-center justify-center gap-2">
+                                            <ShoppingCart className="h-4 w-4 text-orange-600" />
+                                        </div>
+                                    </button>
+                                )
+                            }
+
+                            <button
+                                type="button"
+                                onClick={() => toggleCompare(productDetails?.v_id)}
+                                title={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                                aria-label={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                                className={`flex-1 border font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95 ${isInCompare(productDetails?.v_id) ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-300'}`}
+                            >
+                                <div className="flex items-center justify-center gap-1.5">
+                                    <GitCompare className={`h-4 w-4 ${isInCompare(productDetails?.v_id) ? 'text-white' : 'text-cyan-600'}`} />
+                                    {isInCompare(productDetails?.v_id) && (
+                                        <span className="text-xs text-white">Added</span>
+                                    )}
+                                </div>
+                            </button>
+
+                            {isMyOrCompanyDetails && (
+                                <button
+                                    onClick={() => handleEditProduct(productDetails)}
+                                    className="flex-1 border border-pink-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Edit className="h-4 w-4 text-pink-600" />
+                                    </div>
+                                </button>
+                            )}
+                        </div>
+
                         <button
                             onClick={handleCopyAllClick}
                             className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
                         >
                             <Copy className="h-4 w-4" />
-                            <span>Copy All Features & Specific Features</span>
+                            <span>Copy All</span>
                         </button>
                     </div>
 
@@ -524,7 +1319,7 @@ const ProductDetails = ({ productDetails }) => {
                                         <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
                                     </div>
                                     <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Click4Details'} </p>
+                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
                                     </div>
                                 </div>
                             </div>
@@ -533,20 +1328,34 @@ const ProductDetails = ({ productDetails }) => {
                 </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-2 mb-6">
-                <div className="md:col-span-3">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-2 mb-6 md:h-[calc(100vh-140px)] md:min-h-0 md:overflow-hidden">
+                <div className="md:col-span-3 md:h-full md:min-h-0 md:overflow-y-scroll md:pr-2 md:overscroll-contain">
                     <div>
                         <ProductDetailsSlider images={sliderImage} />
                     </div>
 
+                    {productDetails?.v_pbl_text && (
+                        <div className="mt-4 border rounded-lg shadow-sm overflow-hidden">
+                            <div className="flex items-center gap-2 px-4 py-3 border-b bg-gray-50">
+                                <span className="text-sm font-medium text-blue-600">PBL Text</span>
+                            </div>
+                            <div className="p-4">
+                                <p className="text-sm leading-7 text-gray-600 whitespace-pre-line">{productDetails.v_pbl_text}</p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="mt-4">
-                        <div className="w-full border bg-green-50 border-green-200 rounded-lg shadow p-4 lg:p-6 space-y-4">
+                        <div className="w-full border bg-blue-50 border-blue-100 rounded-lg shadow p-4 lg:p-6 space-y-4">
                             <div className="flex justify-between">
                                 <div className="space-y-2">
                                     <div>
                                         <div className="font-bold  text-gray-600 text-md md:text-xl flex flex-col">
 
-                                            {(productDetails?.vehicle_price?.user_price || productDetails?.vehicle_price?.pbl_price) !== 'Call for Price' && 'TK. '}
+                                            {(productDetails?.vehicle_price?.user_price || productDetails?.vehicle_price?.pbl_price) !== 'Call for Price' && productDetails?.vehicle_db_price?.vp_currency + '. '}
+
+                                            {/* {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. ' } */}
+
                                             {
                                                 basePath == '/product/my-shop' ?
                                                     formatPrice(productDetails?.vehicle_price?.user_price)
@@ -591,30 +1400,47 @@ const ProductDetails = ({ productDetails }) => {
 
                                 {/* ====================== */}
 
-
                                 <div className="space-y-2">
-                                    <div className="">
-                                        <button
-                                            type="button"
-                                            onClick={handleImageShare}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
-                                        >
-                                            <Share2 className="h-4 w-4" /> Image Share
-                                        </button>
-                                    </div>
+                                    {
+                                        canShowAdditionalSecretDocument && (
+                                            <>
+                                                {/* <div className="">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleOpenAdditionalSecretDocumentSlider}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+                                                </div> */}
+                                                <div className="">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleOpenAdditionalSecretDocumentModal}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-700 rounded-l hover:bg-indigo-700 flex items-center gap-2"
+                                                        title="View secret documents"
+                                                        aria-label="View secret documents"
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )
+                                    }
+
 
                                     <div>
                                         <div>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowModal(true)}
-                                                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
+                                                className="px-4 py-2 text-sm font-medium text-white bg-lime-600 border border-lime-700 rounded-l hover:bg-lime-700 flex items-center gap-2"
                                             >
-                                                <Download className="h-4 w-4" /> Download All
+                                                <Download className="h-4 w-4" />
                                             </button>
                                             {showModal && (
                                                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                                                    <div className="bg-white p-6 rounded-lg shadow-lg w-80">
+                                                    <div className="bg-white p-6 rounded-lg shadow-lg w-104">
                                                         <h2 className="text-lg font-bold mb-4">Enter Folder Name</h2>
                                                         <input
                                                             type="text"
@@ -623,19 +1449,27 @@ const ProductDetails = ({ productDetails }) => {
                                                             placeholder="Folder name..."
                                                             className="border border-gray-300 rounded w-full px-3 py-2 mb-4"
                                                         />
-                                                        <div className="flex justify-end gap-2">
+                                                        <div className="flex justify-between gap-2">
                                                             <button
                                                                 onClick={() => setShowModal(false)}
                                                                 className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
                                                             >
                                                                 Cancel
                                                             </button>
-                                                            <button
-                                                                onClick={downloadAsZip}
-                                                                className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
-                                                            >
-                                                                Download
-                                                            </button>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={downloadAsZip}
+                                                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                                >
+                                                                    Download as ZIP
+                                                                </button>
+                                                                <button
+                                                                    onClick={downloadAsUnzip}
+                                                                    className="px-4 py-2 bg-lime-400 text-white rounded hover:bg-lime-400"
+                                                                >
+                                                                    Download at Gallery
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -659,10 +1493,128 @@ const ProductDetails = ({ productDetails }) => {
                 </div>
 
 
-                <div className="md:col-span-2 md:col-start-4">
+
+
+
+                <div className="md:hidden">
+
+                    <div className="flex items-center justify-end gap-2 mb-4">
+                        {isPublicProductDetails && (
+                            <button
+                                onClick={() => setShopModalOpen(true)}
+                                className="flex-1 border border-blue-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Copy className="h-4 w-4 text-blue-600" />
+                                </div>
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => setShareModalOpen(true)}
+                            className="flex-1 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                        >
+                            <div className="flex items-center justify-center gap-2">
+                                <Share2 className="h-4 w-4 text-green-600" />
+                            </div>
+                        </button>
+
+                        {
+                            (!isMyShop && !isCompanyShop) && (
+                                <button
+                                    onClick={handleCallClick}
+                                    className="flex-1 border border-purple-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <PhoneOutgoing className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                </button>
+                            )
+                        }
+
+                        {isPublicProductDetails && (
+                            <button
+                                onClick={handleWhatsappClick}
+                                className="flex-1 border-2 border-green-600 font-bold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <FaWhatsapp className="h-6 w-6 text-green-600" />
+                                </div>
+                            </button>
+                        )}
+
+                        {
+                            (!isMyShop && !isCompanyShop) && (
+                                <button
+                                    onClick={() => handleAddToCart(productDetails)}
+                                    className="flex-1 border border-orange-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        <ShoppingCart className="h-4 w-4 text-orange-600" />
+                                    </div>
+                                </button>
+                            )
+                        }
+
+                        <button
+                            type="button"
+                            onClick={() => toggleCompare(productDetails?.v_id)}
+                            title={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                            aria-label={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
+                            className={`flex-1 border font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95 ${isInCompare(productDetails?.v_id) ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-300'}`}
+                        >
+                            <div className="flex items-center justify-center gap-1.5">
+                                <GitCompare className={`h-4 w-4 ${isInCompare(productDetails?.v_id) ? 'text-white' : 'text-cyan-600'}`} />
+                                {isInCompare(productDetails?.v_id) && (
+                                    <span className="text-xs text-white">Added</span>
+                                )}
+                            </div>
+                        </button>
+
+                        {isMyOrCompanyDetails && (
+                            <button
+                                onClick={() => handleEditProduct(productDetails)}
+                                className="flex-1 border border-pink-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Edit className="h-4 w-4 text-pink-600" />
+                                </div>
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleCopyAllClick}
+                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
+                    >
+                        <Copy className="h-4 w-4" />
+                        <span>Copy All Text</span>
+                    </button>
+                </div>
+
+
+                <div className="md:col-span-2 md:col-start-4 md:h-full md:min-h-0 md:overflow-y-scroll md:pl-2 md:overscroll-contain">
+                    {showSellerMobile && (
+                        <a
+                            href={`tel:${sellerMobileNumber}`}
+                            title="Call seller"
+                            className="relative flex items-center gap-3 rounded-lg border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-4 shadow-sm animate-pulse hover:shadow-md hover:animate-none transition-shadow mb-4"
+                        >
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                                <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+                                    <PhoneOutgoing className="h-5 w-5 text-white" />
+                                </span>
+                            </span>
+                            <span>
+                                <span className="block text-xs font-medium text-green-700">Seller Mobile Number</span>
+                                <span className="block text-lg font-bold tracking-wide text-green-800">{sellerMobileNumber}</span>
+                            </span>
+                        </a>
+                    )}
                     <div className="border rounded shadow-sm p-4">
-                        <div className=" mb-4 border-b pb-2 flex items-center justify-between">
-                            <h2 className="text-lg font-medium text-blue-600">Featuress</h2>
+                        <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
+                            <h2 className="text-lg font-medium text-blue-600">Features</h2>
                             {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
                             <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleCopyClick}>
                                 <Copy /> Copy
@@ -710,6 +1662,18 @@ const ProductDetails = ({ productDetails }) => {
                                     <div className="col-span-3 text-base">Mileage:</div>
                                     <div className="col-span-3 text-base font-semibold">{productDetails?.v_mileage}</div>
                                 </div>
+
+                                {
+                                    !isMyShop && !isCompanyShop && (
+                                        <div className="grid grid-cols-6 gap-2">
+                                            <div className="col-span-3 text-base">Auction Type:</div>
+                                            <div className="col-span-3 text-base font-semibold">
+                                                {productDetails?.v_auction_type ? String(productDetails.v_auction_type).toUpperCase() : ""}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
                             </div>
                             <div>
                                 <div className="grid grid-cols-6 gap-2">
@@ -737,6 +1701,8 @@ const ProductDetails = ({ productDetails }) => {
                                     <div className="col-span-3 text-base font-semibold">{productDetails?.v_seat_name}</div>
                                 </div>
 
+
+
                                 {/* {
                                     user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl') && (
                                         <div className="grid grid-cols-6 gap-2">
@@ -747,7 +1713,7 @@ const ProductDetails = ({ productDetails }) => {
                                 } */}
 
                                 {
-                                    (basePath === "/product/my-shop" || basePath === "/product/company-shop" || (user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl'))) && (
+                                    canShowChassisNumber && (
                                         <div className="grid grid-cols-6 gap-2">
                                             <div className="col-span-3 text-base">Chassis No :</div>
                                             <div className="col-span-3 text-base font-semibold">{productDetails?.v_chassis}</div>
@@ -761,19 +1727,50 @@ const ProductDetails = ({ productDetails }) => {
                                 </div>
                                 <div className="grid grid-cols-6 gap-2">
                                     <div className="col-span-3 text-base">Tax Token :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_tax_token_exp_date}</div>
+                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_tax_token_exp_date)}</div>
                                 </div>
                                 <div className="grid grid-cols-6 gap-2">
                                     <div className="col-span-3 text-base">Fitness :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_fitness_exp_date}</div>
+                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_fitness_exp_date)}</div>
                                 </div>
+                                <div className="grid grid-cols-6 gap-2">
+                                    <div className="col-span-3 text-base">Arrival Date :</div>
+                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_arrival_date)}</div>
+                                </div>
+
+                                {
+                                    productDetails?.v_delivery_condition && (
+                                        <div className="grid grid-cols-6 gap-2">
+                                            <div className="col-span-3 text-base">Delivery Condition :</div>
+                                            <div className="col-span-3 text-base font-semibold">{productDetails.v_delivery_condition}</div>
+                                        </div>
+                                    )
+                                }
+
+                                {
+                                    shouldShowGdocButton && (
+                                        <div className="grid grid-cols-6 gap-2">
+                                            <div className="col-span-3 text-base">Download Pic :</div>
+                                            <div className="col-span-3 text-base font-semibold">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleGdocOpen}
+                                                    className="px-4 py-2 bg-lime-600 border border-lime-700 rounded-lg hover:bg-lime-700 flex items-center gap-2 text-white"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
                             </div>
                         </div>
                     </div>
 
                     <div className="border rounded shadow-sm p-4 mt-4">
 
-                        <div className=" mb-4 border-b pb-2 flex items-center justify-between">
+                        <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
                             <h2 className="text-lg font-medium text-blue-600">Specific Features</h2>
                             {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
                             <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleFeatureCopyClick}>
@@ -799,13 +1796,50 @@ const ProductDetails = ({ productDetails }) => {
                             }
                         </div>
                     </div>
+
+                    {selectedYoutubeVideo && (
+                        <div className="border rounded shadow-sm p-4 mt-4">
+                            <div className="mb-4 border-b pb-2">
+                                <h2 className="text-lg font-medium text-blue-600">YouTube Video</h2>
+                            </div>
+                            <div>
+                                <p className="mb-2 text-sm font-medium text-gray-700">{selectedYoutubeVideo.label}</p>
+                                <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingTop: "56.25%" }}>
+                                    <iframe
+                                        src={selectedYoutubeVideo.embedUrl}
+                                        title={selectedYoutubeVideo.label}
+                                        className="absolute left-0 top-0 h-full w-full"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
 
             {!user && (
                 <div className="mt-4 inline md:hidden">
-                    <ProductDetailsDescription productDetails={productDetails} />
+                    <ProductDetailsDescription productDetails={productDetails} basePath={basePath} />
                 </div>
+            )}
+
+            <ProductShareModal open={shareModalOpen} setOpen={setShareModalOpen} product={productDetails} />
+            <ShopSelectModal open={shopModalOpen} setOpen={setShopModalOpen} product={productDetails} />
+            {showSecretDocumentSlider && (
+                <ModalSlider
+                    setShowModal={setShowSecretDocumentSlider}
+                    images={additionalSecretDocumentImages}
+                    activeIndex={0}
+                />
+            )}
+            {showDocumentModal && (
+                <SecretDocumentsModal
+                    documents={additionalSecretDocuments}
+                    onClose={() => setShowDocumentModal(false)}
+                />
             )}
         </div>
     );

@@ -51,19 +51,30 @@ const Footer = () => {
   // console.log("selectedCompanyShop", selectedCompanyShop);
 
   const getCurrentUser = async () => {
-    const response = await UserService.Queries.getUserById(selectedCompanyShop.shop.s_id);
+    // Double check before API call
+    if (!selectedCompanyShop?.shop?.s_id || !user) {
+      return;
+    }
 
-    console.log("response footer", response);
-    if(response.status == 'success'){
-       setShops(response?.data);
+    try {
+      const response = await UserService.Queries.getUserById(selectedCompanyShop.shop.s_id);
+
+      // console.log("response footer", response);
+      if(response?.status == 'success'){
+         setShops(response?.data);
+      }
+    } catch (error) {
+      console.log("Error fetching user:", error);
+      // Silently fail - don't show error to user
     }
   };
 
   useEffect(() => {
-    if (selectedCompanyShop) {
+    // Only fetch user data if logged in and selectedCompanyShop exists
+    if (selectedCompanyShop?.shop?.s_id && user) {
       getCurrentUser()
     }
-  }, [selectedCompanyShop]);
+  }, [selectedCompanyShop, user]);
 
 
   // Description
@@ -94,7 +105,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     email = selectedCompanyShop?.shop?.user?.email;
   } else {
-    email = "click4details.importer@gmail.com";
+    email = "pilotbazar.com@gmail.com";
   }
 
   // ---------- Address ----------

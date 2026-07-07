@@ -13,6 +13,7 @@ const SearchHistorySection = ({
   customer,
   onDelete,
   allLocations,
+  allShops,
 }) => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,6 +66,7 @@ const SearchHistorySection = ({
                         handleOpenSearchHistoryModal={handleOpenSearchHistoryModal}
                         handleOpenModal={handleOpenModal}
                         allLocations={allLocations}
+                        allShops={allShops}
                       />
                     ))}
                 </div>
@@ -94,6 +96,7 @@ const SearchHistorySection = ({
                         handleOpenModal={handleOpenModal}
                         onDelete={(history) => onDelete(history)}
                         allLocations={allLocations}
+                        allShops={allShops}
                       />
                     ))}
                 </div>
@@ -110,6 +113,7 @@ const SearchHistorySection = ({
         isEmptyValue={isEmptyValue}
         formatValue={formatValue}
         allLocations={allLocations}
+        allShops={allShops}
       />
     </div>
   );

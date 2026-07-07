@@ -1,10 +1,11 @@
 import { useAppContext } from "@/context/AppContext";
+import { parseStoredUser } from "@/lib/parseStoredUser";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
   const { user } = useAppContext();
-  const parsedUser = JSON.parse(user);
+  const parsedUser = parseStoredUser(user);
 
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -13,6 +14,7 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [anniversaryDate, setAnniversaryDate] = useState("");
   const [facebookLink, setFacebookLink] = useState("");
+  const [messengerLink, setMessengerLink] = useState("");
   const [createdBy, setCreatedBy] = useState(null);
   const [updatedBy, setUpdatedBy] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +29,8 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
       setEmail(customer.email || "");
       setDateOfBirth(customer.date_of_birth || "");
       setAnniversaryDate(customer.anniversary_date || "");
-      setFacebookLink(customer.facebook_link || "");
+      setFacebookLink(customer.facebook_id_link || "");
+      setMessengerLink(customer.facebook_messenger_link || "");
       setAddress(customer.address || "");
       setUpdatedBy(parsedUser?.id || null);
     } else {
@@ -38,6 +41,7 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
       setDateOfBirth("");
       setAnniversaryDate("");
       setFacebookLink("");
+      setMessengerLink("");
       setAddress("");
       setCreatedBy(parsedUser?.id || null);
     }
@@ -59,10 +63,8 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
       newErrors.name = "Customer name is required";
     }
 
-    // Validate mobile
-    if (!mobile.trim()) {
-      newErrors.mobile = "Mobile number is required";
-    } else if (!/^[0-9+\-\s()]+$/.test(mobile.trim())) {
+    // Mobile is optional; validate format only when provided
+    if (mobile.trim() && !/^[0-9+\-\s()]+$/.test(mobile.trim())) {
       newErrors.mobile = "Please enter a valid mobile number";
     }
 
@@ -92,11 +94,12 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
     try {
       await onSubmitCustomer({
         name: name.trim(),
-        mobile: mobile.trim(),
+        mobile: mobile.trim() || null,
         email: email.trim() || null,
         date_of_birth: dateOfBirth.trim() || null,
         anniversary_date: anniversaryDate.trim() || null,
-        facebook_link: facebookLink.trim() || null,
+        facebook_id_link: facebookLink.trim() || null,
+        facebook_messenger_link: messengerLink.trim() || null,
         address: address.trim() || null,
         created_by: createdBy,
         updated_by: updatedBy,
@@ -111,6 +114,7 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
         setDateOfBirth("");
         setAnniversaryDate("");
         setFacebookLink("");
+        setMessengerLink("");
         setAddress("");
       }
       setErrors({});
@@ -201,9 +205,7 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
             )}
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mobile Number <span className="text-red-500">*</span>
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
             <input
               type="tel"
               className={`block w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${
@@ -215,7 +217,6 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
                 clearError("mobile");
               }}
               placeholder="Enter mobile number"
-              required
             />
             {errors.mobile && (
               <p className="mt-1 text-sm text-red-600">{errors.mobile}</p>
@@ -269,11 +270,21 @@ const CustomerModal = ({ isOpen, onClose, onSubmitCustomer, customer }) => {
                 setFacebookLink(e.target.value);
                 clearError("facebookLink");
               }}
-              placeholder="Enter Facebook profile link"
+              placeholder="https://facebook.com/..."
             />
             {errors.facebookLink && (
               <p className="mt-1 text-sm text-red-600">{errors.facebookLink}</p>
             )}
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Messenger Link</label>
+            <input
+              type="text"
+              className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              value={messengerLink}
+              onChange={(e) => setMessengerLink(e.target.value)}
+              placeholder="https://m.me/..."
+            />
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>

@@ -90,7 +90,7 @@ const AddShopPermissionModal = ({ open, setOpen, selectedShop }) => {
             urp_permissions: permissionArr
         };
 
-         console.log("payload", payload);
+        //  console.log("payload", payload);
         //  console.log("permissionArr", permissionArr);
 
 
@@ -106,7 +106,6 @@ const AddShopPermissionModal = ({ open, setOpen, selectedShop }) => {
         try {
             const response = await PermissionService.Commands.storeUserPermission(payload);
 
-            console.log("response", response);
             // reset(); // clear the form
           
             // setOpen(false); // close modal
@@ -180,7 +179,7 @@ const AddShopPermissionModal = ({ open, setOpen, selectedShop }) => {
                 setPermissionNames(response.data);
             }
         } catch (error) {
-            console.log("error", error);
+            // console.log("error", error);
         }
     };
 
