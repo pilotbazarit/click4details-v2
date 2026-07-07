@@ -35,7 +35,7 @@ import { parseStoredUser } from "@/lib/parseStoredUser";
 const deliveryConditionOptions = [
   { value: "Japan Condition", label: "Japan Condition" },
   { value: "Shipment Condition", label: "Shipment Condition" },
-  { value: "As it is Port Delivery", label: "As it is Port Delivery" },
+  { value: "Port Condition", label: "Port Condition" },
   { value: "Showroom Condition", label: "Showroom Condition" },
   { value: "Auction Sheet Condition", label: "Auction Sheet Condition" },
 ];
