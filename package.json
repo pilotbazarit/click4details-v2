@@ -28,6 +28,7 @@
     "dayjs": "^1.11.13",
     "emoji-mart": "^5.6.0",
     "file-saver": "^2.0.5",
+    "framer-motion": "^12.42.2",
     "html2canvas": "^1.4.1",
     "jodit-react": "^5.2.26",
     "jspdf": "^3.0.4",
