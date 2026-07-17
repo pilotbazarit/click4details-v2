@@ -857,6 +857,7 @@ const SearchHistoryEditModal = ({ isOpen, onClose, onSave, historyItem, customer
         ...allShops.filter(shop => shop.value !== "").map(shop => ({
           value: shop.value,
           label: shop.label,
+          phone: shop.phone,
         }))
       ];
       setShopsData(shopsOptions);
@@ -1115,6 +1116,7 @@ const CustomerDetailPage = () => {
           .map((shop) => ({
             value: shop.s_id,
             label: shop.s_title,
+            phone: shop?.user?.phone || shop?.s_user_phone || "",
           }))
           .filter((option) => option.value !== null && option.value !== undefined && option.value !== ""),
       ];

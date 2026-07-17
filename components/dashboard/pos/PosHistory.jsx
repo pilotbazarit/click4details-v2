@@ -23,6 +23,7 @@ import Swal from "sweetalert2";
 import PosService from "@/services/PosService";
 import { useAppContext } from "@/context/AppContext";
 import ShopService from "@/services/ShopService";
+import ShopSelect from "@/components/ShopSelect";
 
 const STATUS_COLORS = {
     completed:  "bg-green-100 text-green-700 border-green-200",
@@ -194,18 +195,15 @@ export default function PosHistory() {
 
                     {/* Shop filter (admin only) */}
                     {isAdminOrSupreme && (
-                        <div className="flex items-center gap-1.5">
-                            <Store className="w-4 h-4 text-gray-400" />
-                            <select
-                                className="py-2 pl-2 pr-7 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        <div className="flex items-center gap-1.5 min-w-[220px]">
+                            <Store className="w-4 h-4 text-gray-400 shrink-0" />
+                            <ShopSelect
+                                shops={shops}
                                 value={shopId}
-                                onChange={(e) => { setShopId(e.target.value); setCurrentPage(1); }}
-                            >
-                                <option value="">All Shops</option>
-                                {shops.map((s) => (
-                                    <option key={s.s_id} value={s.s_id}>{s.s_title}</option>
-                                ))}
-                            </select>
+                                onChange={(id) => { setShopId(id); setCurrentPage(1); }}
+                                placeholder="All Shops"
+                                className="flex-1 text-sm"
+                            />
                         </div>
                     )}
 

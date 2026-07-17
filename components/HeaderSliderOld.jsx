@@ -17,7 +17,7 @@ const HeaderSlider = () => {
     //   title: "ইসলামী শরীয়াহ ভিত্তিক বিনিয়োগ, হালাল ব্যবসায় আয় করুন!",
     //   offer: "বাৎসরিক ১৫% থেকে ৪৫% লভ্যাংশ",
     //   buttonText1: "যোগাযোগ করুন",
-    //   buttonText2: "09638660077",
+    //   buttonText2: "01969944400",
     //   imgSrc: assets.slider1,
     // },
     // {
@@ -25,7 +25,7 @@ const HeaderSlider = () => {
     //   title: "Power Meets Elegance - Apple MacBook Pro is Here for you!",
     //   offer: "",
     //   buttonText1: "যোগাযোগ করুন",
-    //   buttonText2: "09638660077",
+    //   buttonText2: "01969944400",
     //   imgSrc: assets.header_macbook_image,
     // },
   ];

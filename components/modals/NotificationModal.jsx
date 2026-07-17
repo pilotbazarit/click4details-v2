@@ -2,18 +2,52 @@ import ConversationService from "@/services/ConversationService";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NotificationService from "@/services/NotificationService";
-import { Bell, Car, MessageCircle, Package, UserPlus, X } from "lucide-react";
+import { Bell, Car, MessageCircle, Package, Search, UserPlus, X } from "lucide-react";
 
 const PER_PAGE = 5;
+
+const NOTIFICATION_TABS = [
+  {
+    key: "product",
+    label: "Product",
+    type: "App\\Models\\Product\\Vehicle",
+    icon: Package,
+  },
+  {
+    key: "vehicle",
+    label: "Vehicle",
+    type: "App\\Models\\Product\\Product",
+    icon: Car,
+  },
+  {
+    key: "partner",
+    label: "Request Partner",
+    type: "want_to_be_partner",
+    icon: UserPlus,
+  },
+  {
+    key: "search",
+    label: "Search Notification",
+    icon: Search,
+  },
+];
 
 const NOTIFICATION_TYPE_META = {
   Vehicle: { icon: Car, iconClass: "bg-blue-50 text-blue-600" },
   Product: { icon: Package, iconClass: "bg-purple-50 text-purple-600" },
   ConversationNotification: { icon: MessageCircle, iconClass: "bg-teal-50 text-teal-600" },
   want_to_be_partner: { icon: UserPlus, iconClass: "bg-amber-50 text-amber-600" },
+  SearchNotification: { icon: Search, iconClass: "bg-sky-50 text-sky-600" },
 };
 
 const getTypeMeta = (type) => NOTIFICATION_TYPE_META[type] || { icon: Bell, iconClass: "bg-gray-100 text-gray-500" };
+
+const formatSearchNotificationTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+};
 
 const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   const router = useRouter();
@@ -23,12 +57,14 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   const [canScroll, setCanScroll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [activeTab, setActiveTab] = useState(NOTIFICATION_TABS[0].key);
 
   const scrollContainerRef = useRef(null);
   const pageRef = useRef(1);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
   const userIdRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   const parseLocalUser = useCallback(() => {
     try {
@@ -81,6 +117,17 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     };
   }, []);
 
+  const normalizeSearchNotificationItem = useCallback((item) => ({
+    id: item.id,
+    title: item?.customer_name ?? "-",
+    description: item?.search_history ?? "-",
+    time: item?.search_date_time,
+    timeText: formatSearchNotificationTime(item?.search_date_time),
+    unreadCount: item?.is_read ? "read" : 0,
+    isUnread: !item?.is_read,
+    type: "SearchNotification",
+  }), []);
+
   const updateScrollability = useCallback(() => {
     const el = scrollContainerRef.current;
     const nextCanScroll = Boolean(el && el.scrollHeight > el.clientHeight + 1);
@@ -91,14 +138,59 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   }, []);
 
   const fetchNotificationsPage = useCallback(async ({ nextPage, replace }) => {
+    let requestId = null;
+
     try {
       const userId = userIdRef.current;
       if (!userId) return;
 
-      if (loadingRef.current) return;
+      if (loadingRef.current && !replace) return;
+      requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
       loadingRef.current = true;
       if (replace) setIsLoading(true);
       else setIsLoadingMore(true);
+
+      const selectedTab = NOTIFICATION_TABS.find((tab) => tab.key === activeTab) || NOTIFICATION_TABS[0];
+
+      if (selectedTab.key === "search") {
+        const response = await NotificationService.Queries.getNotifications({
+          filter: "unread",
+          page: nextPage,
+          per_page: PER_PAGE,
+        });
+
+        if (requestId !== requestIdRef.current) return;
+
+        const ok = response?.status === "success" || response?.success;
+        const payload = response?.data ?? response;
+
+        if (ok && payload) {
+          const itemData = Array.isArray(payload.data) ? payload.data : [];
+          const normalized = itemData.map(normalizeSearchNotificationItem);
+          const meta = payload.meta || {};
+          const currentPage = Number(meta.current_page || nextPage);
+          const lastPage = Number(meta.last_page || 0);
+          const nextHasMore = lastPage > 0 ? currentPage < lastPage : normalized.length === PER_PAGE;
+
+          setHasMore(nextHasMore);
+          hasMoreRef.current = nextHasMore;
+          pageRef.current = nextPage;
+
+          if (replace) {
+            setNotifications(normalized);
+          } else {
+            setNotifications((prevItems) => {
+              const map = new Map();
+              prevItems.forEach((n) => map.set(n.id, n));
+              normalized.forEach((n) => map.set(n.id, n));
+              return Array.from(map.values());
+            });
+          }
+        }
+
+        return;
+      }
 
       const params = {
         _page: nextPage,
@@ -106,10 +198,12 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         _notifiable_id: userId,
         _orderBy: "updated_at",
         _order: "desc",
+        _type: selectedTab.type,
       };
 
       const response = await ConversationService.Queries.getNotificationList(params);
 
+      if (requestId !== requestIdRef.current) return;
 
       if (response.status === "success") {
         const itemData = Array.isArray(response.data?.data) ? response.data.data : [];
@@ -135,11 +229,13 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     } catch (error) {
       console.error("Error fetching conversations:", error);
     } finally {
-      loadingRef.current = false;
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (requestId !== null && requestIdRef.current === requestId) {
+        loadingRef.current = false;
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
-  }, [normalizeNotificationItem]);
+  }, [activeTab, normalizeNotificationItem, normalizeSearchNotificationItem]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -153,6 +249,8 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       setIsLoadingMore(false);
       loadingRef.current = false;
       userIdRef.current = null;
+      requestIdRef.current += 1;
+      setActiveTab(NOTIFICATION_TABS[0].key);
       return;
     }
     const parsedUser = parseLocalUser();
@@ -165,11 +263,12 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     if (!isOpen || !user?.id) return;
     userIdRef.current = user.id;
     pageRef.current = 1;
+    setNotifications([]);
     setHasMore(true);
     setCanScroll(false);
     hasMoreRef.current = true;
     fetchNotificationsPage({ nextPage: 1, replace: true });
-  }, [fetchNotificationsPage, isOpen, user?.id]);
+  }, [activeTab, fetchNotificationsPage, isOpen, user?.id]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -233,6 +332,12 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   const handleNotificationClick = async(item) => {
 
     // console.log("item", item);
+    if (item?.type === "SearchNotification") {
+      onClose && onClose();
+      router.push(`/dashboard/notifications?highlight=${item?.id}`);
+      return;
+    }
+
     if (item?.type === "ConversationNotification") {
       onOpenChat && onOpenChat(item);
       return;
@@ -255,9 +360,14 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   };
 
 
+  const handleTabChange = (tabKey) => {
+    if (tabKey === activeTab) return;
+    setActiveTab(tabKey);
+  };
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-[2px]">
-      <div className="relative flex h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+      <div className="relative flex h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
         <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white px-5 py-4">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-600">
@@ -274,6 +384,32 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
           >
             <X className="h-4.5 w-4.5" />
           </button>
+        </div>
+
+        <div className="border-b border-gray-100 bg-gray-50/70 px-5 py-3">
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 sm:grid-cols-4">
+            {NOTIFICATION_TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const TabIcon = tab.icon;
+
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => handleTabChange(tab.key)}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-2 py-2 text-xs font-semibold transition sm:text-sm ${
+                    isActive
+                      ? "bg-orange-500 text-white shadow-sm"
+                      : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  <TabIcon className="h-4 w-4 shrink-0" />
+                  <span className="text-center leading-tight">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div
@@ -293,8 +429,9 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
           ) : (
             notifications.map((item, index) => {
               const unreadCount = Number(item.unreadCount || 0);
-              const isUnread = unreadCount === 0;
+              const isUnread = typeof item.isUnread === "boolean" ? item.isUnread : unreadCount === 0;
               const isHighPriority = item.priority === "high";
+              const hasUnreadCount = Number.isFinite(unreadCount) && unreadCount > 0;
               const { icon: TypeIcon, iconClass } = getTypeMeta(item.type);
 
               return (
@@ -328,10 +465,10 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
                     {item.description && (
                       <p className="mt-0.5 truncate text-xs text-gray-500">{item.description}</p>
                     )}
-                    <p className="mt-1 text-[11px] text-gray-400">{formatNotificationTime(item.time)}</p>
+                    <p className="mt-1 text-[11px] text-gray-400">{item.timeText || formatNotificationTime(item.time)}</p>
                   </div>
 
-                  {unreadCount > 0 && (
+                  {hasUnreadCount && (
                     <span className="mt-0.5 flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-semibold text-white">
                       {unreadCount}
                     </span>
@@ -349,6 +486,20 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
           )}
           {!isLoading && notifications.length > 0 && !hasMore && (
             <div className="py-3 text-center text-xs text-gray-400">No more notifications.</div>
+          )}
+          {activeTab === "search" && notifications.length > 0 && (
+            <div className="sticky bottom-0 border-t border-gray-100 bg-white px-5 py-3 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose && onClose();
+                  router.push("/dashboard/notifications");
+                }}
+                className="text-sm font-semibold text-[#0167a2] transition hover:opacity-80"
+              >
+                View all notifications
+              </button>
+            </div>
           )}
         </div>
       </div>

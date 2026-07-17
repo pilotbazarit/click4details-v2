@@ -38,6 +38,7 @@ const vimeoEmbedUrl = (url = "") => {
 
 const SecretInformationPage = () => {
   const [query, setQuery] = useState("");
+  const [type, setType] = useState("all");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -53,7 +54,7 @@ const SecretInformationPage = () => {
     }
     try {
       setSearching(true);
-      const response = await SecretDataService.Queries.search({ q: query.trim() });
+      const response = await SecretDataService.Queries.search({ q: query.trim(), type });
       if (response?.status === "success") {
         setResults(response?.data || []);
       } else {
@@ -99,7 +100,16 @@ const SecretInformationPage = () => {
     <div className="p-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Secret Information</h1>
 
-      <form onSubmit={handleSearch} className="flex gap-2 mb-6 max-w-xl">
+      <form onSubmit={handleSearch} className="flex gap-2 mb-6 max-w-2xl">
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="border rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
+        >
+          <option value="all">All</option>
+          <option value="vehicle">Vehicle</option>
+          <option value="product">Product</option>
+        </select>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input

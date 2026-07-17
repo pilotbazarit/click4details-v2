@@ -35,6 +35,12 @@ dayjs.extend(relativeTime);
 
 const DEFAULT_PHONE = "+8809638660077";
 
+const formatLocalMobile = (value) => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("0") ? trimmed : `0${trimmed}`;
+};
+
 const parseMaybeJson = (value) => {
   if (typeof value !== "string") return value;
   try {
@@ -267,9 +273,8 @@ const GalleryCarousel = ({ images, productName, activeIndex, onActiveIndexChange
             <button
               key={`thumb-${src}-${index}`}
               type="button"
-              className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 bg-white transition ${
-                activeIndex === index ? "border-slate-900" : "border-slate-200"
-              }`}
+              className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 bg-white transition ${activeIndex === index ? "border-slate-900" : "border-slate-200"
+                }`}
             >
               <img src={src} alt="" className="h-full w-full object-cover" />
             </button>
@@ -313,9 +318,8 @@ const GalleryCarousel = ({ images, productName, activeIndex, onActiveIndexChange
             key={`thumb-${src}-${index}`}
             type="button"
             onClick={() => goToSlide(index)}
-            className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 bg-white transition ${
-              activeIndex === index ? "border-slate-900" : "border-slate-200 hover:border-slate-400"
-            }`}
+            className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 bg-white transition ${activeIndex === index ? "border-slate-900" : "border-slate-200 hover:border-slate-400"
+              }`}
           >
             <img src={src} alt="" className="h-full w-full object-cover" />
           </button>
@@ -380,6 +384,11 @@ const GeneralProductDetails = ({ productDetails }) => {
   const moreInformation = useMemo(() => normalizeMoreInformation(productDetails), [productDetails]);
   const currentUser = parseUser(user) || parsedUser || null;
   const sellerPhone = currentUser?.phone || productDetails?.shop?.s_phone || DEFAULT_PHONE;
+  const sellerMobileNumber = formatLocalMobile(productDetails?.user?.phone);
+  const sellerInfoList = (Array.isArray(productDetails?.p_seller_info) ? productDetails.p_seller_info : [])
+    .map((seller) => ({ name: seller?.name || "", phone: formatLocalMobile(seller?.phone) }))
+    .filter((seller) => seller.phone);
+  const showSellerMobile = Number(productDetails?.p_show_seller_mobile) === 1 && (sellerInfoList.length > 0 || Boolean(sellerMobileNumber));
   const selectedStatus = statusLabel(selectedVariant);
   const totalStock = variants.reduce((sum, v) => sum + toNumber(v.availableQty ?? v.stockQty), 0);
   const videoLink = String(productDetails?.p_video_link || "").trim();
@@ -423,7 +432,7 @@ const GeneralProductDetails = ({ productDetails }) => {
   const shareProduct = async () => {
     const productUrl = productUrlFor(productDetails);
     const shareData = {
-      title: productDetails?.p_name || "Click4Details product",
+      title: productDetails?.p_name || "Pilot Bazar product",
       text: `${productDetails?.p_name || "Product"} - ${selectedVariant ? money(selectedVariant.sellingPrice) : ""}`,
       url: productUrl,
     };
@@ -510,6 +519,61 @@ const GeneralProductDetails = ({ productDetails }) => {
     </div>
   );
 
+  const pblTestContent = description?.pbl_test ? (
+    <div className="border rounded-lg shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b bg-gray-50">
+        <Layers className="h-4 w-4 text-blue-600" />
+        <span className="text-sm font-medium text-blue-600">PBL Text</span>
+      </div>
+      <div className="p-4">
+        <p className="text-sm leading-7 text-gray-600 whitespace-pre-line">{description.pbl_test}</p>
+      </div>
+    </div>
+  ) : null;
+
+  const sellerMobileBlock = showSellerMobile ? (
+    sellerInfoList.length > 0 ? (
+      sellerInfoList.map((seller, index) => (
+        <a
+          key={index}
+          href={`tel:${seller.phone}`}
+          title="Call seller"
+          className="relative flex items-center gap-3 rounded-lg border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-4 shadow-sm animate-pulse hover:shadow-md hover:animate-none transition-shadow mb-3"
+        >
+          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+              <PhoneOutgoing className="h-5 w-5 text-white" />
+            </span>
+          </span>
+          <span>
+            <span className="block text-xs font-medium text-green-700">
+              {seller.name ? `Seller Name: ${seller.name}` : "Seller Mobile Number"}
+            </span>
+            <span className="block text-lg font-bold tracking-wide text-green-800">{seller.phone}</span>
+          </span>
+        </a>
+      ))
+    ) : (
+      <a
+        href={`tel:${sellerMobileNumber}`}
+        title="Call seller"
+        className="relative flex items-center gap-3 rounded-lg border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-4 shadow-sm animate-pulse hover:shadow-md hover:animate-none transition-shadow"
+      >
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+          <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-500">
+            <PhoneOutgoing className="h-5 w-5 text-white" />
+          </span>
+        </span>
+        <span>
+          <span className="block text-xs font-medium text-green-700">Seller Mobile Number</span>
+          <span className="block text-lg font-bold tracking-wide text-green-800">{sellerMobileNumber}</span>
+        </span>
+      </a>
+    )
+  ) : null;
+
   const descTabs = [
     { key: "description", label: "Description", content: description?.pbl || description?.user || "" },
     { key: "special", label: "Special Description", content: description?.meta || "" },
@@ -528,11 +592,10 @@ const GeneralProductDetails = ({ productDetails }) => {
               key={tab.key}
               type="button"
               onClick={() => setDescTab(tab.key)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                descTab === tab.key
-                  ? "border-blue-600 text-blue-600 bg-white"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${descTab === tab.key
+                ? "border-blue-600 text-blue-600 bg-white"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               {tab.label}
             </button>
@@ -610,7 +673,7 @@ const GeneralProductDetails = ({ productDetails }) => {
             className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105 text-sm"
           >
             <Copy className="h-4 w-4" />
-            Copy All Details
+            Copy All
           </button>
         </div>
       </div>
@@ -627,7 +690,37 @@ const GeneralProductDetails = ({ productDetails }) => {
             onActiveIndexChange={setActiveImageIndex}
           />
 
-          {/* Price card — green like vehicle page */}
+
+
+
+          {/* Description – desktop only */}
+          <div className="hidden md:block space-y-4">
+            {pblTestContent}
+            {descriptionContent}
+          </div>
+        </div>
+
+        {/* Mobile action buttons */}
+        <div className="md:hidden">
+          <div className="flex items-center justify-end gap-2 mb-3 flex-wrap">
+            {actionButtons}
+          </div>
+          <button
+            type="button"
+            onClick={copyDetails}
+            className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg shadow-md flex items-center justify-center gap-2 text-sm"
+          >
+            <Copy className="h-4 w-4" />
+            Copy All Details
+          </button>
+        </div>
+
+        {/* ── RIGHT col (2/5) — sticky + scrollable ── */}
+        <div className="md:col-span-2 md:col-start-4 space-y-4 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto md:pr-1">
+
+          {sellerMobileBlock}
+
+          {/* Price card — green like vehicle page 693 */}
           <div className="w-full border bg-green-50 border-green-200 rounded-lg shadow p-4 lg:p-5 space-y-4">
             {/* Price row */}
             <div className="flex justify-between items-start">
@@ -689,11 +782,10 @@ const GeneralProductDetails = ({ productDetails }) => {
                       key={variant.id}
                       type="button"
                       onClick={() => setSelectedVariantId(variant.id)}
-                      className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-all duration-150 ${
-                        selectedVariant?.id === variant.id
-                          ? "border-slate-900 bg-white ring-2 ring-slate-900/10 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm"
-                      }`}
+                      className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-all duration-150 ${selectedVariant?.id === variant.id
+                        ? "border-slate-900 bg-white ring-2 ring-slate-900/10 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm"
+                        }`}
                     >
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100 border border-slate-200">
                         {variant.primaryImage || productImages[0] ? (
@@ -766,30 +858,6 @@ const GeneralProductDetails = ({ productDetails }) => {
               </a>
             </div>
           </div>
-
-          {/* Description – desktop only */}
-          <div className="hidden md:block">
-            {descriptionContent}
-          </div>
-        </div>
-
-        {/* Mobile action buttons */}
-        <div className="md:hidden">
-          <div className="flex items-center justify-end gap-2 mb-3 flex-wrap">
-            {actionButtons}
-          </div>
-          <button
-            type="button"
-            onClick={copyDetails}
-            className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg shadow-md flex items-center justify-center gap-2 text-sm"
-          >
-            <Copy className="h-4 w-4" />
-            Copy All Details
-          </button>
-        </div>
-
-        {/* ── RIGHT col (2/5) — sticky + scrollable ── */}
-        <div className="md:col-span-2 md:col-start-4 space-y-4 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto md:pr-1">
 
           {/* Product Facts */}
           <div className="border rounded-lg shadow-sm p-4">
@@ -901,7 +969,8 @@ const GeneralProductDetails = ({ productDetails }) => {
       </div>
 
       {/* Description – mobile only */}
-      <div className="md:hidden mt-2">
+      <div className="md:hidden mt-2 space-y-4">
+        {pblTestContent}
         {descriptionContent}
       </div>
     </div>

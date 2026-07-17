@@ -178,8 +178,8 @@ export default function AccountDeletionPage() {
                 <h2 className="text-xl font-bold mb-2 text-gray-900">Contact Us</h2>
                 <p className="text-gray-600">
                   For any questions about account deletion or data privacy, contact us at:{' '}
-                  <a href="mailto:pilotbazar.com@gmail.com" className="text-blue-600 font-semibold hover:underline">
-                    pilotbazar.com@gmail.com
+                  <a href="mailto:click4details.com@gmail.com" className="text-blue-600 font-semibold hover:underline">
+                    click4details.com@gmail.com
                   </a>
                 </p>
               </section>
@@ -188,7 +188,7 @@ export default function AccountDeletionPage() {
 
           {/* Footer Section */}
           <footer className="bg-gray-100 py-8 px-8 text-center text-sm text-gray-500 border-t border-gray-200">
-            <p>© {new Date().getFullYear()} Your Pilot Bazar. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Your Click4Details. All rights reserved.</p>
           </footer>
         </div>
       </div>

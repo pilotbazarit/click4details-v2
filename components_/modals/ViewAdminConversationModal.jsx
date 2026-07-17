@@ -113,7 +113,7 @@ const ViewAdminConversationModal = ({ open, setOpen, productInfo, conversationId
   // console.log("selectedPrice", selectedPrice);
 
 
-  console.log("product selectedConversation---------------", selectedConversation);
+  // console.log("product selectedConversation---------------", selectedConversation);
 
 
 
@@ -186,6 +186,9 @@ const ViewAdminConversationModal = ({ open, setOpen, productInfo, conversationId
       toast.error("Failed to fetch conversation")
     }
   }
+
+
+  // console.log("conversationId", conversationId);
 
 
   useEffect(() => {
@@ -455,7 +458,7 @@ const ViewAdminConversationModal = ({ open, setOpen, productInfo, conversationId
               <DialogTitle className="text-lg font-semibold text-gray-900">
                 <div className="flex items-center gap-2">
                   <span>
-                    {'Chat With Importer'}
+                    {'Chat With Importer'} 
                   </span>
                   <Link
                     target='_blank'
@@ -468,6 +471,10 @@ const ViewAdminConversationModal = ({ open, setOpen, productInfo, conversationId
                       title="Show Product Details"
                     />
                   </Link>
+
+                  <span className="text-sm text-gray-500">
+                    CON-{conversationId}
+                  </span>
                 </div>
               </DialogTitle>
               <p className="text-xs text-gray-500">

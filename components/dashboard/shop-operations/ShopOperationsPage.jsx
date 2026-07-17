@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import ShopOperationsService from "@/services/ShopOperationsService";
+import ShopSelect from "@/components/ShopSelect";
 import SupplierService from "@/services/SupplierService";
 
 const modeConfig = {
@@ -315,17 +316,13 @@ export default function ShopOperationsPage({ mode = "stock" }) {
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <select
+            <ShopSelect
+              shops={shops}
               value={shopId}
-              onChange={(event) => setShopId(event.target.value)}
-              className="h-10 min-w-[240px] rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
-            >
-              {shops.map((shop) => (
-                <option key={shop.s_id} value={shop.s_id}>
-                  {shop.s_title}
-                </option>
-              ))}
-            </select>
+              onChange={(id) => setShopId(id)}
+              isClearable={false}
+              className="min-w-[240px] text-sm"
+            />
             <button
               type="button"
               onClick={refresh}

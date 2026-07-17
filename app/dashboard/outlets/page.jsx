@@ -128,6 +128,7 @@ const Model = () => {
       const shopOptions = response.data.data.map((shop) => ({
         value: shop.s_id,
         label: shop.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
       }));
 
       setShopData(shopOptions);

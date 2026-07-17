@@ -32,8 +32,8 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
     return (
         <div>
             <div className="space-y-6">
-                <div className="border rounded shadow-sm mt-4 overflow-hidden">
-                    <div className="flex flex-wrap gap-2 border-b bg-white p-2" role="tablist">
+                <div className="border rounded-lg shadow-sm mt-4 overflow-hidden">
+                    <div className="flex flex-wrap gap-2 border rounded-lg border-blue-200 bg-white p-2" role="tablist">
                         {descriptionTabs.map((tab) => {
                             const isActive = visibleDescriptionTab === tab.key;
 
@@ -84,7 +84,7 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                     basePath == '/product' && (
                         <>
                             {/* SEO Description */}
-                            <div className={visibleDescriptionTab === "special" ? "border rounded shadow-sm p-4" : "hidden"}>
+                            <div className={visibleDescriptionTab === "special" ? "border rounded-lg shadow-sm p-4 border-blue-200" : "hidden"}>
                                 <h2 className="text-md font-medium text-blue-700 mb-4 border-b pb-2">Special Description (PB)</h2>
 
                                 <div className="text-sm font-small space-y-2 leading-normal">
@@ -100,11 +100,11 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                                     <div className="mt-4 font-bold">Social Media:</div>
 
                                     <p>
-                                        Fb Page Click4Details Automobiles : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
-                                        Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : click4details
-                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4Details Automobiles Please Visit
-                                        Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
-                                        find us by : Click4Details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
+                                        Fb Page Pilot Bazar Automobiles : https://rb.gy/f7srjcFb Page Pilot Bazar : https://rb.gy/psidwuFb
+                                        Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : pilot_bazar
+                                        \To Experience This Vehicle Please Visit Our Showroom: \ Pilot Bazar Automobiles Please Visit
+                                        Website: https://pilotbazar.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
+                                        find us by : Pilot Bazar Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
                                     </p>
 
                                     <div className="mt-4 font-bold">𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡</div>
@@ -127,11 +127,11 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                                     <div className="mt-4 font-bold">Social Media:</div>
 
                                     <p>
-                                        Fb Page Click4Details Automobiles : https://rb.gy/f7srjcFb Page Click4Details : https://rb.gy/psidwuFb
-                                        Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : click4details
-                                        \To Experience This Vehicle Please Visit Our Showroom: \ Click4Details Automobiles Please Visit
-                                        Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
-                                        find us by : Click4Details Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
+                                        Fb Page Pilot Bazar Automobiles : https://rb.gy/f7srjcFb Page Pilot Bazar : https://rb.gy/psidwuFb
+                                        Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : pilot_bazar
+                                        \To Experience This Vehicle Please Visit Our Showroom: \ Pilot Bazar Automobiles Please Visit
+                                        Website: https://pilotbazar.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
+                                        find us by : Pilot Bazar Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
                                     </p>
 
                                     <div className="mt-4 font-bold">𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡</div>

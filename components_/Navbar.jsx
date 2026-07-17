@@ -463,6 +463,7 @@ const NavbarContent = () => {
       const shopData = shops.map((shop) => ({
         value: shop.s_id,
         label: shop.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
       }));
 
       setShopOptions(shopData);
@@ -812,7 +813,7 @@ const NavbarContent = () => {
             } */}
 
 
-            {
+            {/* {
               <div className="relative" ref={categoryRef}>
                 <button
                   onClick={handleAllCategory}
@@ -821,11 +822,6 @@ const NavbarContent = () => {
                   All Categories
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCategoryOpen ? 'rotate-180' : ''}`} />
                 </button>
-
-
-                {/* {
-                  console.log("categories render:", categories)
-                } */}
 
                 {isCategoryOpen && (
                   <div className="absolute top-full left-0 mt-2 bg-white shadow-xl rounded-lg border border-gray-200 z-50 min-w-[250px]">
@@ -842,15 +838,11 @@ const NavbarContent = () => {
                   </div>
                 )}
               </div>
-            }
+            } */}
 
             {
               user ? (<Link
                 href="/filter-products"
-                // className={`transition duration-300 ${isActiveFilterProduct
-                //   ? 'text-blue-600 font-semibold bg-orange-600/10 border-b-2 border-orange-500 rounded-full px-4 py-1'
-                //   : 'hover:text-gray-900'
-                //   }`}
 
                 className={`transition duration-300 ${isActiveFilterProduct
                   ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
@@ -1045,7 +1037,7 @@ const NavbarContent = () => {
                         className="block text-center text-sm font-medium hover:opacity-90 transition"
                         style={{ color: 'rgb(1 103 162)' }}
                       >
-                        View all notifications
+                        View all notifications 
                       </Link>
                     </Popover.Close>
                   </div>

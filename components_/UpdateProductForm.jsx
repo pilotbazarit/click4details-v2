@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Loading from '@/components/Loading';
+import PblHistoryPanel from '@/components/PblHistoryPanel';
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -25,7 +26,7 @@ import OutletService from "@/services/OutletService";
 import LocationService from "@/services/LocationService";
 import VehiclePricingSection from "@/components/pricing/VehiclePricingSection";
 import CategoryService from "@/services/CategoryService";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 import { parseStoredUser } from "@/lib/parseStoredUser";
 const Select = dynamic(() => import('react-select'), { ssr: false });
@@ -43,6 +44,15 @@ const schema = yup.object().shape({
 });
 
 const MAX_ADDITIONAL_IMAGES = 12;
+
+const deliveryConditionOptions = [
+    { value: "Japan Condition", label: "Japan Condition" },
+    { value: "Shipment Condition", label: "Shipment Condition" },
+    { value: "As it is Port Delivery", label: "As it is Port Delivery" },
+    { value: "Port Condition", label: "Port Condition" },
+    { value: "Showroom Condition", label: "Showroom Condition" },
+    { value: "Auction Sheet Condition", label: "Auction Sheet Condition" },
+];
 
 const auctionTypeOptions = [
     {
@@ -179,10 +189,13 @@ const UpdateProductForm = ({ productId }) => {
     const [preview, setPreview] = useState(null);
     const [additionalImages, setAdditionalImages] = useState([]); // store File objects
     const [additionalPreviews, setAdditionalPreviews] = useState([]); // for UI previews
+    const [additionalImagePublicIds, setAdditionalImagePublicIds] = useState([]); // public_id per preview, null for unsaved local files
     const [additionalDocumentFiles, setAdditionalDocumentFiles] = useState([]); // store File objects
     const [additionalDocumentPreviews, setAdditionalDocumentPreviews] = useState([]); // for UI previews
+    const [additionalDocumentPublicIds, setAdditionalDocumentPublicIds] = useState([]); // public_id per preview, null for unsaved local files
     const [secretDocumentFiles, setSecretDocumentFiles] = useState([]); // store File objects
     const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]); // for UI previews
+    const [secretDocumentPublicIds, setSecretDocumentPublicIds] = useState([]); // public_id per preview, null for unsaved local files
 
     const [shopData, setShopData] = useState([]);
     const [partnerData, setPartnerData] = useState([]);
@@ -219,7 +232,36 @@ const UpdateProductForm = ({ productId }) => {
     const [isCategoryListVisible, setIsCategoryListVisible] = useState(false);
     const categoryDropdownRef = useRef(null);
     const [user, setUser] = useState(null);
+    const [sellerInfoRows, setSellerInfoRows] = useState([{ name: "", phone: "" }]);
+    const [moreInformation, setMoreInformation] = useState([{ id: "more-info-0", key: "", value: "" }]);
     const { permissionList } = useAppContext();
+
+    const handleSellerInfoChange = (index, field, value) => {
+        setSellerInfoRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    };
+
+    const handleAddSellerInfoRow = () => {
+        setSellerInfoRows((prev) => [...prev, { name: "", phone: "" }]);
+    };
+
+    const handleRemoveSellerInfoRow = (index) => {
+        setSellerInfoRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+    };
+
+    const setMoreInformationRow = (id, patch) => {
+        setMoreInformation((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    };
+
+    const addMoreInformationRow = () => {
+        setMoreInformation((current) => [...current, { id: `more-info-${Date.now()}-${current.length}`, key: "", value: "" }]);
+    };
+
+    const removeMoreInformationRow = (id) => {
+        setMoreInformation((current) => {
+            const nextRows = current.filter((row) => row.id !== id);
+            return nextRows.length ? nextRows : [{ id: "more-info-0", key: "", value: "" }];
+        });
+    };
 
     const canShowSellerMobileToggle = (targetUser = user) => {
         if (!targetUser) return false;
@@ -654,26 +696,17 @@ const UpdateProductForm = ({ productId }) => {
 
         setAdditionalImages((prev) => [...prev, ...filesToAdd]);
         setAdditionalPreviews((prev) => [...prev, ...previews]);
+        setAdditionalImagePublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
         e.target.value = "";
     };
 
     const handleDeleteAdditionalImage = (url, index) => {
 
         const isNewImage = typeof url === "string" && url.startsWith("blob:");
-        const isCloudinaryImage = typeof url === "string" && url.includes('res.cloudinary.com') && url.includes('/image/upload/');
+        const publicId = additionalImagePublicIds[index];
 
-        if (isCloudinaryImage) {
-            const urlParts = url.split("/");
-
-            const fileNameWithExt = urlParts[urlParts.length - 1];
-
-            const folderIndex = urlParts.findIndex(part => part === "upload") + 2;
-
-            const publicId = urlParts.slice(folderIndex).join("/").replace(/\.[^/.]+$/, "");
-
-            if (!removeAdditionalImage.includes(publicId)) {
-                setRemoveAdditionalImage(prev => [...prev, publicId]);
-            }
+        if (publicId && !removeAdditionalImage.includes(publicId)) {
+            setRemoveAdditionalImage(prev => [...prev, publicId]);
         }
 
         if (isNewImage) {
@@ -687,6 +720,7 @@ const UpdateProductForm = ({ productId }) => {
         }
 
         setAdditionalPreviews((prev) => prev.filter((_, i) => i !== index));
+        setAdditionalImagePublicIds((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleAdditionalDocumentFileChange = (e) => {
@@ -701,24 +735,30 @@ const UpdateProductForm = ({ productId }) => {
 
         setAdditionalDocumentFiles((prev) => [...prev, ...filesToAdd]);
         setAdditionalDocumentPreviews((prev) => [...prev, ...previews]);
+        setAdditionalDocumentPublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
         e.target.value = "";
     };
 
     const handleDeleteAdditionalDocument = (url, index) => {
-        const isCloudinaryImage = url.includes('res.cloudinary.com') && url.includes('/image/upload/');
+        const isNewDocument = typeof url === "string" && url.startsWith("blob:");
+        const publicId = additionalDocumentPublicIds[index];
 
-        if (isCloudinaryImage) {
-            const urlParts = url.split("/");
-            const folderIndex = urlParts.findIndex(part => part === "upload") + 2;
-            const publicId = urlParts.slice(folderIndex).join("/").replace(/\.[^/.]+$/, "");
-
-            if (!removeAdditionalDocument.includes(publicId)) {
-                setRemoveAdditionalDocument(prev => [...prev, publicId]);
-            }
+        if (publicId && !removeAdditionalDocument.includes(publicId)) {
+            setRemoveAdditionalDocument(prev => [...prev, publicId]);
         }
 
-        setAdditionalDocumentFiles((prev) => prev.filter((_, i) => i !== index));
+        if (isNewDocument) {
+            const newDocumentIndex = additionalDocumentPreviews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setAdditionalDocumentFiles((prev) => prev.filter((_, i) => i !== newDocumentIndex));
+        }
+
         setAdditionalDocumentPreviews((prev) => prev.filter((_, i) => i !== index));
+        setAdditionalDocumentPublicIds((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleSecretDocumentFileChange = (e) => {
@@ -733,24 +773,30 @@ const UpdateProductForm = ({ productId }) => {
 
         setSecretDocumentFiles((prev) => [...prev, ...filesToAdd]);
         setSecretDocumentPreviews((prev) => [...prev, ...previews]);
+        setSecretDocumentPublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
         e.target.value = "";
     };
 
     const handleDeleteSecretDocument = (url, index) => {
-        const isCloudinaryImage = url.includes('res.cloudinary.com') && url.includes('/image/upload/');
+        const isNewDocument = typeof url === "string" && url.startsWith("blob:");
+        const publicId = secretDocumentPublicIds[index];
 
-        if (isCloudinaryImage) {
-            const urlParts = url.split("/");
-            const folderIndex = urlParts.findIndex(part => part === "upload") + 2;
-            const publicId = urlParts.slice(folderIndex).join("/").replace(/\.[^/.]+$/, "");
-
-            if (!removeSecretDocument.includes(publicId)) {
-                setRemoveSecretDocument(prev => [...prev, publicId]);
-            }
+        if (publicId && !removeSecretDocument.includes(publicId)) {
+            setRemoveSecretDocument(prev => [...prev, publicId]);
         }
 
-        setSecretDocumentFiles((prev) => prev.filter((_, i) => i !== index));
+        if (isNewDocument) {
+            const newDocumentIndex = secretDocumentPreviews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setSecretDocumentFiles((prev) => prev.filter((_, i) => i !== newDocumentIndex));
+        }
+
         setSecretDocumentPreviews((prev) => prev.filter((_, i) => i !== index));
+        setSecretDocumentPublicIds((prev) => prev.filter((_, i) => i !== index));
     };
 
     const currentYear = new Date().getFullYear();
@@ -773,6 +819,7 @@ const UpdateProductForm = ({ productId }) => {
             const shopOptions = response.data.data.map((shop) => ({
                 value: shop?.s_id,
                 label: shop?.s_title,
+                phone: shop?.user?.phone || shop?.s_user_phone || "",
                 s_user_id: shop?.s_user_id,
                 s_id: shop?.s_id,
                 shop_name: "my-shop",
@@ -1155,35 +1202,44 @@ const UpdateProductForm = ({ productId }) => {
                 }
 
                 const vehicleImgArr = [];
+                const vehicleImgPublicIds = [];
                 if (data?.vehicle_images?.length > 0) {
                     data.vehicle_images.forEach((img) => {
                         if (img.url !== "") {
                             vehicleImgArr.push(img.url);
+                            vehicleImgPublicIds.push(img?.public_id || null);
                         }
                     });
                 }
 
                 const vehicleDocArr = [];
+                const vehicleDocPublicIds = [];
                 if (data?.v_docs?.length > 0) {
                     data.v_docs.forEach((doc) => {
                         if (doc?.url) {
                             vehicleDocArr.push(doc.url);
+                            vehicleDocPublicIds.push(doc?.public_id || null);
                         }
                     });
                 }
 
                 const vehicleSecretDocArr = [];
+                const vehicleSecretDocPublicIds = [];
                 if (data?.v_secret_docs?.length > 0) {
                     data.v_secret_docs.forEach((doc) => {
                         if (doc?.url) {
                             vehicleSecretDocArr.push(doc.url);
+                            vehicleSecretDocPublicIds.push(doc?.public_id || null);
                         }
                     });
                 }
 
                 setAdditionalPreviews(vehicleImgArr);
+                setAdditionalImagePublicIds(vehicleImgPublicIds);
                 setAdditionalDocumentPreviews(vehicleDocArr);
+                setAdditionalDocumentPublicIds(vehicleDocPublicIds);
                 setSecretDocumentPreviews(vehicleSecretDocArr);
+                setSecretDocumentPublicIds(vehicleSecretDocPublicIds);
                 setPreview(data?.vehicle_front_image?.url);
 
                 // Populate other form fields
@@ -1258,6 +1314,7 @@ const UpdateProductForm = ({ productId }) => {
                         {
                             value: data.v_shop_id,
                             label: currentShopLabel,
+                            phone: data?.v_shop?.user?.phone || data?.shop?.user?.phone || data?.v_shop_user_phone || "",
                             s_user_id: partnerId,
                             s_id: data.v_shop_id,
                         },
@@ -1311,11 +1368,26 @@ const UpdateProductForm = ({ productId }) => {
                 );
 
                 setValue('pbl_partner_code', data.pbl_partner_code);
+                setValue('v_pbl_partnership_expire_date', data.v_pbl_partnership_expire_date || '');
                 setValue('v_description', data.v_description);
                 setValue('v_user_description', data.v_user_description);
                 setValue('vm_description', data?.v_metadata?.vm_description);
                 setValue('v_pbl_text', data.v_pbl_text || '');
                 setValue('v_delivery_condition', data.v_delivery_condition || '');
+                setValue('v_secret_text', data.v_secret_text || '');
+                setValue('v_secret_video_link', data.v_secret_video_link || '');
+                const sellerInfoData = Array.isArray(data?.v_seller_info) ? data.v_seller_info : [];
+                setSellerInfoRows(
+                    sellerInfoData.length > 0
+                        ? sellerInfoData.map((row) => ({ name: row?.name || '', phone: row?.phone || '' }))
+                        : [{ name: '', phone: '' }]
+                );
+                const moreInfoData = Array.isArray(data?.v_more_information) ? data.v_more_information : [];
+                setMoreInformation(
+                    moreInfoData.length > 0
+                        ? moreInfoData.map((row, index) => ({ id: `more-info-${index}`, key: row?.label || '', value: row?.value || '' }))
+                        : [{ id: 'more-info-0', key: '', value: '' }]
+                );
                 const videoData = data?.v_video;
                 const userVideo = (videoData && typeof videoData === 'object')
                     ? (videoData?.user ? String(videoData.user) : '')
@@ -1527,6 +1599,19 @@ const UpdateProductForm = ({ productId }) => {
             }
         }
 
+        const sellerInfoPayload = sellerInfoRows.filter((row) => (row.name && row.name.trim()) || (row.phone && row.phone.trim()));
+        appendFormValue(formData, "v_seller_info", JSON.stringify(sellerInfoPayload));
+
+        formData.append("extended_data_clear", "1");
+        moreInformation
+            .map((item) => ({ key: String(item.key || "").trim(), value: String(item.value || "").trim() }))
+            .filter((item) => item.key || item.value)
+            .forEach((item) => {
+                formData.append("ed_entity[]", "vehicle");
+                formData.append("ed_entity_key[]", item.key);
+                formData.append("ed_entity_value[]", item.value);
+            });
+
         const otherCosts = Array.isArray(data?.vp_other_cost) ? data.vp_other_cost : [];
         otherCosts.forEach((item, index) => {
             appendFormValue(formData, `vp_other_cost[${index}][name]`, item?.name ? String(item.name).trim() : "");
@@ -1644,6 +1729,7 @@ const UpdateProductForm = ({ productId }) => {
             const shopOptions = response.data.data.map((shop) => ({
                 value: shop?.s_id,
                 label: shop?.s_title,
+                phone: shop?.user?.phone || shop?.s_user_phone || "",
                 s_user_id: shop?.s_user_id,
                 s_id: shop?.s_id,
                 shop_name: "partner-shop",
@@ -2082,11 +2168,20 @@ const UpdateProductForm = ({ productId }) => {
                                                 <label className="text-base font-medium" htmlFor="v_delivery_condition">
                                                     Delivery Condition
                                                 </label>
-                                                <Input
-                                                    id="v_delivery_condition"
+                                                <Controller
                                                     name="v_delivery_condition"
-                                                    placeholder="Enter Delivery Condition"
-                                                    {...register("v_delivery_condition")}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <Select
+                                                            {...field}
+                                                            options={deliveryConditionOptions}
+                                                            onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
+                                                            value={deliveryConditionOptions.find(option => option.value === field.value) || null}
+                                                            placeholder="Select Delivery Condition"
+                                                            className="basic-single"
+                                                            classNamePrefix="select"
+                                                        />
+                                                    )}
                                                 />
                                             </div>
 
@@ -2394,6 +2489,20 @@ const UpdateProductForm = ({ productId }) => {
                                                             placeholder="Select Shop"
                                                             className="basic-single"
                                                             classNamePrefix="select"
+                                                            formatOptionLabel={(option) => (
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <span>{option.label}</span>
+                                                                    {option.phone ? <span className="text-xs text-gray-400">{option.phone}</span> : null}
+                                                                </div>
+                                                            )}
+                                                            filterOption={(option, input) => {
+                                                                const term = input.trim().toLowerCase();
+                                                                if (!term) return true;
+                                                                return (
+                                                                    option.label.toLowerCase().includes(term) ||
+                                                                    String(option.data.phone || "").toLowerCase().includes(term)
+                                                                );
+                                                            }}
                                                         />
                                                     )}
                                                 />
@@ -2862,7 +2971,48 @@ const UpdateProductForm = ({ productId }) => {
 
                                     </div>
 
+                                    <div className="mb-3 mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+                                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <h4 className="text-sm font-semibold text-gray-800">More Information</h4>
+                                                <p className="text-xs text-gray-500">Add public vehicle facts like warranty, service history, or extra features.</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-medium text-white hover:bg-slate-800"
+                                                onClick={addMoreInformationRow}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Add Row
+                                            </button>
+                                        </div>
 
+                                        <div className="grid gap-3">
+                                            {moreInformation.map((item) => (
+                                                <div key={item.id} className="grid gap-2 md:grid-cols-[220px_1fr_40px]">
+                                                    <input
+                                                        value={item.key}
+                                                        placeholder="Label, e.g. Warranty"
+                                                        className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                                        onChange={(event) => setMoreInformationRow(item.id, { key: event.target.value })}
+                                                    />
+                                                    <input
+                                                        value={item.value}
+                                                        placeholder="Value, e.g. 1 year service warranty"
+                                                        className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                                        onChange={(event) => setMoreInformationRow(item.id, { value: event.target.value })}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                                                        onClick={() => removeMoreInformationRow(item.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
 
                                     {/* PBL Section */}
                                     {
@@ -2951,6 +3101,32 @@ const UpdateProductForm = ({ productId }) => {
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </div>
+
+                                                <div className="mb-2 w-[50%]">
+                                                    <label className="text-base font-medium" htmlFor="v_secret_text">
+                                                        Secret Text
+                                                    </label>
+                                                    <textarea
+                                                        id="v_secret_text"
+                                                        name="v_secret_text"
+                                                        placeholder="Secret Text"
+                                                        rows="4"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_secret_text")}
+                                                    ></textarea>
+                                                </div>
+
+                                                <div className="mb-2 w-[50%]">
+                                                    <label className="text-base font-medium" htmlFor="v_secret_video_link">
+                                                        Secret Video Link
+                                                    </label>
+                                                    <Input
+                                                        id="v_secret_video_link"
+                                                        name="v_secret_video_link"
+                                                        placeholder="Enter Secret Video Link"
+                                                        {...register("v_secret_video_link")}
+                                                    />
                                                 </div>
 
 
@@ -3117,7 +3293,21 @@ const UpdateProductForm = ({ productId }) => {
                                                         />
                                                     </div>
 
-                                            
+                                                    <div className="mb-2">
+                                                        <label className="text-base font-medium" htmlFor="v_pbl_partnership_expire_date">
+                                                            Partnership Expire Date
+                                                        </label>
+                                                        <Input
+                                                            id="v_pbl_partnership_expire_date"
+                                                            type="date"
+                                                            {...register("v_pbl_partnership_expire_date")}
+                                                        />
+                                                        <p className="mt-1 text-xs text-gray-500">
+                                                            After this date, the vehicle is automatically removed from PBL sale (home &amp; category pages).
+                                                        </p>
+                                                    </div>
+
+                                                    <PblHistoryPanel type="vehicle" id={productId} />
 
 
 
@@ -3288,9 +3478,9 @@ const UpdateProductForm = ({ productId }) => {
                                                     />
                                                 </div>
 
-                                                {/* PBL Text section */}
+                                                {/* Vendor Agreement section */}
                                                 <div className="mb-3 mt-4">
-                                                    <h4 className="text-lg font-semibold text-gray-800 mb-1">PBL Text</h4>
+                                                    <h4 className="text-lg font-semibold text-gray-800 mb-1">Vendor Agreement</h4>
                                                     <div className="flex w-24 h-1">
                                                         <div className="w-2/3 bg-green-500"></div>
                                                         <div className="w-1/2 bg-gray-500/20"></div>
@@ -3301,7 +3491,7 @@ const UpdateProductForm = ({ productId }) => {
                                                     <textarea
                                                         id="v_pbl_text"
                                                         name="v_pbl_text"
-                                                        placeholder="PBL Text"
+                                                        placeholder="Vendor Agreement"
                                                         rows="4"
                                                         className="outline-none py-2 px-3 rounded border w-full"
                                                         {...register("v_pbl_text")}
@@ -3319,6 +3509,46 @@ const UpdateProductForm = ({ productId }) => {
                                                         <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
                                                             Show Seller Mobile Number
                                                         </label>
+                                                    </div>
+                                                )}
+
+                                                {canShowSellerMobileToggle() && watch("v_show_seller_mobile") && (
+                                                    <div className="mt-4">
+                                                        <h4 className="text-sm font-semibold text-gray-800 mb-2">Sellers</h4>
+                                                        {sellerInfoRows.map((row, index) => (
+                                                            <div key={index} className="flex items-end gap-2 mb-2">
+                                                                <div className="flex-1">
+                                                                    <label className="text-sm font-medium text-gray-700">Seller Name</label>
+                                                                    <Input
+                                                                        value={row.name}
+                                                                        placeholder="Seller Name"
+                                                                        onChange={(e) => handleSellerInfoChange(index, "name", e.target.value)}
+                                                                    />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                                                                    <Input
+                                                                        value={row.phone}
+                                                                        placeholder="Phone"
+                                                                        onChange={(e) => handleSellerInfoChange(index, "phone", e.target.value)}
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveSellerInfoRow(index)}
+                                                                    className="px-3 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddSellerInfoRow}
+                                                            className="mt-1 px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+                                                        >
+                                                            + Add Seller
+                                                        </button>
                                                     </div>
                                                 )}
 

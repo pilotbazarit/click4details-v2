@@ -39,7 +39,7 @@ const AboutUs = () => {
                             <div className="w-36 h-1 bg-gradient-to-r from-orange-500 to-orange-300 rounded-full mt-3 z-10"></div>
 
                             <div className='mt-4 text-gray-600 text-xl text-center'>
-                                <p>Pilot Bazar Ltd is Bangladesh's trustworthy, quality-controlled, monitored online marketplace and multipurpose business web and app. It is also a totally free social platform on which people can interact with each other. In addition to business support, this app provides various free social services. Besides Pilot Bazar Ltd sells and buys cars, apartments and land.</p>
+                                <p>Click4Details Ltd is Bangladesh's trustworthy, quality-controlled, monitored online marketplace and multipurpose business web and app. It is also a totally free social platform on which people can interact with each other. In addition to business support, this app provides various free social services. Besides Click4Details Ltd sells and buys cars, apartments and land.</p>
                             </div>
 
                             {/* Vieo Section */}
@@ -84,10 +84,10 @@ const AboutUs = () => {
                                             Pilot Kabir (Ahsanul Kabir)
                                         </h3>
                                         <p className="text-xl text-orange-600 font-semibold mb-4">
-                                            Chairman, Pilot Bazar Ltd
+                                            Chairman, Click4Details Ltd
                                         </p>
                                         <p className="text-gray-600 mb-6 leading-relaxed">
-                                           সিলেট ক্যাডেট কলেজ থেকে পাস করে পাইলট কবির ১৯৯৮ সালে বাংলাদেশ বিমান বাহিনীতে যোগদান করেন। তিনি একজন ফাইটার পাইলট এবং ফ্লাইং ইনস্ট্রাক্টর ছিলেন। তিনি বিমান বাহিনী এবং জাতিসংঘের মিশনে বিভিন্ন গুরুত্বপূর্ণ পদে কর্মরত ছিলেন। পরবর্তীতে তিনি রিজেন্ট এয়ারওয়েজে পাইলট হিসেবে কাজ করেন। বর্তমানে তিনি পাইলট বাজার গ্রুপের চেয়ারম্যান।
+                                           সিলেট ক্যাডেট কলেজ থেকে পাস করে পাইলট কবির ১৯৯৮ সালে বাংলাদেশ বিমান বাহিনীতে যোগদান করেন। তিনি একজন ফাইটার পাইলট এবং ফ্লাইং ইনস্ট্রাক্টর ছিলেন। তিনি বিমান বাহিনী এবং জাতিসংঘের মিশনে বিভিন্ন গুরুত্বপূর্ণ পদে কর্মরত छिलेन। परवर्तीते तिनि रिजेन्ट एयारवे जे पाइलट हिसाबे काज करेन। बर्तमाने तिनि क्लिक4Details ग्रुपकर चेयारमन।
                                         </p>
                                         
                                         {/* Bio Button */}

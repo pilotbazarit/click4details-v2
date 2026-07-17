@@ -347,6 +347,7 @@ const ProductList = () => {
       const shopOptions = response.data.data.map((shop) => ({
         value: shop.s_id,
         label: shop.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
       }));
 
       setShopData((prevShopData) => {
@@ -395,6 +396,7 @@ const ProductList = () => {
               shopArrayData.push({
                 value: item.shop.s_id,
                 label: item.shop.s_title,
+                phone: item?.shop?.user?.phone || item?.shop?.s_user_phone || "",
               });
             }
 
@@ -451,7 +453,7 @@ const ProductList = () => {
               <option value="">Select Company Shop</option>
               <option value="my-shop">My Shop</option>
               {shopData.map((shop) => (
-                <option key={shop.value} value={shop.value}>{shop.label}</option>
+                <option key={shop.value} value={shop.value}>{shop.label}{shop.phone ? ` — ${shop.phone}` : ""}</option>
               ))}
             </select>
           </div>

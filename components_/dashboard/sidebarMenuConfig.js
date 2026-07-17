@@ -12,6 +12,7 @@ import {
   LayoutList,
   List,
   ListChecks,
+  Lock,
   MessageSquare,
   MessageSquareText,
   MessageSquareWarning,
@@ -21,6 +22,7 @@ import {
   Receipt,
   Settings,
   ShoppingCart,
+  SlidersHorizontal,
   Store,
   Truck,
   UserCog,
@@ -402,6 +404,18 @@ export const dashboardMenuItems = [
     },
   },
   {
+    name: "Secret Information",
+    path: "/dashboard/secret-information",
+    icon: Lock,
+    allowedModes: [ADMIN, SUPREME, PBL],
+    requiredPermission: {
+      section: "Vehicle",
+      action: "SecretData",
+      appliesToModes: [ADMIN, PBL],
+      pblShopId: 0,
+    },
+  },
+  {
     name: "Shop List",
     path: "/dashboard/shop/",
     icon: Store,
@@ -486,6 +500,15 @@ export const dashboardMenuItems = [
           appliesToModes: [PBL, ADMIN],
           pblShopId: 0,
         }
+      },
+      {
+        // Backend gate (User.Create) was never seeded for any role but
+        // supreme's wildcard bypass, so menu visibility mirrors that
+        // reality rather than promising access other roles don't have yet.
+        name: "Add User",
+        path: "/dashboard/users/create/",
+        icon: Users,
+        allowedModes: [SUPREME],
       },
       {
         name: "Role List",
@@ -712,6 +735,17 @@ export const dashboardMenuItems = [
           appliesToModes: [PBL, ADMIN],
           pblShopId: 0,
         },
+      },
+      {
+        // Superadmin-only platform config (GTM, SMS, shipping, payment
+        // gateways, couriers) - menu visibility is cosmetic, the real
+        // gate is the backend (SystemSettingController, supreme-only) and
+        // this page's own useAppContext() check, since any authenticated
+        // user could otherwise hit the URL directly.
+        name: "System Setup",
+        path: "/dashboard/settings/system-setup/",
+        icon: SlidersHorizontal,
+        allowedModes: [SUPREME],
       },
       {
         name: "Change Password",

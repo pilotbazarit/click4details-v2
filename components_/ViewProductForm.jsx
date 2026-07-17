@@ -2413,7 +2413,7 @@ const ViewProductForm = ({ productId }) => {
                                                     {...register("v_is_saleBy_pbl")}
                                                 />
                                                 <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                    I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                     <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                         Terms and Conditions
                                                     </Link>. Please Sale My Product and Increase My Profit.
@@ -2432,7 +2432,7 @@ const ViewProductForm = ({ productId }) => {
                                                     {...register("want_to_be_partner")}
                                                 />
                                                 <label htmlFor="want_to_be_partner" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                                                    I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                                                 </label>
                                             </div>
 

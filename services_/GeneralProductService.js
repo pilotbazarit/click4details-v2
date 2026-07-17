@@ -20,6 +20,12 @@ const Commands = {
         }
     }),
 
+    approveGeneralProduct: (id, data) => commandApi.post(`/api/product/approve-sale-by-pbl/${id}`, data, {
+        headers: {
+            Accept: "application/json",
+        }
+    }),
+
 };
 
 const Queries = {

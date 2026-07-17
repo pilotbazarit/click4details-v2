@@ -155,6 +155,20 @@ const EditSearchHistoryModal = ({
                   placeholder="Select shops..."
                   className="text-sm"
                   classNamePrefix="react-select"
+                  formatOptionLabel={(option) => (
+                    <div className="flex items-center justify-between gap-3">
+                      <span>{option.label}</span>
+                      {option.phone ? <span className="text-xs text-gray-400">{option.phone}</span> : null}
+                    </div>
+                  )}
+                  filterOption={(option, input) => {
+                    const term = input.trim().toLowerCase();
+                    if (!term) return true;
+                    return (
+                      option.label.toLowerCase().includes(term) ||
+                      String(option.data.phone || "").toLowerCase().includes(term)
+                    );
+                  }}
                 />
               </div>
 

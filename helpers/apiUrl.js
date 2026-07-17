@@ -1,12 +1,11 @@
-// export const API_URL = "http://127.0.0.1:8000/";
-// production    
-// export const API_URL = "https://pro.pilotbazar.com/"; 
-// development
-// export const API_URL = "https://staging.pilotbazar.com/";
-export const API_URL = "https://api.pilotbazar.com/";
-// export const API_URL = "https://www.api.pilotbazar.xyz/";
+const normalizeApiUrl = (url) => {
+  const fallback = "https://api.pilotbazar.com/";
+  const rawUrl = String(url || fallback).trim();
+  const withoutApiPrefix = rawUrl.replace(/\/api\/?$/i, "");
 
-// export const API_URL = "https://deepskyblue-whale-573676.hostingersite.com/";
+  return withoutApiPrefix.endsWith("/") ? withoutApiPrefix : `${withoutApiPrefix}/`;
+};
 
-// development
-// export const API_URL = "https://floralwhite-porpoise-504857.hostingersite.com/";
+// reads NEXT_PUBLIC_API_URL (set per-environment in .env/.env.docker/.env.local);
+// falls back to production so a missing env var never silently breaks a deploy
+export const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);

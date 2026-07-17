@@ -767,7 +767,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleWhatsappClick = () => {
-        const rawPhoneNumber = "+8809638660077";
+        const rawPhoneNumber = "+8801407054400";
         const phoneNumber = rawPhoneNumber.replace("+", "");
         const productDetailsUrl = window.location.href;
         const message = `Hello,\nI am interested about this product. Please give me more information.\n${productDetailsUrl}`;
@@ -795,7 +795,7 @@ const ProductDetails = ({ productDetails }) => {
         .map((value) => formatDetailValue(value))
         .filter((value) => value !== "-")
         .join("/");
-    const agencyName = formatDetailValue(productDetails?.shop?.s_name || productDetails?.user?.name || "Click4Details");
+    const agencyName = formatDetailValue(productDetails?.shop?.s_name || productDetails?.user?.name || "Pilot Bazar Ltd.");
 
     const gdocDownloadControl = shouldShowGdocButton ? (
         <button

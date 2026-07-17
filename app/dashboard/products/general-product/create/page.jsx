@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { useAppContext } from "@/context/AppContext";
+import PblHistoryPanel from "@/components/PblHistoryPanel";
 import CategoryService from "@/services/CategoryService";
 import GeneralProductService from "@/services/GeneralProductService";
 import LocationService from "@/services/LocationService";
@@ -29,6 +30,8 @@ import ShopService from "@/services/ShopService";
 import SupplierService from "@/services/SupplierService";
 import VehicleModelService from "@/services/VehicleModelService";
 import constData from "@/lib/constant";
+import { hasPermission } from "@/lib/utils";
+import { formatPermissions } from "@/helpers/functions";
 
 const DRAFT_PREFIX = "pbl.general-product";
 
@@ -60,6 +63,7 @@ const emptyBasic = {
   pblTest: "",
   productDetails: "",
   saleByPbl: false,
+  pblPartnershipExpireDate: "",
   showSellerMobile: false,
   status: "active",
   secretText: "",
@@ -162,6 +166,7 @@ const toShopOptions = (items) => {
     unique.set(String(shop.s_id), {
       value: String(shop.s_id),
       label: shop.s_title,
+      phone: shop?.user?.phone || shop?.s_user_phone || item?.user?.phone || "",
       userId: shop.s_user_id || item?.s_user_id || shop?.user?.id || item?.user?.id,
     });
   });
@@ -264,6 +269,18 @@ const imageUrl = (image) => {
   return parsed.secure_url || parsed.url || "";
 };
 
+// like imageUrl(), but also keeps the S3/document public_id so a removed existing
+// image can be reported back to the API (see pv_images_remove / p_images_remove).
+const imageMeta = (image) => {
+  const parsed = maybeJson(image);
+
+  if (!parsed) return null;
+  if (typeof parsed === "string") return parsed ? { url: parsed, publicId: "" } : null;
+
+  const url = parsed.secure_url || parsed.url || "";
+  return url ? { url, publicId: parsed.public_id || "" } : null;
+};
+
 const readDraft = (key) => {
   try {
     return JSON.parse(localStorage.getItem(key) || "null");
@@ -321,7 +338,7 @@ const variantsFromProduct = (product) => {
         lowStockThreshold: "5",
         status: product?.p_status || "active",
         attributes: {},
-        existingPrimaryImage: "",
+        existingPrimaryImage: null,
         existingGalleryImages: [],
       },
     ];
@@ -347,8 +364,8 @@ const variantsFromProduct = (product) => {
       lowStockThreshold: stringValue(item?.pv_low_stock_threshold),
       status: item?.pv_status || "active",
       attributes,
-      existingPrimaryImage: imageUrl(item?.pv_primary_image),
-      existingGalleryImages: arrayValue(item?.pv_images).map(imageUrl).filter(Boolean),
+      existingPrimaryImage: imageMeta(item?.pv_primary_image),
+      existingGalleryImages: arrayValue(item?.pv_images).map(imageMeta).filter(Boolean),
     };
   });
 };
@@ -412,9 +429,8 @@ const TextInput = ({ label, error, className = "", ...props }) => (
     <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
     <input
       {...props}
-      className={`h-10 w-full rounded-md border px-3 text-sm outline-none transition focus:border-slate-900 ${
-        error ? "border-red-400" : "border-slate-300"
-      }`}
+      className={`h-10 w-full rounded-md border px-3 text-sm outline-none transition focus:border-slate-900 ${error ? "border-red-400" : "border-slate-300"
+        }`}
     />
     <FieldError message={error} />
   </label>
@@ -425,9 +441,8 @@ const SelectInput = ({ label, error, options, placeholder = "Select", className 
     <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
     <select
       {...props}
-      className={`h-10 w-full rounded-md border bg-white px-3 text-sm outline-none transition focus:border-slate-900 ${
-        error ? "border-red-400" : "border-slate-300"
-      }`}
+      className={`h-10 w-full rounded-md border bg-white px-3 text-sm outline-none transition focus:border-slate-900 ${error ? "border-red-400" : "border-slate-300"
+        }`}
     >
       <option value="">{placeholder}</option>
       {options.map((option) => (
@@ -453,9 +468,13 @@ const SearchableSelect = ({
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
-  const filteredOptions = options.filter((option) =>
-    String(option.label || "").toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredOptions = options.filter((option) => {
+    const term = query.toLowerCase();
+    return (
+      String(option.label || "").toLowerCase().includes(term) ||
+      String(option.phone || "").toLowerCase().includes(term)
+    );
+  });
 
   return (
     <label className={`relative block ${className}`}>
@@ -463,9 +482,8 @@ const SearchableSelect = ({
       <button
         type="button"
         disabled={disabled}
-        className={`flex h-10 w-full items-center justify-between rounded-md border bg-white px-3 text-left text-sm outline-none transition focus:border-slate-900 disabled:bg-slate-100 disabled:text-slate-400 ${
-          error ? "border-red-400" : "border-slate-300"
-        }`}
+        className={`flex h-10 w-full items-center justify-between rounded-md border bg-white px-3 text-left text-sm outline-none transition focus:border-slate-900 disabled:bg-slate-100 disabled:text-slate-400 ${error ? "border-red-400" : "border-slate-300"
+          }`}
         onClick={() => setIsOpen((current) => !current)}
       >
         <span className={selected ? "text-slate-900" : "text-slate-400"}>{selected?.label || placeholder}</span>
@@ -500,9 +518,8 @@ const SearchableSelect = ({
                 <button
                   type="button"
                   key={option.value}
-                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${
-                    option.value === value ? "bg-slate-100 font-medium text-slate-900" : "text-slate-700"
-                  }`}
+                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${option.value === value ? "bg-slate-100 font-medium text-slate-900" : "text-slate-700"
+                    }`}
                   onMouseDown={(event) => {
                     event.preventDefault();
                     onChange(option.value, option);
@@ -510,7 +527,10 @@ const SearchableSelect = ({
                     setIsOpen(false);
                   }}
                 >
-                  {option.label}
+                  <span className="flex items-center justify-between gap-3">
+                    <span>{option.label}</span>
+                    {option.phone ? <span className="text-xs text-slate-400">{option.phone}</span> : null}
+                  </span>
                 </button>
               ))
             ) : (
@@ -534,9 +554,8 @@ const FileDrop = ({ label, multiple = false, value, onChange, accept = "image/*"
       <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
       <div className="relative">
         <label
-          className={`flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed bg-white px-4 py-5 text-center ${
-            error ? "border-red-400" : "border-slate-300"
-          }`}
+          className={`flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed bg-white px-4 py-5 text-center ${error ? "border-red-400" : "border-slate-300"
+            }`}
         >
           {showPreview ? (
             <img src={previewUrl} alt="" className="mb-2 h-14 w-14 rounded-md object-cover" />
@@ -574,7 +593,7 @@ const FileDrop = ({ label, multiple = false, value, onChange, accept = "image/*"
 
 export function GeneralProductFormWizard({ mode = "create", productId = "" } = {}) {
   const router = useRouter();
-  const { user: contextUser } = useAppContext();
+  const { user: contextUser, permissionList } = useAppContext();
   const currentUser = useMemo(() => parseUser(contextUser), [contextUser]);
   const isEdit = mode === "edit";
   const draftKey = useMemo(() => draftKeyFor(isEdit ? "edit" : "create", productId), [isEdit, productId]);
@@ -584,11 +603,17 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
   const [featuredImage, setFeaturedImage] = useState(null);
   const [galleryImages, setGalleryImages] = useState([]);
   const [pblImage, setPblImage] = useState(null);
-  const [existingFeaturedImage, setExistingFeaturedImage] = useState("");
+  const [existingFeaturedImage, setExistingFeaturedImage] = useState(null);
   const [existingGalleryImages, setExistingGalleryImages] = useState([]);
-  const [existingPblImage, setExistingPblImage] = useState("");
+  const [existingPblImage, setExistingPblImage] = useState(null);
+  const [removedFeaturedImagePublicId, setRemovedFeaturedImagePublicId] = useState("");
+  const [removedGalleryImages, setRemovedGalleryImages] = useState([]);
+  const [removedPblImagePublicId, setRemovedPblImagePublicId] = useState("");
   const [secretDocs, setSecretDocs] = useState([]);
   const [existingSecretDocs, setExistingSecretDocs] = useState([]);
+  const [secretDocs2, setSecretDocs2] = useState([]);
+  const [existingSecretDocs2, setExistingSecretDocs2] = useState([]);
+  const [sellerInfoRows, setSellerInfoRows] = useState([{ name: "", phone: "" }]);
   const [attributes, setAttributes] = useState(cloneInitialAttributes);
   const [variants, setVariants] = useState([]);
   const [variantMedia, setVariantMedia] = useState({});
@@ -619,6 +644,25 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
   const pageTitle = isEdit ? "Edit Product" : "Create Product";
   const canApprovePblSale = canManagePblSale(currentUser);
   const showAdditionalPrice = checkAdditionalPriceAccess(currentUser);
+
+  const canManagePbl = (targetUser = currentUser) => {
+    if (!targetUser) return false;
+    const targetPermissions = permissionList?.length ? permissionList : formatPermissions(targetUser?.permissions ?? []);
+    const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+    return userMode === "supreme" || hasPermission(targetPermissions, 0, "Product", "Create");
+  };
+
+  const handleSellerInfoChange = (index, field, value) => {
+    setSellerInfoRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  };
+
+  const handleAddSellerInfoRow = () => {
+    setSellerInfoRows((prev) => [...prev, { name: "", phone: "" }]);
+  };
+
+  const handleRemoveSellerInfoRow = (index) => {
+    setSellerInfoRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
 
   useEffect(() => {
     if (isEdit) return;
@@ -681,6 +725,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
           pblTest: description?.pbl_test || "",
           productDetails: description?.user || "",
           saleByPbl: Number(product?.p_is_saleBy_pbl) === 1,
+          pblPartnershipExpireDate: product?.p_pbl_partnership_expire_date || "",
           showSellerMobile: Number(product?.p_show_seller_mobile) === 1,
           status: product?.p_status || "active",
           secretText: product?.p_secret_text || "",
@@ -697,11 +742,20 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
         setFeaturedImage(null);
         setGalleryImages([]);
         setPblImage(null);
-        setExistingFeaturedImage(imageUrl(product?.p_primary_image || product?.p_default_image));
-        setExistingGalleryImages(arrayValue(product?.p_images).map(imageUrl).filter(Boolean));
-        setExistingPblImage(imageUrl(product?.p_pbl_image));
+        setExistingFeaturedImage(imageMeta(product?.p_primary_image || product?.p_default_image));
+        setExistingGalleryImages(arrayValue(product?.p_images).map(imageMeta).filter(Boolean));
+        setExistingPblImage(imageMeta(product?.p_pbl_image));
+        setRemovedFeaturedImagePublicId("");
+        setRemovedGalleryImages([]);
+        setRemovedPblImagePublicId("");
         setSecretDocs([]);
         setExistingSecretDocs(arrayValue(product?.p_secret_docs).map(imageUrl).filter(Boolean));
+        setSecretDocs2([]);
+        setExistingSecretDocs2(arrayValue(product?.p_secret_docs_2).map(imageUrl).filter(Boolean));
+        const existingSellerInfo = arrayValue(product?.p_seller_info)
+          .map((seller) => ({ name: seller?.name || "", phone: seller?.phone || "" }))
+          .filter((seller) => seller.name || seller.phone);
+        setSellerInfoRows(existingSellerInfo.length ? existingSellerInfo : [{ name: "", phone: "" }]);
         setVariants(productVariants);
         setVariantMedia(variantMediaById);
         setAttributes(attributesFromVariants(productVariants));
@@ -761,18 +815,18 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
       try {
         const shopRequest = canSeeAllShops(currentUser)
           ? ShopService.Queries.getShops({
-              _page: 1,
-              _perPage: 1000,
-              order: "desc",
-              orderBy: "s_id",
-            })
+            _page: 1,
+            _perPage: 1000,
+            order: "desc",
+            orderBy: "s_id",
+          })
           : currentUser?.id
             ? ShopService.Queries.getShopsWithCompanyShops({
-                _user_id: currentUser.id,
-                _type: "all",
-                _page: 1,
-                _perPage: 1000,
-              })
+              _user_id: currentUser.id,
+              _type: "all",
+              _page: 1,
+              _perPage: 1000,
+            })
             : Promise.resolve({ data: [] });
 
         const [typesRes, brandsRes, countriesRes, shopsRes] = await Promise.all([
@@ -1183,16 +1237,20 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
     formData.append("p_status", basic.status);
     formData.append("p_video_link", basic.videoLink);
     formData.append("p_is_saleBy_pbl", basic.saleByPbl ? 1 : 0);
-    formData.append("p_show_seller_mobile", basic.showSellerMobile ? 1 : 0);
-    formData.append("p_description[pbl]", basic.shortDescription);
+    formData.append("p_pbl_partnership_expire_date", basic.pblPartnershipExpireDate || "");
     formData.append("p_description[meta]", basic.shortDescription);
-    formData.append("p_description[pbl_test]", basic.pblTest);
     formData.append("p_description[user]", basic.productDetails);
     formData.append("extended_data_clear", "1");
-    if (canApprovePblSale) {
+    if (canManagePbl()) {
+      formData.append("p_description[pbl]", basic.shortDescription);
+      formData.append("p_description[pbl_test]", basic.pblTest);
+      formData.append("p_show_seller_mobile", basic.showSellerMobile ? 1 : 0);
+      const sellerInfoPayload = sellerInfoRows.filter((row) => row.name?.trim() || row.phone?.trim());
+      formData.append("p_seller_info", JSON.stringify(sellerInfoPayload));
       formData.append("p_secret_text", basic.secretText || "");
       formData.append("p_secret_video_link", basic.secretVideoLink || "");
       secretDocs.forEach((file, index) => formData.append(`p_secret_docs[${index}]`, file));
+      secretDocs2.forEach((file, index) => formData.append(`p_secret_docs_2[${index}]`, file));
     }
 
     validMoreInformation(moreInformation).forEach((item) => {
@@ -1202,8 +1260,11 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
     });
 
     if (featuredImage) formData.append("p_primary_image", featuredImage);
+    if (removedFeaturedImagePublicId) formData.append("p_primary_image_remove", removedFeaturedImagePublicId);
     if (pblImage && canApprovePblSale) formData.append("p_pbl_image", pblImage);
+    if (removedPblImagePublicId) formData.append("p_pbl_image_remove", removedPblImagePublicId);
     galleryImages.forEach((file) => formData.append("p_images[]", file));
+    removedGalleryImages.forEach((publicId) => formData.append("p_images_remove[]", publicId));
 
     const variantsPayload = variants.map((variant, index) => {
       const media = variantMedia[variant.id] || {};
@@ -1211,12 +1272,19 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
       if (media.primaryImage) {
         formData.append(`pv_primary_image_${index}`, media.primaryImage);
       }
+      if (media.removedPrimaryImagePublicId) {
+        formData.append(`pv_primary_image_remove_${index}`, media.removedPrimaryImagePublicId);
+      }
 
       (media.galleryImages || []).forEach((file) => {
         formData.append(`pv_images_${index}[]`, file);
       });
+      (media.removedGalleryImages || []).forEach((publicId) => {
+        formData.append(`pv_images_remove_${index}[]`, publicId);
+      });
 
       return {
+        id: variant.backendId || undefined,
         title: variant.name,
         sku: variant.sku,
         status: variant.status,
@@ -1340,19 +1408,17 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                 <button
                   key={step.key}
                   type="button"
-                  className={`flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
-                    isActive ? "bg-slate-900 text-white" : "bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
+                  className={`flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${isActive ? "bg-slate-900 text-white" : "bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
                   onClick={() => setActiveStep(index)}
                 >
                   <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
-                      isActive
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${isActive
                         ? "border-white text-white"
                         : isDone
                           ? "border-emerald-600 bg-emerald-600 text-white"
                           : "border-slate-300 text-slate-500"
-                    }`}
+                      }`}
                   >
                     {isDone ? <Check className="h-4 w-4" /> : index + 1}
                   </span>
@@ -1376,6 +1442,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     error={errors.productName}
                     onChange={(event) => setBasicValue("productName", event.target.value)}
                   />
+                  
                   <SearchableSelect
                     label="Shop"
                     value={basic.shopId}
@@ -1383,6 +1450,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     options={shopOptions}
                     onChange={chooseShop}
                   />
+
                   <SearchableSelect
                     label="Supplier"
                     value={basic.supplierId}
@@ -1390,6 +1458,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     disabled={!basic.shopId}
                     onChange={(value) => setBasicValue("supplierId", value)}
                   />
+
                   <SearchableSelect
                     label="Product Type"
                     value={basic.productTypeId}
@@ -1397,6 +1466,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     options={productTypeOptions}
                     onChange={chooseProductType}
                   />
+
                   <div className="grid gap-3 md:col-span-2">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm font-medium text-slate-700">Category</span>
@@ -1426,12 +1496,14 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     </div>
                     <FieldError message={errors.categoryId} />
                   </div>
+
                   <SearchableSelect
                     label="Brand"
                     value={basic.brandId}
                     options={brandOptions}
                     onChange={chooseBrand}
                   />
+
                   <SearchableSelect
                     label="Model"
                     value={basic.modelId}
@@ -1439,6 +1511,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     disabled={!basic.brandId}
                     onChange={chooseModel}
                   />
+
                   <SearchableSelect
                     label="Package"
                     value={basic.packageId}
@@ -1446,6 +1519,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     disabled={!basic.modelId}
                     onChange={(value) => setBasicValue("packageId", value)}
                   />
+
                   <SearchableSelect
                     label="Outlet"
                     value={basic.outletId}
@@ -1453,12 +1527,14 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     disabled={!basic.shopId}
                     onChange={(value) => setBasicValue("outletId", value)}
                   />
+
                   <SearchableSelect
                     label="Country"
                     value={basic.countryId}
                     options={countryOptions}
                     onChange={chooseCountry}
                   />
+
                   <SearchableSelect
                     label="District"
                     value={basic.locationId}
@@ -1466,6 +1542,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     disabled={!basic.countryId}
                     onChange={(value) => setBasicValue("locationId", value)}
                   />
+
                   <SelectInput
                     label="Status"
                     value={basic.status}
@@ -1475,6 +1552,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     ]}
                     onChange={(event) => setBasicValue("status", event.target.value)}
                   />
+
                   <TextInput
                     label="Video Link"
                     type="url"
@@ -1482,89 +1560,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     placeholder="https://example.com/video"
                     onChange={(event) => setBasicValue("videoLink", event.target.value)}
                   />
-                  <label className="flex items-center justify-between rounded-md border border-slate-200 p-4 md:col-span-2">
-                    <span className="flex items-center gap-3">
-                      <ShieldCheck className="h-5 w-5 text-slate-700" />
-                      <span>
-                        <span className="block text-sm font-semibold text-slate-800">
-                          {canApprovePblSale ? "Approve Sale by PBL" : "Request Sale by PBL"}
-                        </span>
-                        <span className="block text-xs text-slate-500">
-                          {canApprovePblSale
-                            ? "Approved products can use PBL image and PBL sale display."
-                            : "The request will notify authorized PBL approvers."}
-                        </span>
-                      </span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={basic.saleByPbl}
-                      onChange={(event) => setBasicValue("saleByPbl", event.target.checked)}
-                    />
-                  </label>
-                  <label className="flex items-center justify-between rounded-md border border-slate-200 p-4 md:col-span-2">
-                    <span className="flex items-center gap-3">
-                      <ShieldCheck className="h-5 w-5 text-slate-700" />
-                      <span>
-                        <span className="block text-sm font-semibold text-slate-800">Show Seller Mobile Number</span>
-                        <span className="block text-xs text-slate-500">
-                          Highlights the seller&apos;s mobile number with an animation on the product details page.
-                        </span>
-                      </span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={basic.showSellerMobile}
-                      onChange={(event) => setBasicValue("showSellerMobile", event.target.checked)}
-                    />
-                  </label>
-                  <label className="block md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">PBL Description</span>
-                    <textarea
-                      value={basic.shortDescription}
-                      onChange={(event) => setBasicValue("shortDescription", event.target.value)}
-                      rows={3}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                    />
-                  </label>
-                  <label className="block md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">PBL Test</span>
-                    <textarea
-                      value={basic.pblTest}
-                      onChange={(event) => setBasicValue("pblTest", event.target.value)}
-                      rows={3}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                    />
-                  </label>
-                  {canApprovePblSale && (
-                    <>
-                      <label className="block md:col-span-2">
-                        <span className="mb-1 block text-sm font-medium text-slate-700">Secret Text</span>
-                        <textarea
-                          value={basic.secretText}
-                          onChange={(event) => setBasicValue("secretText", event.target.value)}
-                          rows={3}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                        />
-                      </label>
-                      <TextInput
-                        label="Secret Video Link"
-                        type="url"
-                        value={basic.secretVideoLink}
-                        placeholder="https://example.com/video"
-                        onChange={(event) => setBasicValue("secretVideoLink", event.target.value)}
-                      />
-                    </>
-                  )}
-                  <label className="block md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">User Description</span>
-                    <textarea
-                      value={basic.productDetails}
-                      onChange={(event) => setBasicValue("productDetails", event.target.value)}
-                      rows={5}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                    />
-                  </label>
+
 
                   <div className="md:col-span-2 rounded-md border border-slate-200 bg-slate-50 p-4">
                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1572,14 +1568,6 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                         <h3 className="text-sm font-semibold text-slate-900">More Information</h3>
                         <p className="text-xs text-slate-500">Add public product facts like warranty, material, origin, care, or delivery notes.</p>
                       </div>
-                      <button
-                        type="button"
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-medium text-white hover:bg-slate-800"
-                        onClick={addMoreInformationRow}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Row
-                      </button>
                     </div>
 
                     <div className="grid gap-3">
@@ -1606,8 +1594,170 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                           </button>
                         </div>
                       ))}
+
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="button"
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-medium text-white hover:bg-slate-800"
+                          onClick={addMoreInformationRow}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  <label className="block md:col-span-2">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">User Description</span>
+                    <textarea
+                      value={basic.productDetails}
+                      onChange={(event) => setBasicValue("productDetails", event.target.value)}
+                      rows={5}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                    />
+                  </label>
+
+
+                  <label className="flex items-center justify-between rounded-md border border-slate-200 p-4 md:col-span-2">
+                    <span className="flex items-center gap-3">
+                      <ShieldCheck className="h-5 w-5 text-slate-700" />
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-800">
+                          {canApprovePblSale ? "Request to Approve Sale by PBL" : "Request Sale by PBL"}
+                        </span>
+                        <span className="block text-xs text-slate-500">
+                          {canApprovePblSale
+                            ? "Approved products can use PBL image and PBL sale display."
+                            : "The request will notify authorized PBL approvers."}
+                        </span>
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={basic.saleByPbl}
+                      onChange={(event) => setBasicValue("saleByPbl", event.target.checked)}
+                    />
+                  </label>
+
+                  {canManagePbl() && (
+                    <div className="md:col-span-2 rounded-md border border-slate-200 bg-slate-50 p-4">
+                      <div className="mb-3">
+                        <h3 className="text-sm font-semibold text-slate-900">PBL Information</h3>
+                        <p className="text-xs text-slate-500">Visible only to super admins and users with PBL permission.</p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="block md:col-span-2">
+                          <span className="mb-1 block text-sm font-medium text-slate-700">Partnership Expire Date</span>
+                          <input
+                            type="date"
+                            value={basic.pblPartnershipExpireDate}
+                            onChange={(event) => setBasicValue("pblPartnershipExpireDate", event.target.value)}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                          />
+                          <span className="mt-1 block text-xs text-slate-500">
+                            After this date, the product is automatically removed from PBL sale (home &amp; category pages).
+                          </span>
+                        </label>
+                        <label className="block md:col-span-2">
+                          <span className="mb-1 block text-sm font-medium text-slate-700">PBL Description</span>
+                          <textarea
+                            value={basic.shortDescription}
+                            onChange={(event) => setBasicValue("shortDescription", event.target.value)}
+                            rows={3}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                          />
+                        </label>
+                        <label className="block md:col-span-2">
+                          <span className="mb-1 block text-sm font-medium text-slate-700">PBL Text</span>
+                          <textarea
+                            value={basic.pblTest}
+                            onChange={(event) => setBasicValue("pblTest", event.target.value)}
+                            rows={3}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                          />
+                        </label>
+                        <label className="block md:col-span-2">
+                          <span className="mb-1 block text-sm font-medium text-slate-700">Secret Text</span>
+                          <textarea
+                            value={basic.secretText}
+                            onChange={(event) => setBasicValue("secretText", event.target.value)}
+                            rows={3}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                          />
+                        </label>
+                        <TextInput
+                          label="Secret Video Link"
+                          type="url"
+                          value={basic.secretVideoLink}
+                          placeholder="https://example.com/video"
+                          onChange={(event) => setBasicValue("secretVideoLink", event.target.value)}
+                        />
+                        <label className="flex items-center justify-between rounded-md border border-slate-200 bg-white p-4 md:col-span-2">
+                          <span className="flex items-center gap-3">
+                            <ShieldCheck className="h-5 w-5 text-slate-700" />
+                            <span>
+                              <span className="block text-sm font-semibold text-slate-800">Show Seller Mobile Number</span>
+                              <span className="block text-xs text-slate-500">
+                                Highlights the seller&apos;s mobile number with an animation on the product details page.
+                              </span>
+                            </span>
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={basic.showSellerMobile}
+                            onChange={(event) => setBasicValue("showSellerMobile", event.target.checked)}
+                          />
+                        </label>
+                        {basic.showSellerMobile && (
+                          <div className="md:col-span-2">
+                            <h4 className="mb-2 text-sm font-semibold text-slate-800">Sellers</h4>
+                            <div className="grid gap-2">
+                              {sellerInfoRows.map((row, index) => (
+                                <div key={index} className="grid gap-2 md:grid-cols-[1fr_1fr_90px] md:items-end">
+                                  <label className="block">
+                                    <span className="mb-1 block text-xs font-medium text-slate-700">Seller Name</span>
+                                    <input
+                                      value={row.name}
+                                      placeholder="Seller Name"
+                                      className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                      onChange={(event) => handleSellerInfoChange(index, "name", event.target.value)}
+                                    />
+                                  </label>
+                                  <label className="block">
+                                    <span className="mb-1 block text-xs font-medium text-slate-700">Phone</span>
+                                    <input
+                                      value={row.phone}
+                                      placeholder="Phone"
+                                      className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                      onChange={(event) => handleSellerInfoChange(index, "phone", event.target.value)}
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSellerInfoRow(index)}
+                                    className="flex h-10 items-center justify-center rounded-md border border-red-300 text-sm text-red-600 hover:bg-red-50"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleAddSellerInfoRow}
+                              className="mt-2 rounded-md border border-blue-300 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50"
+                            >
+                              + Add Seller
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <PblHistoryPanel type="product" id={productId} />
+                    </div>
+                  )}
+
+
                 </section>
               )}
 
@@ -1620,18 +1770,24 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                       onChange={setFeaturedImage}
                       error={errors.featuredImage}
                       existingCount={existingFeaturedImage ? 1 : 0}
-                      previewUrl={existingFeaturedImage}
-                      onClear={() => setExistingFeaturedImage("")}
+                      previewUrl={existingFeaturedImage?.url || ""}
+                      onClear={() => {
+                        if (existingFeaturedImage?.publicId) setRemovedFeaturedImagePublicId(existingFeaturedImage.publicId);
+                        setExistingFeaturedImage(null);
+                      }}
                     />
                     <div>
                       <span className="mb-1 block text-sm font-medium text-slate-700">Gallery Images</span>
                       <div className="flex flex-wrap gap-2 rounded-md border border-dashed border-slate-300 bg-white p-3">
-                        {existingGalleryImages.map((url, i) => (
-                          <div key={url} className="relative">
-                            <img src={url} alt="" className="h-16 w-16 rounded-md object-cover" />
+                        {existingGalleryImages.map((img, i) => (
+                          <div key={img.publicId || img.url} className="relative">
+                            <img src={img.url} alt="" className="h-16 w-16 rounded-md object-cover" />
                             <button
                               type="button"
-                              onClick={() => setExistingGalleryImages((imgs) => imgs.filter((_, j) => j !== i))}
+                              onClick={() => {
+                                setExistingGalleryImages((imgs) => imgs.filter((_, j) => j !== i));
+                                if (img.publicId) setRemovedGalleryImages((prev) => [...prev, img.publicId]);
+                              }}
                               className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                             >
                               <X className="h-3 w-3" />
@@ -1665,6 +1821,83 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                         </label>
                       </div>
                     </div>
+
+                    {/* -------------- */}
+
+                      {hasVariants && (
+                        <div className="md:col-span-2 rounded-md border p-4">
+                          <div className="border-b  py-3 text-sm font-semibold">Variant Images</div>
+                          <div className="divide-y ">
+                            {variants.map((variant) => {
+                              const media = variantMedia[variant.id] || {};
+
+                              return (
+                                <div key={variant.id} className="grid gap-4 px-4 py-4 md:grid-cols-[1fr_180px_180px] md:items-center">
+                                  <span className="text-sm font-medium text-slate-800">{variant.name}</span>
+                                  <div className="grid gap-1">
+                                    {media.existingPrimaryImage && !media.primaryImage ? (
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative">
+                                          <img src={media.existingPrimaryImage} alt="" className="h-12 w-12 rounded-md object-cover" />
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setVariantMedia((current) => ({
+                                                ...current,
+                                                [variant.id]: { ...media, existingPrimaryImage: "" },
+                                              }))
+                                            }
+                                            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                                          >
+                                            <X className="h-2.5 w-2.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="text-sm"
+                                        onChange={(event) =>
+                                          setVariantMedia((current) => ({
+                                            ...current,
+                                            [variant.id]: {
+                                              ...media,
+                                              primaryImage: event.target.files?.[0] || null,
+                                            },
+                                          }))
+                                        }
+                                      />
+                                    )}
+                                  </div>
+                                  <div className="grid gap-1">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      className="text-sm"
+                                      onChange={(event) =>
+                                        setVariantMedia((current) => ({
+                                          ...current,
+                                          [variant.id]: {
+                                            ...media,
+                                            galleryImages: Array.from(event.target.files || []),
+                                          },
+                                        }))
+                                      }
+                                    />
+                                    {Boolean(media.existingGalleryImages?.length) && !media.galleryImages?.length && (
+                                      <span className="text-xs text-slate-500">{media.existingGalleryImages.length} gallery images</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                  {/* -------------------------- */}
                     {canApprovePblSale && (
                       <div className="md:col-span-2 rounded-md border border-slate-200 bg-slate-50 p-4">
                         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
@@ -1676,8 +1909,11 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                           value={pblImage}
                           onChange={setPblImage}
                           existingCount={existingPblImage ? 1 : 0}
-                          previewUrl={existingPblImage}
-                          onClear={() => setExistingPblImage("")}
+                          previewUrl={existingPblImage?.url || ""}
+                          onClear={() => {
+                            if (existingPblImage?.publicId) setRemovedPblImagePublicId(existingPblImage.publicId);
+                            setExistingPblImage(null);
+                          }}
                         />
                       </div>
                     )}
@@ -1697,6 +1933,22 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                         />
                       </div>
                     )}
+                    {canApprovePblSale && (
+                      <div className="md:col-span-2 rounded-md border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                          <ShieldCheck className="h-4 w-4" />
+                          Secret Documents 2
+                        </div>
+                        <FileDrop
+                          label="Secret Documents 2"
+                          multiple
+                          accept="image/*,.pdf,.doc,.docx"
+                          value={secretDocs2}
+                          onChange={setSecretDocs2}
+                          existingCount={existingSecretDocs2.length}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {hasVariants && (
@@ -1705,22 +1957,27 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                       <div className="divide-y divide-slate-100">
                         {variants.map((variant) => {
                           const media = variantMedia[variant.id] || {};
+                          const updateMedia = (patch) =>
+                            setVariantMedia((current) => ({
+                              ...current,
+                              [variant.id]: { ...(current[variant.id] || {}), ...patch },
+                            }));
 
                           return (
-                            <div key={variant.id} className="grid gap-4 px-4 py-4 md:grid-cols-[1fr_180px_180px] md:items-center">
+                            <div key={variant.id} className="grid gap-4 px-4 py-4 md:grid-cols-[1fr_180px_220px] md:items-center">
                               <span className="text-sm font-medium text-slate-800">{variant.name}</span>
                               <div className="grid gap-1">
                                 {media.existingPrimaryImage && !media.primaryImage ? (
                                   <div className="flex items-center gap-2">
                                     <div className="relative">
-                                      <img src={media.existingPrimaryImage} alt="" className="h-12 w-12 rounded-md object-cover" />
+                                      <img src={media.existingPrimaryImage.url} alt="" className="h-12 w-12 rounded-md object-cover" />
                                       <button
                                         type="button"
                                         onClick={() =>
-                                          setVariantMedia((current) => ({
-                                            ...current,
-                                            [variant.id]: { ...media, existingPrimaryImage: "" },
-                                          }))
+                                          updateMedia({
+                                            existingPrimaryImage: null,
+                                            removedPrimaryImagePublicId: media.existingPrimaryImage.publicId || "",
+                                          })
                                         }
                                         className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                                       >
@@ -1733,37 +1990,59 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                                     type="file"
                                     accept="image/*"
                                     className="text-sm"
-                                    onChange={(event) =>
-                                      setVariantMedia((current) => ({
-                                        ...current,
-                                        [variant.id]: {
-                                          ...media,
-                                          primaryImage: event.target.files?.[0] || null,
-                                        },
-                                      }))
-                                    }
+                                    onChange={(event) => updateMedia({ primaryImage: event.target.files?.[0] || null })}
                                   />
                                 )}
                               </div>
                               <div className="grid gap-1">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  multiple
-                                  className="text-sm"
-                                  onChange={(event) =>
-                                    setVariantMedia((current) => ({
-                                      ...current,
-                                      [variant.id]: {
-                                        ...media,
-                                        galleryImages: Array.from(event.target.files || []),
-                                      },
-                                    }))
-                                  }
-                                />
-                                {Boolean(media.existingGalleryImages?.length) && !media.galleryImages?.length && (
-                                  <span className="text-xs text-slate-500">{media.existingGalleryImages.length} gallery images</span>
-                                )}
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(media.existingGalleryImages || []).map((img, i) => (
+                                    <div key={img.publicId || img.url} className="relative">
+                                      <img src={img.url} alt="" className="h-10 w-10 rounded object-cover" />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateMedia({
+                                            existingGalleryImages: (media.existingGalleryImages || []).filter((_, j) => j !== i),
+                                            removedGalleryImages: img.publicId
+                                              ? [...(media.removedGalleryImages || []), img.publicId]
+                                              : media.removedGalleryImages || [],
+                                          })
+                                        }
+                                        className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                                      >
+                                        <X className="h-2 w-2" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  {(media.galleryImages || []).map((file, i) => (
+                                    <div key={i} className="relative">
+                                      <img src={URL.createObjectURL(file)} alt="" className="h-10 w-10 rounded object-cover" />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateMedia({ galleryImages: (media.galleryImages || []).filter((_, j) => j !== i) })
+                                        }
+                                        className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                                      >
+                                        <X className="h-2 w-2" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <label className="flex h-10 w-10 cursor-pointer items-center justify-center rounded border border-dashed border-slate-300 text-slate-400 hover:bg-slate-50">
+                                    <ImagePlus className="h-4 w-4" />
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      className="hidden"
+                                      onChange={(event) => {
+                                        const files = Array.from(event.target.files || []);
+                                        updateMedia({ galleryImages: [...(media.galleryImages || []), ...files] });
+                                      }}
+                                    />
+                                  </label>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1951,9 +2230,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                             <td className="px-3 py-2">
                               <input
                                 value={variant.name}
-                                className={`h-9 w-full rounded-md border px-2 text-sm outline-none focus:border-slate-900 ${
-                                  errors[`variant_${index}_name`] ? "border-red-400" : "border-slate-300"
-                                }`}
+                                className={`h-9 w-full rounded-md border px-2 text-sm outline-none focus:border-slate-900 ${errors[`variant_${index}_name`] ? "border-red-400" : "border-slate-300"
+                                  }`}
                                 onChange={(event) => setVariant(variant.id, "name", event.target.value)}
                               />
                             </td>
@@ -1976,9 +2254,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                               <input
                                 type="number"
                                 value={variant.sellingPrice}
-                                className={`h-9 w-full rounded-md border px-2 text-sm outline-none focus:border-slate-900 ${
-                                  errors[`variant_${index}_sellingPrice`] ? "border-red-400" : "border-slate-300"
-                                }`}
+                                className={`h-9 w-full rounded-md border px-2 text-sm outline-none focus:border-slate-900 ${errors[`variant_${index}_sellingPrice`] ? "border-red-400" : "border-slate-300"
+                                  }`}
                                 onChange={(event) => setVariant(variant.id, "sellingPrice", event.target.value)}
                               />
                             </td>
@@ -2034,9 +2311,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                               <input
                                 type="number"
                                 value={variant.stockQuantity}
-                                className={`h-9 w-full rounded-md border px-2 text-sm outline-none focus:border-slate-900 ${
-                                  errors[`variant_${index}_stockQuantity`] ? "border-red-400" : "border-slate-300"
-                                }`}
+                                className={`h-9 w-full rounded-md border px-2 text-sm outline-none focus:border-slate-900 ${errors[`variant_${index}_stockQuantity`] ? "border-red-400" : "border-slate-300"
+                                  }`}
                                 onChange={(event) => setVariant(variant.id, "stockQuantity", event.target.value)}
                               />
                             </td>

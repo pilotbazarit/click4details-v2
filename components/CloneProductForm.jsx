@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import Loading from '@/components/Loading';
+import ShopSelect from '@/components/ShopSelect';
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -368,12 +369,7 @@ const CloneProductForm = ({ productId }) => {
                 _perPage: 1000
             });
 
-            const shopOptions = response.data.data.map((shop) => ({
-                value: shop.s_id,
-                label: shop.s_title,
-            }));
-
-            setShopData(shopOptions);
+            setShopData(response.data.data || []);
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to fetch data");
         }
@@ -1548,22 +1544,18 @@ const CloneProductForm = ({ productId }) => {
                                             <label className="text-base font-medium" htmlFor="customer-name">
                                                 Shop List <span className="text-red-500">*</span>
                                             </label>
-                                            <select
-                                                id="v_shop_id"
+                                            <Controller
                                                 name="v_shop_id"
-                                                className="outline-none py-2 px-3 rounded border w-full"
-                                                {...register("v_shop_id")}
-                                            >
-                                                <option value=""> Select Shop</option>
-                                                {
-                                                    shopData.map((shop) => (
-                                                        <option key={shop.value} value={shop.value}>
-                                                            {shop.label}
-                                                        </option>
-                                                    ))
-                                                }
-
-                                            </select>
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <ShopSelect
+                                                        shops={shopData}
+                                                        value={field.value}
+                                                        onChange={(shopId) => field.onChange(shopId)}
+                                                        placeholder="Select Shop"
+                                                    />
+                                                )}
+                                            />
                                             {errors.v_shop_id && (
                                                 <p className="text-red-500 text-sm">{errors.v_shop_id.message}</p>
                                             )}

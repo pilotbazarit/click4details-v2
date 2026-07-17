@@ -1,5 +1,6 @@
 'use client'
 import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import ProductDetailsSlider from "@/components/frontend/ProductDetailsSlider";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -418,6 +419,39 @@ const SecretDocumentsModal = ({ documents, onClose }) => {
         </div>
     );
 };
+
+// ── Typewriter Price Animation Component ──────────────────────────────
+const TypewriterPrice = ({ text, className = "" }) => {
+    const chars = String(text || "").split("");
+    const containerVariants = {
+        hidden: {},
+        visible: {
+            transition: {
+                staggerChildren: 0.065,
+            },
+        },
+    };
+    const charVariants = {
+        hidden: { opacity: 0, y: 8 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: "easeOut" } },
+    };
+    return (
+        <motion.span
+            key={text}
+            className={`inline ${className}`}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+        >
+            {chars.map((char, i) => (
+                <motion.span key={i} variants={charVariants}>
+                    {char === " " ? "\u00A0" : char}
+                </motion.span>
+            ))}
+        </motion.span>
+    );
+};
+
 const ProductDetails = ({ productDetails }) => {
     const [sliderImage, setSliderImage] = useState([])
     const [user, setUser] = useState(null);
@@ -443,7 +477,7 @@ const ProductDetails = ({ productDetails }) => {
         .map((doc) => doc?.url || doc?.secure_url)
         .filter(Boolean), [productDetails]);
 
-    
+
 
     const additionalSecretDocuments = useMemo(() => {
         const docs = Array.isArray(productDetails?.data?.v_secret_docs)
@@ -1173,79 +1207,125 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     return (
-        <div className="px-4">
+        <div className="px-4 overflow-x-hidden">
             <div>
                 <div className="flex flex-col-reverse md:flex-row md:justify-between md:items-center mt-4">
                     <div>
-                        <p className="text-xl font-bold md:text-3xl md:font-medium">{productDetails?.v_title}</p>
+                        <p className="text-xl text-blue-700 font-bold md:text-3xl md:font-medium">
+                            <TypewriterPrice text={productDetails?.v_title} />
+                        </p>
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
                     </div>
 
-                    <div className="hidden md:flex md:items-center md:justify-end gap-2 flex-wrap">
+                    <motion.div
+                        className="hidden md:flex md:items-center md:justify-end gap-2 flex-wrap"
+                        variants={{
+                            hidden: {},
+                            visible: { transition: { staggerChildren: 0.22, delayChildren: 2 } },
+                        }}
+                        initial="hidden"
+                        animate="visible"
+                    >
                         <div className="flex gap-2">
                             {isPublicProductDetails && (
-                                <button
+                                <motion.button
                                     onClick={() => setShopModalOpen(true)}
-                                    className="flex-1 border border-blue-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    className="flex-1 border border-blue-300 font-semibold px-4 py-2 rounded-lg"
+                                    variants={{
+                                        hidden: { opacity: 0, x: -60, scale: 0.9 },
+                                        visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 160, damping: 48 } },
+                                    }}
+                                    whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(59,130,246,0.25)' }}
+                                    whileTap={{ scale: 0.93 }}
                                 >
                                     <div className="flex items-center justify-center gap-2">
                                         <Copy className="h-4 w-4 text-blue-600" />
                                     </div>
-                                </button>
+                                </motion.button>
                             )}
 
-                            <button
+                            <motion.button
                                 onClick={() => setShareModalOpen(true)}
-                                className="flex-1 border border-green-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                className="flex-1 border border-green-300 font-semibold px-4 py-2 rounded-lg"
+                                variants={{
+                                    hidden: { opacity: 0, x: 60, scale: 0.9 },
+                                    visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 200, damping: 22 } },
+                                }}
+                                whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(34,197,94,0.25)' }}
+                                whileTap={{ scale: 0.93 }}
                             >
                                 <div className="flex items-center justify-center gap-2">
                                     <Share2 className="h-4 w-4 text-green-600" />
                                 </div>
-                            </button>
+                            </motion.button>
 
                             {
                                 (!isMyShop && !isCompanyShop) && (
-                                    <button
+                                    <motion.button
                                         onClick={handleCallClick}
-                                        className="flex-1 border border-purple-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                        className="flex-1 border border-purple-300 font-semibold px-4 py-2 rounded-lg"
+                                        variants={{
+                                            hidden: { opacity: 0, x: -60, scale: 0.9 },
+                                            visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 120, damping: 28 } },
+                                        }}
+                                        whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(168,85,247,0.25)' }}
+                                        whileTap={{ scale: 0.93 }}
                                     >
                                         <div className="flex items-center justify-center gap-2">
                                             <PhoneOutgoing className="h-4 w-4 text-purple-600" />
                                         </div>
-                                    </button>
+                                    </motion.button>
                                 )
                             }
 
                             {isPublicProductDetails && (
-                                <button
+                                <motion.button
                                     onClick={handleWhatsappClick}
-                                    className="flex-1 border-2 border-green-600 font-bold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    className="flex-1 border-2 border-green-600 font-bold px-4 py-2 rounded-lg"
+                                    variants={{
+                                        hidden: { opacity: 0, x: -60, scale: 0.9 },
+                                        visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 120, damping: 28 } },
+                                    }}
+                                    whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(22,163,74,0.3)' }}
+                                    whileTap={{ scale: 0.93 }}
                                 >
                                     <div className="flex items-center justify-center gap-2">
                                         <FaWhatsapp className="h-6 w-6 text-green-600" />
                                     </div>
-                                </button>
+                                </motion.button>
                             )}
 
                             {
                                 (!isMyShop && !isCompanyShop) && (
-                                    <button
+                                    <motion.button
                                         onClick={() => handleAddToCart(productDetails)}
-                                        className="flex-1 border border-orange-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                        className="flex-1 border border-orange-300 font-semibold px-4 py-2 rounded-lg"
+                                        variants={{
+                                            hidden: { opacity: 0, x: -60, scale: 0.9 },
+                                            visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 120, damping: 28 } },
+                                        }}
+                                        whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(249,115,22,0.25)' }}
+                                        whileTap={{ scale: 0.93 }}
                                     >
                                         <div className="flex items-center justify-center gap-2">
                                             <ShoppingCart className="h-4 w-4 text-orange-600" />
                                         </div>
-                                    </button>
+                                    </motion.button>
                                 )
                             }
 
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={() => toggleCompare(productDetails?.v_id)}
                                 title={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
                                 aria-label={isInCompare(productDetails?.v_id) ? "Remove from compare" : "Add to compare"}
-                                className={`flex-1 border font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95 ${isInCompare(productDetails?.v_id) ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-300'}`}
+                                className={`flex-1 border font-semibold px-4 py-2 rounded-lg ${isInCompare(productDetails?.v_id) ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-300'}`}
+                                variants={{
+                                    hidden: { opacity: 0, x: 60, scale: 0.9 },
+                                    visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 200, damping: 22 } },
+                                }}
+                                whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(6,182,212,0.25)' }}
+                                whileTap={{ scale: 0.93 }}
                             >
                                 <div className="flex items-center justify-center gap-1.5">
                                     <GitCompare className={`h-4 w-4 ${isInCompare(productDetails?.v_id) ? 'text-white' : 'text-cyan-600'}`} />
@@ -1253,81 +1333,40 @@ const ProductDetails = ({ productDetails }) => {
                                         <span className="text-xs text-white">Added</span>
                                     )}
                                 </div>
-                            </button>
+                            </motion.button>
 
                             {isMyOrCompanyDetails && (
-                                <button
+                                <motion.button
                                     onClick={() => handleEditProduct(productDetails)}
-                                    className="flex-1 border border-pink-300 font-semibold px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg active:scale-95"
+                                    className="flex-1 border border-pink-300 font-semibold px-4 py-2 rounded-lg"
+                                    variants={{
+                                        hidden: { opacity: 0, x: -60, scale: 0.9 },
+                                        visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 120, damping: 28 } },
+                                    }}
+                                    whileHover={{ scale: 1.1, boxShadow: '0 6px 20px rgba(236,72,153,0.25)' }}
+                                    whileTap={{ scale: 0.93 }}
                                 >
                                     <div className="flex items-center justify-center gap-2">
                                         <Edit className="h-4 w-4 text-pink-600" />
                                     </div>
-                                </button>
+                                </motion.button>
                             )}
                         </div>
 
-                        <button
+                        <motion.button
                             onClick={handleCopyAllClick}
-                            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
+                            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg shadow-md flex items-center gap-2"
+                            variants={{
+                                hidden: { opacity: 0, x: 60, scale: 0.9 },
+                                visible: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring', stiffness: 200, damping: 22 } },
+                            }}
+                            whileHover={{ scale: 1.07, boxShadow: '0 8px 24px rgba(37,99,235,0.4)' }}
+                            whileTap={{ scale: 0.95 }}
                         >
                             <Copy className="h-4 w-4" />
                             <span>Copy All</span>
-                        </button>
-                    </div>
-
-                    {/* <div className="w-full md:w-[39.5%] border border-gray-200 rounded-lg shadow p-2 space-y-2">
-                        <div>
-                            <div className="md:flex md:justify-between">
-                                <div className="flex space-x-4">
-                                    <div>
-                                        <div>
-                                            <h2 className="text-sm text-gray-500  pb-1">Seller Mobile Number</h2>
-                                        </div>
-                                        <div className="mb-2">
-                                            <p className="text-xl font-bold text-gray-800">
-                                                {
-                                                    user ? (
-                                                        <a href={`tel:${user?.phone}`}>{user?.phone}</a>
-                                                    ) : (
-                                                        <a href="tel:+8809638660077">+8809638660077</a>
-                                                    )
-                                                }
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex space-x-2 text-center items-center">
-                                        <div>
-                                            <a
-                                                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${domain}/product/${productDetails?.v_id}`)}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shadow-lg transition duration-300 ease-in-out text-white"
-                                            >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    className="w-6 h-6"
-                                                    fill="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path d="M20.52 3.48A11.92 11.92 0 0 0 12.07.06a11.93 11.93 0 0 0-10.7 17.2L.05 24l6.84-1.82a11.93 11.93 0 0 0 5.19 1.24h.01a11.92 11.92 0 0 0 8.43-20.94zM12 21.36a9.35 9.35 0 0 1-4.78-1.3l-.34-.2-4.05 1.08 1.1-3.94-.22-.35a9.35 9.35 0 1 1 8.3 4.71zm5.29-6.98c-.29-.14-1.7-.84-1.96-.94-.26-.1-.45-.14-.64.15s-.74.94-.9 1.14c-.17.2-.33.22-.62.08-.29-.14-1.21-.45-2.31-1.43-.85-.76-1.43-1.7-1.6-1.99-.17-.29-.02-.45.13-.6.13-.13.29-.33.43-.5.14-.17.19-.29.29-.48.1-.2.05-.37-.03-.52-.08-.14-.64-1.54-.88-2.11-.23-.55-.46-.48-.64-.49h-.55c-.17 0-.45.07-.68.33s-.89.87-.89 2.13.91 2.48 1.04 2.65c.13.17 1.78 2.7 4.32 3.78.6.26 1.06.41 1.42.53.6.19 1.15.16 1.58.1.48-.07 1.48-.6 1.69-1.18.2-.58.2-1.08.15-1.18-.05-.1-.24-.17-.53-.3z" />
-                                                </svg>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="">
-                                    <div>
-                                        <h2 className="text-sm text-gray-500  pb-1">Seller Name</h2>
-                                    </div>
-                                    <div className="mb-2">
-                                        <p className="text-xl font-bold text-gray-800"> {user && user.name ? user.name : 'Pilot Bazar Limited'} </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> */}
+                        </motion.button>
+                    </motion.div>
                 </div>
             </div>
 
@@ -1349,22 +1388,24 @@ const ProductDetails = ({ productDetails }) => {
                     )}
 
                     <div className="mt-4">
-                        <div className="w-full border bg-blue-50 border-blue-100 rounded-lg shadow p-4 lg:p-6 space-y-4">
+                        <div className="w-full border bg-blue-50 border-blue-500 rounded-lg shadow p-4 lg:p-6 space-y-4">
                             <div className="flex justify-between">
                                 <div className="space-y-2">
                                     <div>
-                                        <div className="font-bold  text-gray-600 text-md md:text-xl flex flex-col">
-
-                                            {(productDetails?.vehicle_price?.user_price || productDetails?.vehicle_price?.pbl_price) !== 'Call for Price' && productDetails?.vehicle_db_price?.vp_currency + '. '}
-
-                                            {/* {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. ' } */}
-
-                                            {
-                                                basePath == '/product/my-shop' ?
-                                                    formatPrice(productDetails?.vehicle_price?.user_price)
-                                                    :
-                                                    formatPrice(productDetails?.vehicle_price?.pbl_price)
-                                            }
+                                        <div className="font-bold text-gray-600 text-md md:text-xl flex flex-col">
+                                            <TypewriterPrice
+                                                text={
+                                                    [
+                                                        (productDetails?.vehicle_price?.user_price || productDetails?.vehicle_price?.pbl_price) !== 'Call for Price'
+                                                            ? (productDetails?.vehicle_db_price?.vp_currency + '. ')
+                                                            : '',
+                                                        basePath === '/product/my-shop'
+                                                            ? formatPrice(productDetails?.vehicle_price?.user_price)
+                                                            : formatPrice(productDetails?.vehicle_price?.pbl_price),
+                                                    ].join('')
+                                                }
+                                                className="font-bold text-gray-600 text-md md:text-xl"
+                                            />
                                         </div>
 
                                         {
@@ -1638,190 +1679,251 @@ const ProductDetails = ({ productDetails }) => {
                             </span>
                         </a>
                     )}
-                    <div className="border rounded shadow-sm p-4">
-                        <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
-                            <h2 className="text-lg font-medium text-blue-600">Features</h2>
-                            {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
-                            <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleCopyClick}>
-                                <Copy /> Copy
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-1 xl:grid-cols-2 md:gap-x-1 lg:gap-x-2 text-sm">
-                            <div className="">
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Brand :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_brand_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Model:</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_model_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Package:</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_edition_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Condition :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_condition_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Model Yr :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_mod_year}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Reg Yr :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_registration}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Grade :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_grade_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Exterior Grd :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_ext_grade_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Interior Grd :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_int_grade_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Mileage:</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_mileage}</div>
-                                </div>
+                    <motion.div
+                        variants={{
+                            hidden: {},
+                            visible: { transition: { staggerChildren: 0, delayChildren: 0 } },
+                        }}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, amount: 0.05 }}
+                    >
+                        <motion.div
+                            className="border border-blue-500 rounded-xl shadow-md p-4 overflow-hidden"
+                            variants={{
+                                hidden: { opacity: 0, x: 600 },
+                                visible: { opacity: 1, x: 0, transition: { duration: 2.5, ease: [0.22, 1, 0.36, 1] } },
+                            }}
+                        >
+                            <motion.div
+                                className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border border-blue-500 border-t-0 border-l-0"
+                                initial={{ opacity: 0, x: -20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+                            >
+                                <h2 className="text-lg font-medium text-blue-600">Features</h2>
+                                {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
+                                <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleCopyClick}>
+                                    <Copy /> Copy
+                                </button>
+                            </motion.div>
+                            <motion.div
+                                className="grid grid-cols-1 md:grid-cols-1 xl:grid-cols-2 md:gap-x-1 lg:gap-x-2 text-sm"
+                                variants={{
+                                    hidden: {},
+                                    visible: { transition: { staggerChildren: 0.055, delayChildren: 0.25 } },
+                                }}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={{ once: true, amount: 0.04 }}
+                            >
+                                <div className="">
+                                    {[
+                                        ['Brand :', productDetails?.v_brand_name],
+                                        ['Model:', productDetails?.v_model_name],
+                                        ['Package:', productDetails?.v_edition_name],
+                                        ['Condition :', productDetails?.v_condition_name],
+                                        ['Model Yr :', productDetails?.v_mod_year],
+                                        ['Reg Yr :', productDetails?.v_registration],
+                                        ['Grade :', productDetails?.v_grade_name],
+                                        ['Exterior Grd :', productDetails?.v_ext_grade_name],
+                                        ['Interior Grd :', productDetails?.v_int_grade_name],
+                                        ['Mileage:', productDetails?.v_mileage],
+                                    ].map(([label, value], i) => (
+                                        <div
+                                            key={i}
+                                            className="grid grid-cols-6 gap-2 rounded px-1 py-0.5 hover:bg-blue-50 transition-colors"
+                                            variants={{
+                                                hidden: { opacity: 0, x: -22 },
+                                                visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                            }}
+                                        >
+                                            <div className="col-span-3 text-base">{label}</div>
+                                            <div className="col-span-3 text-base font-semibold">{value}</div>
+                                        </div>
+                                    ))}
 
-                                {
-                                    !isMyShop && !isCompanyShop && (
-                                        <div className="grid grid-cols-6 gap-2">
-                                            <div className="col-span-3 text-base">Auction Type:</div>
-                                            <div className="col-span-3 text-base font-semibold">
-                                                {productDetails?.v_auction_type ? String(productDetails.v_auction_type).toUpperCase() : ""}
+                                    {
+                                        !isMyShop && !isCompanyShop && (
+                                            <div
+                                                className="grid grid-cols-6 gap-2 rounded px-1 py-0.5 hover:bg-blue-50 transition-colors"
+                                                variants={{
+                                                    hidden: { opacity: 0, x: -22 },
+                                                    visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                                }}
+                                            >
+                                                <div className="col-span-3 text-base">Auction Type:</div>
+                                                <div className="col-span-3 text-base font-semibold">
+                                                    {productDetails?.v_auction_type ? String(productDetails.v_auction_type).toUpperCase() : ""}
+                                                </div>
                                             </div>
+                                        )
+                                    }
+                                </div>
+                                <div>
+                                    {[
+                                        ['Color:', productDetails?.v_color_name],
+                                        ['Fuel :', productDetails?.v_fuel_name],
+                                        ['Option :', productDetails?.v_transmission_name],
+                                        ['CC :', productDetails?.v_capacity],
+                                        ['Body :', productDetails?.v_skeleton_name],
+                                        ['Seat :', productDetails?.v_seat_name],
+                                    ].map(([label, value], i) => (
+                                        <div
+                                            key={i}
+                                            className="grid grid-cols-6 gap-2 rounded px-1 py-0.5 hover:bg-blue-50 transition-colors"
+                                            variants={{
+                                                hidden: { opacity: 0, x: -22 },
+                                                visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                            }}
+                                        >
+                                            <div className="col-span-3 text-base">{label}</div>
+                                            <div className="col-span-3 text-base font-semibold">{value}</div>
                                         </div>
-                                    )
-                                }
+                                    ))}
 
+
+                                    {
+                                        canShowChassisNumber && (
+                                            <motion.div
+                                                className="grid grid-cols-6 gap-2 rounded px-1 py-0.5 hover:bg-blue-50 transition-colors"
+                                                variants={{
+                                                    hidden: { opacity: 0, x: -22 },
+                                                    visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                                }}
+                                            >
+                                                <div className="col-span-3 text-base">Chassis No :</div>
+                                                <div className="col-span-3 text-base font-semibold">{productDetails?.v_chassis}</div>
+                                            </motion.div>
+                                        )
+                                    }
+
+                                    {[
+                                        ['Engine No:', productDetails?.v_engine],
+                                        ['Tax Token :', formatProductDetailsDate(productDetails?.v_tax_token_exp_date)],
+                                        ['Fitness :', formatProductDetailsDate(productDetails?.v_fitness_exp_date)],
+                                        ['Arrival Date :', formatProductDetailsDate(productDetails?.v_arrival_date)],
+                                    ].map(([label, value], i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="grid grid-cols-6 gap-2 rounded px-1 py-0.5 hover:bg-blue-50 transition-colors"
+                                            variants={{
+                                                hidden: { opacity: 0, x: -22 },
+                                                visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                            }}
+                                        >
+                                            <div className="col-span-3 text-base">{label}</div>
+                                            <div className="col-span-3 text-base font-semibold">{value}</div>
+                                        </motion.div>
+                                    ))}
+
+                                    {
+                                        productDetails?.v_delivery_condition && (
+                                            <motion.div
+                                                className="grid grid-cols-6 gap-2 rounded px-1 py-0.5 hover:bg-blue-50 transition-colors"
+                                                variants={{
+                                                    hidden: { opacity: 0, x: -22 },
+                                                    visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                                }}
+                                            >
+                                                <div className="col-span-3 text-base">Delivery Condition :</div>
+                                                <div className="col-span-3 text-base font-semibold">{productDetails.v_delivery_condition}</div>
+                                            </motion.div>
+                                        )
+                                    }
+
+                                    {
+                                        shouldShowGdocButton && (
+                                            <motion.div
+                                                className="grid grid-cols-6 gap-2 rounded px-1 py-0.5"
+                                                variants={{
+                                                    hidden: { opacity: 0, x: -22 },
+                                                    visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+                                                }}
+                                            >
+                                                <div className="col-span-3 text-base">Download Pic :</div>
+                                                <div className="col-span-3 text-base font-semibold">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleGdocOpen}
+                                                        className="px-4 py-2 bg-lime-600 border border-lime-700 rounded-lg hover:bg-lime-700 flex items-center gap-2 text-white"
+                                                    >
+                                                        <Download className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        )
+                                    }
+
+                                </div>
+                            </motion.div>
+                        </motion.div>
+
+                        <motion.div
+                            className="border border-blue-500 rounded shadow-sm p-4 mt-4"
+                            variants={{
+                                hidden: { opacity: 0, x: 600 },
+                                visible: { opacity: 1, x: 0, transition: { duration: 1.8, ease: [0.22, 1, 0.36, 1] } },
+                            }}
+                        >
+
+                            <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded bg-blue-50 px-4 py-3 border border-blue-500 border-t-0 border-l-0">
+                                <h2 className="text-lg font-medium text-blue-600">Specific Features</h2>
+                                {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
+                                <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleFeatureCopyClick}>
+                                    <Copy /> Copy
+                                </button>
                             </div>
-                            <div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Color:</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_color_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Fuel :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_fuel_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Option :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_transmission_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">CC :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_capacity}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Body :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_skeleton_name}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Seat :</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_seat_name}</div>
-                                </div>
-
-
-
-                                {/* {
-                                    user && (user.user_type === 'supreme' || user.user_type === 'admin' || user.user_type === 'pbl') && (
-                                        <div className="grid grid-cols-6 gap-2">
-                                            <div className="col-span-3 text-base">Chassis No :</div>
-                                            <div className="col-span-3 text-base font-semibold">{productDetails?.v_chassis}</div>
-                                        </div>
-                                    )
-                                } */}
-
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-sm">
                                 {
-                                    canShowChassisNumber && (
-                                        <div className="grid grid-cols-6 gap-2">
-                                            <div className="col-span-3 text-base">Chassis No :</div>
-                                            <div className="col-span-3 text-base font-semibold">{productDetails?.v_chassis}</div>
-                                        </div>
-                                    )
+                                    productDetails?.feature_specification?.map((feature, index) => (
+                                        feature.specification?.length > 0 && feature?.specification?.some(item => item.is_selected) ? (
+                                            <motion.div
+                                                className="border-b pb-2"
+                                                key={index}
+                                                initial={{ opacity: 0, scale: 0.88, y: 18 }}
+                                                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                                                viewport={{ once: true, amount: 0.1 }}
+                                                transition={{
+                                                    duration: 0.45,
+                                                    delay: index * 0.06,
+                                                    ease: [0.34, 1.56, 0.64, 1],
+                                                }}
+                                            >
+                                                <h3 className="font-medium text-base text-blue-600 mb-1">{feature?.md_title}</h3>
+                                                {
+                                                    feature?.specification && feature?.specification.length > 0 && feature?.specification?.map((item, idx) => (
+                                                        <p key={idx} className="text-base">
+                                                            {item?.is_selected && item?.fs_title}
+                                                        </p>
+                                                    ))
+                                                }
+                                            </motion.div>
+                                        ) : null
+                                    ))
                                 }
-
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Engine No:</div>
-                                    <div className="col-span-3 text-base font-semibold">{productDetails?.v_engine}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Tax Token :</div>
-                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_tax_token_exp_date)}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Fitness :</div>
-                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_fitness_exp_date)}</div>
-                                </div>
-                                <div className="grid grid-cols-6 gap-2">
-                                    <div className="col-span-3 text-base">Arrival Date :</div>
-                                    <div className="col-span-3 text-base font-semibold">{formatProductDetailsDate(productDetails?.v_arrival_date)}</div>
-                                </div>
-
-                                {
-                                    productDetails?.v_delivery_condition && (
-                                        <div className="grid grid-cols-6 gap-2">
-                                            <div className="col-span-3 text-base">Delivery Condition :</div>
-                                            <div className="col-span-3 text-base font-semibold">{productDetails.v_delivery_condition}</div>
-                                        </div>
-                                    )
-                                }
-
-                                {
-                                    shouldShowGdocButton && (
-                                        <div className="grid grid-cols-6 gap-2">
-                                            <div className="col-span-3 text-base">Download Pic :</div>
-                                            <div className="col-span-3 text-base font-semibold">
-                                                <button
-                                                    type="button"
-                                                    onClick={handleGdocOpen}
-                                                    className="px-4 py-2 bg-lime-600 border border-lime-700 rounded-lg hover:bg-lime-700 flex items-center gap-2 text-white"
-                                                >
-                                                    <Download className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )
-                                }
-
                             </div>
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
 
-                    <div className="border rounded shadow-sm p-4 mt-4">
-
-                        <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
-                            <h2 className="text-lg font-medium text-blue-600">Specific Features</h2>
-                            {/* এখানে onClick ইভেন্ট যোগ করা হয়েছে */}
-                            <button className="text-lg font-medium text-blue-600 flex items-center gap-1" onClick={handleFeatureCopyClick}>
-                                <Copy /> Copy
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-sm">
-                            {
-                                productDetails?.feature_specification?.map((feature, index) => (
-                                    feature.specification?.length > 0 && feature?.specification?.some(item => item.is_selected) ? (
-                                        <div className="border-b pb-2" key={index}>
-                                            <h3 className="font-medium text-base text-blue-600 mb-1">{feature?.md_title}</h3>
-                                            {
-                                                feature?.specification && feature?.specification.length > 0 && feature?.specification?.map((item, idx) => (
-                                                    <p key={idx} className="text-base">
-                                                        {item?.is_selected && item?.fs_title}
-                                                    </p>
-                                                ))
-                                            }
+                    {Array.isArray(productDetails?.v_more_information) && productDetails.v_more_information.length > 0 && (
+                        <div className="border rounded shadow-sm p-4 mt-4">
+                            <div className="-mx-4 -mt-4 mb-4 rounded-t bg-blue-50 px-4 py-3 border-b border-blue-100">
+                                <h2 className="text-lg font-medium text-blue-600">More Information</h2>
+                            </div>
+                            <div className="text-sm">
+                                {productDetails.v_more_information.map((item, index) => (
+                                    item?.value ? (
+                                        <div key={`${item.label}-${index}`} className="grid grid-cols-6 gap-2 py-1.5 border-b border-slate-100 last:border-b-0">
+                                            <div className="col-span-3 text-sm text-gray-500">{item.label || "Info"} :</div>
+                                            <div className="col-span-3 text-sm font-semibold text-gray-800">{item.value}</div>
                                         </div>
                                     ) : null
-                                ))
-                            }
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {selectedYoutubeVideo && (
                         <div className="border rounded shadow-sm p-4 mt-4">

@@ -463,6 +463,7 @@ const NavbarContent = () => {
       const shopData = shops.map((shop) => ({
         value: shop.s_id,
         label: shop.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
       }));
 
       setShopOptions(shopData);
@@ -1036,7 +1037,7 @@ const NavbarContent = () => {
                         className="block text-center text-sm font-medium hover:opacity-90 transition"
                         style={{ color: 'rgb(1 103 162)' }}
                       >
-                        View all notifications
+                        View all notifications 
                       </Link>
                     </Popover.Close>
                   </div>

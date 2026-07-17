@@ -1136,7 +1136,7 @@ const ProductList = () => {
         .map((item) => {
           const shop = item?.shop ?? item;
           if (!shop?.s_id) return null;
-          return { value: shop.s_id, label: shop.s_title };
+          return { value: shop.s_id, label: shop.s_title, phone: shop?.user?.phone || shop?.s_user_phone || "" };
         })
         .filter(Boolean);
 
@@ -1668,6 +1668,7 @@ const ProductList = () => {
       const shopOptions = response.data.data.map((shop) => ({
         value: shop.s_id,
         label: shop.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
       }));
 
       // console.log("======================shopOptions===============================", shopOptions);
@@ -1729,6 +1730,7 @@ const ProductList = () => {
               shopArrayData.push({
                 value: item.shop.s_id,
                 label: item.shop.s_title,
+                phone: item?.shop?.user?.phone || item?.shop?.s_user_phone || "",
               });
             }
 

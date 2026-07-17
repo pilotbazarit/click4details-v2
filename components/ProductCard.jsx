@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Select from "react-select";
 import { assets } from "@/assets/assets";
 import Image from "next/image";
-import { FireExtinguisher, GitBranch, GitCompare, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing, MessageCircle, ShoppingCart, Copy, Edit, Clock, ChevronDown, X, Star, Palette, Loader2, Plus } from "lucide-react"
+import { FireExtinguisher, GitBranch, GitCompare, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing, MessageCircle, ShoppingCart, Copy, Edit, Clock, ChevronDown, X, Star, Palette, Loader2, Plus, Gift } from "lucide-react"
 import { FaWhatsapp, FaWhatsappSquare } from "react-icons/fa";
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
@@ -2173,6 +2173,24 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </div>
           </div>
         )}
+
+        {/* {product?.v_gift_offer && ( */}
+        <div className="absolute top-2 right-2 z-20 group/gift">
+          <div className="relative flex items-center justify-center">
+            {/* Gift Icon Button */}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg cursor-pointer transition-transform duration-200 group-hover/gift:scale-110">
+              <Image src={assets.gift} alt="Gift" width={32} height={32} className="w-8 h-8 object-contain rounded-full" />
+            </div>
+            {/* Tooltip - hover করলে দেখাবে */}
+            <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-white text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover/gift:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover/gift:scale-100">
+              🎁 Gift Offer
+              {/* {product.v_gift_offer} */}
+              {/* Tooltip arrow */}
+              <span className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-rose-600"></span>
+            </div>
+          </div>
+        </div>
+        {/* )} */}
 
         {/* Message Notification Badge */}
         {/* <div 

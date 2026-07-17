@@ -6,6 +6,13 @@ const commandApi = createApiRequest(API_URL);
 
 const Commands = {
 
+    createUser: (data) => commandApi.post("/api/user", data, {
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        }
+    }),
+
     masterLogin: (id, data) => commandApi.post(`/api/user/master-login/${id}`, {
         headers: {
             "Content-Type": "multipart/form-data",

@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Boxes, Share2, ShoppingCart, ShieldCheck } from "lucide-react";
-import { usePathname } from "next/navigation";
 
 import { useAppContext } from "@/context/AppContext";
 import { getSessionId } from "@/lib/utils";
@@ -109,7 +108,6 @@ const GeneralProductCard = ({ product }) => {
   const intervalRef = useRef(null);
 
   const { addToCart, user } = useAppContext();
-  const pathname = usePathname();
 
   const parsedUser = useMemo(() => parseUser(user), [user]);
   const options = useMemo(() => normalizeGeneralProductOptions(product), [product]);
@@ -137,13 +135,7 @@ const GeneralProductCard = ({ product }) => {
     return imgs;
   }, [product, activeOptions]);
 
-  const href =
-    pathname.startsWith("/my-shop/") ||
-    pathname.startsWith("/company-shop/") ||
-    pathname.startsWith("/member-shop/") ||
-    pathname.startsWith("/user-shop/")
-      ? `/general-product/my-shop/${product?.p_slug}`
-      : `/general-product/${product?.p_slug}`;
+  const href = `/general-product/${product?.p_slug}`;
 
   const displayImage = allImages[hoverIdx] || allImages[0] || "";
 

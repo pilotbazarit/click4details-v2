@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Loading from '@/components/Loading';
+import PblHistoryPanel from '@/components/PblHistoryPanel';
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -28,13 +29,14 @@ import UserService from "@/services/UserService";
 import { hasPermission } from "@/lib/utils";
 import VehiclePricingSection from "@/components/pricing/VehiclePricingSection";
 import CategoryService from "@/services/CategoryService";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const deliveryConditionOptions = [
   { value: "Japan Condition", label: "Japan Condition" },
   { value: "Shipment Condition", label: "Shipment Condition" },
+  { value: "As it is Port Delivery", label: "As it is Port Delivery" },
   { value: "Port Condition", label: "Port Condition" },
   { value: "Showroom Condition", label: "Showroom Condition" },
   { value: "Auction Sheet Condition", label: "Auction Sheet Condition" },
@@ -179,6 +181,7 @@ const Vehicle = () => {
   const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]);
   const [sellerInfoRows, setSellerInfoRows] = useState([{ name: "", phone: "" }]);
   const [removeSecretDocument, setRemoveSecretDocument] = useState([]);
+  const [moreInformation, setMoreInformation] = useState([{ id: "more-info-0", key: "", value: "" }]);
 
   const [shopData, setShopData] = useState([]);
   const [brandData, setBrandData] = useState([]);
@@ -315,6 +318,21 @@ const Vehicle = () => {
 
   const handleRemoveSellerInfoRow = (index) => {
     setSellerInfoRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
+
+  const setMoreInformationRow = (id, patch) => {
+    setMoreInformation((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  };
+
+  const addMoreInformationRow = () => {
+    setMoreInformation((current) => [...current, { id: `more-info-${Date.now()}-${current.length}`, key: "", value: "" }]);
+  };
+
+  const removeMoreInformationRow = (id) => {
+    setMoreInformation((current) => {
+      const nextRows = current.filter((row) => row.id !== id);
+      return nextRows.length ? nextRows : [{ id: "more-info-0", key: "", value: "" }];
+    });
   };
 
   const {
@@ -690,6 +708,16 @@ const Vehicle = () => {
         appendFormValue(formData, `vp_purchase_cost[${index}][amount]`, item?.amount ? String(item.amount).replace(/,/g, "").trim() : "");
       });
 
+      formData.append("extended_data_clear", "1");
+      moreInformation
+        .map((item) => ({ key: String(item.key || "").trim(), value: String(item.value || "").trim() }))
+        .filter((item) => item.key || item.value)
+        .forEach((item) => {
+          formData.append("ed_entity[]", "vehicle");
+          formData.append("ed_entity_key[]", item.key);
+          formData.append("ed_entity_value[]", item.value);
+        });
+
       appendFormValue(formData, "v_video[user]", data.v_video_user ? String(data.v_video_user).trim() : "");
       appendFormValue(formData, "v_video[pbl]", data.v_video_pbl ? String(data.v_video_pbl).trim() : "");
       appendFormValue(formData, "v_video[gdocpbl]", data.v_video_gdocpbl ? String(data.v_video_gdocpbl).trim() : "");
@@ -995,6 +1023,7 @@ const Vehicle = () => {
       const shopOptions = response.data.data.map((shop) => ({
         value: shop?.s_id,
         label: shop?.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
         s_user_id: shop?.s_user_id,
         s_id: shop?.s_id,
         shop_name: "my-shop"
@@ -1551,6 +1580,7 @@ const Vehicle = () => {
               shopArrayData.push({
                 value: item.shop.s_id,
                 label: item.shop.s_title,
+                phone: item?.shop?.user?.phone || item?.shop?.s_user_phone || "",
                 s_user_id: item.shop.s_user_id,
                 s_id: item?.shop?.s_id,
                 shop_name: 'company-shop'
@@ -1652,6 +1682,7 @@ const Vehicle = () => {
       const shopOptions = response.data.data.map((shop) => ({
         value: shop.s_id,
         label: shop.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || "",
       }));
 
       setShopData(shopOptions);
@@ -1965,6 +1996,20 @@ const Vehicle = () => {
                                   placeholder="Select Shop"
                                   className="basic-single"
                                   classNamePrefix="select"
+                                  formatOptionLabel={(option) => (
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span>{option.label}</span>
+                                      {option.phone ? <span className="text-xs text-gray-400">{option.phone}</span> : null}
+                                    </div>
+                                  )}
+                                  filterOption={(option, input) => {
+                                    const term = input.trim().toLowerCase();
+                                    if (!term) return true;
+                                    return (
+                                      option.label.toLowerCase().includes(term) ||
+                                      String(option.data.phone || "").toLowerCase().includes(term)
+                                    );
+                                  }}
                                 />
                               )}
                             />
@@ -2227,6 +2272,49 @@ const Vehicle = () => {
                                 {additionalDocumentFiles.length} file selected
                               </p>
                             )}
+                          </div>
+                        </div>
+
+                        <div className="mb-3 mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+                          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-800">More Information</h4>
+                              <p className="text-xs text-gray-500">Add public vehicle facts like warranty, service history, or extra features.</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-medium text-white hover:bg-slate-800"
+                              onClick={addMoreInformationRow}
+                            >
+                              <Plus className="h-4 w-4" />
+                              Add Row
+                            </button>
+                          </div>
+
+                          <div className="grid gap-3">
+                            {moreInformation.map((item) => (
+                              <div key={item.id} className="grid gap-2 md:grid-cols-[220px_1fr_40px]">
+                                <input
+                                  value={item.key}
+                                  placeholder="Label, e.g. Warranty"
+                                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                  onChange={(event) => setMoreInformationRow(item.id, { key: event.target.value })}
+                                />
+                                <input
+                                  value={item.value}
+                                  placeholder="Value, e.g. 1 year service warranty"
+                                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                  onChange={(event) => setMoreInformationRow(item.id, { value: event.target.value })}
+                                />
+                                <button
+                                  type="button"
+                                  className="flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                                  onClick={() => removeMoreInformationRow(item.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         </div>
 
@@ -2531,6 +2619,22 @@ const Vehicle = () => {
                                   onKeyDown={onlyDecimalInput}
                                 />
                               </div>
+
+                              <div className="mb-2">
+                                <label className="text-base font-medium" htmlFor="v_pbl_partnership_expire_date">
+                                  Partnership Expire Date
+                                </label>
+                                <Input
+                                  id="v_pbl_partnership_expire_date"
+                                  type="date"
+                                  {...register("v_pbl_partnership_expire_date")}
+                                />
+                                <p className="mt-1 text-xs text-gray-500">
+                                  After this date, the vehicle is automatically removed from PBL sale (home &amp; category pages).
+                                </p>
+                              </div>
+
+                              <PblHistoryPanel type="vehicle" id={watch("v_id")} />
 
 
                               {
