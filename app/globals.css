@@ -200,6 +200,21 @@
   pointer-events: auto !important;
 }
 
+.swal2-container .swal2-styled.swal2-confirm {
+  background-color: var(--swal2-confirm-button-background-color) !important;
+  color: var(--swal2-confirm-button-color) !important;
+}
+
+.swal2-container .swal2-styled.swal2-cancel {
+  background-color: var(--swal2-cancel-button-background-color) !important;
+  color: var(--swal2-cancel-button-color) !important;
+}
+
+.swal2-container .swal2-styled.swal2-deny {
+  background-color: var(--swal2-deny-button-background-color) !important;
+  color: var(--swal2-deny-button-color) !important;
+}
+
 .pb-product-slider .swiper-button-next,
 .pb-product-slider .swiper-button-prev {
   width: 34px;

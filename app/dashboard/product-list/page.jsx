@@ -1025,7 +1025,11 @@ const ProductList = () => {
           effectiveCompanyShops.forEach((item, idx) => {
             params[`_shop_ids[${idx}]`] = item?.value ?? item;
           });
-          delete params._user_id; // When filtering by specific company shops, we don't want the default user filter
+          if (user?.user_mode !== 'supreme' && user?.id) {
+            params._user_id = user.id;
+          } else {
+            delete params._user_id;
+          }
 
         } else {
           params['_shop_ids[0]'] = shopToFilter;
@@ -1118,9 +1122,14 @@ const ProductList = () => {
 
     const activeUser = userOverride || user || getStoredUser();
     const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
+    const shouldPassLoginUserId =
+      activeUser?.id &&
+      (shopType === "company-shop"
+        ? activeUser?.user_mode !== "supreme"
+        : !canAllShopView(activeUser));
     const params = {
       // _user_id: user?.id,
-      ...(!canAllShopView(activeUser) && activeUser?.id && { _user_id: activeUser.id }),
+      ...(shouldPassLoginUserId && { _user_id: activeUser.id }),
       _type: type,
       _page: 1,
       _perPage: 1000
@@ -1843,40 +1852,37 @@ const ProductList = () => {
               Print
             </Button> */}
 
-              {
-                canShowVehicleListPdfButton && ( 
-                  <Button
-                    type="button"
-                    onClick={handleOpenVehicleListPdfModal}
-                    variant="outline"
-                    className=" border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <Download className="h-4 w-4" />
-                    Vehicle List PDF
-                  </Button>
-                )
-              }
-           
-          </div>
-
-          {canShowAddProductButton && (
-            <Button
-              type="button"
-              onClick={handleAdd}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <svg
-                className="w-5 h-5"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            {canShowVehicleListPdfButton && (
+              <Button
+                type="button"
+                onClick={handleOpenVehicleListPdfModal}
+                variant="outline"
+                className=" border-gray-300 text-gray-700 hover:bg-gray-100"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-              </svg>
-              Add Product
-            </Button>
-          )}
+                <Download className="h-4 w-4" />
+                Vehicle List PDF
+              </Button>
+            )}
+
+            {canShowAddProductButton && (
+              <Button
+                type="button"
+                onClick={handleAdd}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Product
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search Filter */}

@@ -1589,7 +1589,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       }
 
       const response = await fetch(
-        `${API_URL}api/vehicle/quotation-pdf/${productId}?${queryParams.toString()}`,
+        `${API_URL}/api/vehicle/quotation-pdf/${productId}?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
