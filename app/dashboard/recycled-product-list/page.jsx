@@ -30,6 +30,8 @@ import PackageService from "@/services/PackageService";
 import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import { set } from "lodash";
 
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const ProductList = () => {
@@ -66,6 +68,21 @@ const ProductList = () => {
 
     // const itemsPerPage = 10
     const router = useRouter();
+    const { permissionList } = useAppContext();
+    const [user, setUser] = useState(null);
+    const [selectedShop] = useState("my-shop");
+
+    const canDeleteButton =
+        (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+        hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow");
+
+
+    useEffect(() => {
+        const storedUser = parseStoredUser(localStorage.getItem("user"));
+        if (storedUser) {
+            setUser(storedUser);
+        }
+    }, []);
 
     useEffect(() => {
         const fetchEditions = async () => {
@@ -760,15 +777,17 @@ const ProductList = () => {
                                             </button> */}
 
                                             <button
+                                                disabled={!(selectedShop === "my-shop" ||
+                                                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
                                                 onClick={() => handleArchiveDelete(item.v_id)}
                                                 title="Archive Delete"
-                                                className="text-orange-600 hover:text-orange-800"
+                                                className="text-orange-600 hover:text-orange-800 disabled:cursor-not-allowed disabled:text-gray-400"
                                                 aria-label={`Archive Delete ${item.s_title}`}
                                             >
                                                 <Archive size={18} />
                                             </button>
                                         </TableCell>
-                                    </TableRow>
+                                    </TableRow> 
                                 ))
                             ) : (
                                 <TableRow>

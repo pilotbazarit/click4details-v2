@@ -20,7 +20,9 @@ import GeneralProductService from "@/services/GeneralProductService";
 import PackageService from "@/services/PackageService";
 import SeoMetadataService from "@/services/SeoMetadataService";
 import VehicleModelService from "@/services/VehicleModelService";
+import MasterDataService from "@/services/MasterDataService";
 import VehicleService from "@/services/VehicleService";
+import constData from "@/lib/constant";
 
 const ENTITY_TYPE_OPTIONS = [
     "vehicle",
@@ -28,6 +30,7 @@ const ENTITY_TYPE_OPTIONS = [
     "vehicle_model",
     "package",
     "category",
+    "brand",
 ];
 
 const schema = yup.object().shape({
@@ -191,6 +194,27 @@ const getEntityOptionConfig = (entityType) => {
                 mapItem: (item) => ({
                     value: String(item?.p_id || ""),
                     label: item?.p_name || `Package #${item?.p_id}`,
+                }),
+            };
+        case "brand":
+            return {
+                fetch: async (searchValue) => {
+                    const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.BRAND_MD_CODE);
+                    const brandItems = response?.data?.master_data || [];
+                    const searchTerm = String(searchValue || "").trim().toLowerCase();
+
+                    if (!searchTerm) {
+                        return brandItems;
+                    }
+
+                    return brandItems.filter((item) =>
+                        String(item?.md_title || "").toLowerCase().includes(searchTerm) ||
+                        String(item?.md_id || "").includes(searchTerm)
+                    );
+                },
+                mapItem: (item) => ({
+                    value: String(item?.md_id || ""),
+                    label: item?.md_title || `Brand #${item?.md_id}`,
                 }),
             };
         case "category":

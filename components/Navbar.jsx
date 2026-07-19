@@ -295,6 +295,7 @@ const NavbarContent = () => {
         _page: 1,
         _perPage: 10000,
         _parent_id: parentId,
+        _status: "active",
       });
 
       if (response?.status === "success") {

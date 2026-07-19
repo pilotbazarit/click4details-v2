@@ -27,6 +27,12 @@ const Commands = {
         }
     }),
 
+    deleteVehicle: (id) => commandApi.delete(`/api/vehicle/${id}`, {
+        headers: {
+            Accept: "application/json",
+        }
+    }),
+
 
 
     cloneVehicle: (id, shopId) => commandApi.post(`/api/vehicle/takeVihicle/${id}?_shop_id=${shopId}`, {

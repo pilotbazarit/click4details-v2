@@ -1653,6 +1653,45 @@ const ProductList = () => {
     }
   };
 
+  const handlePermanentDelete = async (id) => {
+    if (!id) {
+      toast.error("Product not selected.");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This product will be permanently deleted and cannot be restored!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, permanently delete it!"
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await VehicleService.Commands.deleteVehicle(id);
+
+        if (response) {
+          setProducts(prevProducts => prevProducts.filter(product => product.v_id !== id));
+          setTotalItems(prevTotal => Math.max((prevTotal || 0) - 1, 0));
+          Swal.fire({
+            title: "Permanently Deleted!",
+            text: "Product permanently deleted successfully!",
+            icon: "success"
+          });
+        }
+      } catch (error) {
+        if (error.errors) {
+          Object.values(error.errors).forEach((e) => toast.error(e[0]));
+        } else {
+          toast.error(error?.response?.data?.message || error.message || "Something went wrong");
+        }
+      }
+    }
+  };
+
 
 
   // shop data get from api
@@ -3269,6 +3308,18 @@ const ProductList = () => {
                             aria-label={`Delete product ${item.v_name}`}
                           >
                             <Trash2 size={21} />
+                          </button>
+
+                          <button
+                            // disabled={!(selectedShop === "my-shop" ||
+                            //   hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
+                            onClick={() => handlePermanentDelete(item?.v_id)}
+                            className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
+                            title="Permanent Delete Product"
+                            aria-label={`Permanent delete product ${item?.v_name || item?.v_id}`}
+                          >
+                            <Trash2 size={16} />
+                            {/* <span>Permanent Delete</span> */}
                           </button>
                         </TableCell>
                       )}
