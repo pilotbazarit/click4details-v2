@@ -213,12 +213,18 @@ export const AppContextProvider = ({ children }) => {
         currentUser = null;
       }
 
+      // _status matches CartController::index()'s simpleFilter condition key -
+      // was previously misspelled "_statis" so the active-only filter was
+      // silently never applied: every cart the user/session ever had
+      // (including ones left behind by a failed clearCart() call after a
+      // past order) was fetched and merged together, showing already-ordered
+      // items back in the cart indefinitely.
       const params = {
         _page: 1,
         _perPage: 1000,
-        _oderBy: "p_id",
+        _orderBy: "p_id",
         _order: "ASC",
-        _statis: "active"
+        _status: "active"
       };
 
       // If user is logged in, use _user_id. Otherwise, use c_session_id

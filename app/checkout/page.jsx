@@ -12,6 +12,7 @@ import Select from "react-select";
 import toast from "react-hot-toast";
 import OrderService from "@/services/OrderService";
 import LoginService from "@/services/LoginService";
+import { pushDataLayerEvent } from "@/helpers/gtmEvents";
 
 const parseMaybeJson = (value, fallback = null) => {
   if (!value) return fallback;
@@ -390,6 +391,17 @@ const Checkout = () => {
         // Success - show message
         toast.success('Order placed successfully!');
 
+        // Fired once right here at order creation - not on the confirmation
+        // page - so a refresh/back-navigation to /order-confirmation can
+        // never re-fire it and double-count the purchase in Facebook/GA4.
+        const orderIdForEvent = response.data?.order_id || response.data?.o_id;
+        pushDataLayerEvent("purchase", {
+          transaction_id: orderIdForEvent,
+          value: getCartAmount(),
+          currency: "BDT",
+          items: cartItems.map((item) => ({ item_id: item.ci_product_id, item_name: item.ci_name, price: item.ci_price, quantity: item.ci_qty })),
+        });
+
         // Clear cart after successful order
         try {
           const res = await CartService.Commands.clearCart(cartItems[0].cart_id);
@@ -559,6 +571,12 @@ const Checkout = () => {
     // Redirect to cart if no items
     if (getCartCount() === 0) {
       router.push('/cart');
+    } else {
+      pushDataLayerEvent("begin_checkout", {
+        value: getCartAmount(),
+        currency: "BDT",
+        items: cartItems.map((item) => ({ item_id: item.ci_product_id, item_name: item.ci_name, price: item.ci_price })),
+      });
     }
   }, []);
 

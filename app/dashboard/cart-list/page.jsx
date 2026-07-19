@@ -252,7 +252,7 @@ const OrderList = () => {
                    
 
                     <TableCell className="border-r border-gray-200 font-medium">{item?.c_total}</TableCell>
-                    <TableCell className="border-r border-gray-200 font-medium">{item?.c_status}</TableCell>
+                    <TableCell className="border-r border-gray-200 font-medium capitalize">{item?.c_status}</TableCell>
                     <TableCell className="border-r border-gray-200">
                       <div className="flex flex-col gap-1">
                         <div className="text-sm text-gray-900">

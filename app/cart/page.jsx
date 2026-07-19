@@ -86,12 +86,12 @@ const Cart = () => {
               <button
                 type="button"
                 onClick={() => router.push("/all-products")}
-                className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-gray-950"
+                className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-gray-950 capitalize"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Continue shopping
               </button>
-              <h1 className="text-3xl font-semibold text-gray-950 md:text-4xl">
+              <h1 className="text-3xl font-semibold text-gray-950 md:text-4xl capitalize">
                 Shopping Cart
               </h1>
               <p className="mt-2 text-sm text-gray-500">
@@ -101,11 +101,11 @@ const Cart = () => {
 
             {activeCartItems.length > 0 && (
               <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 capitalize">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
                   Secure checkout
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 capitalize">
                   <PackageCheck className="h-4 w-4 text-blue-600" />
                   Ready for checkout
                 </span>
@@ -118,14 +118,14 @@ const Cart = () => {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
                 <ShoppingBag className="h-7 w-7 text-gray-500" />
               </div>
-              <h2 className="mt-5 text-xl font-semibold text-gray-950">Your cart is empty</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
+              <h2 className="mt-5 text-xl font-semibold text-gray-950 capitalize">Your cart is empty</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-gray-500 capitalize">
                 Your selected products will appear here.
               </p>
               <button
                 type="button"
                 onClick={() => router.push("/all-products")}
-                className="mt-6 inline-flex items-center justify-center rounded-md bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                className="mt-6 inline-flex items-center justify-center rounded-md bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 capitalize"
               >
                 Browse products
               </button>
@@ -158,7 +158,7 @@ const Cart = () => {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-xs font-medium text-gray-400">
+                            <div className="flex h-full w-full items-center justify-center text-xs font-medium text-gray-400 capitalize">
                               No image
                             </div>
                           )}
@@ -179,7 +179,7 @@ const Cart = () => {
                                     SKU {variantSku}
                                   </span>
                                 )}
-                                <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                                <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 capitalize">
                                   General product
                                 </span>
                               </div>

@@ -397,7 +397,7 @@ const OrderListByStatus = () => {
                       </TableCell>
                     <TableCell className="border-r border-gray-200">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{item?.o_status}</span>
+                        <span className="font-medium capitalize">{item?.o_status}</span>
                         <button
                           onClick={() => {
                             setSelectedOrderForStatus(item);

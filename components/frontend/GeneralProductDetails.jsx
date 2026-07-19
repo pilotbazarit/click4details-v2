@@ -30,10 +30,11 @@ import toast from "react-hot-toast";
 import { formatPrice } from "@/helpers/functions";
 import { getSessionId } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
+import { pushDataLayerEvent } from "@/helpers/gtmEvents";
 
 dayjs.extend(relativeTime);
 
-const DEFAULT_PHONE = "+8809638660077";
+const DEFAULT_PHONE = "+8801969944400";
 
 const formatLocalMobile = (value) => {
   const trimmed = String(value || "").trim();
@@ -432,7 +433,7 @@ const GeneralProductDetails = ({ productDetails }) => {
   const shareProduct = async () => {
     const productUrl = productUrlFor(productDetails);
     const shareData = {
-      title: productDetails?.p_name || "Click4Details product",
+      title: productDetails?.p_name || "Pilot Bazar product",
       text: `${productDetails?.p_name || "Product"} - ${selectedVariant ? money(selectedVariant.sellingPrice) : ""}`,
       url: productUrl,
     };
@@ -482,6 +483,12 @@ const GeneralProductDetails = ({ productDetails }) => {
     if (selectedVariant.variantId) cartPayload.ci_product_variant_id = selectedVariant.variantId;
     if (selectedVariant.legacyPriceId) cartPayload.ci_product_price_id = selectedVariant.legacyPriceId;
     addToCart(productDetails.p_id, cartPayload);
+
+    pushDataLayerEvent("add_to_cart", {
+      value: price,
+      currency: "BDT",
+      items: [{ item_id: productDetails.p_id, item_name: cartPayload.ci_name, price }],
+    });
   };
 
   const leftFacts = [
