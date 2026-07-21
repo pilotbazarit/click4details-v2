@@ -2764,7 +2764,7 @@ const Vehicle = () => {
                                   options={giftData}
                                   onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
                                   value={giftData.find(option => option.value === field.value) || null}
-                                  placeholder={isGiftLoading ? "Loading..." : "Select PilotBazar gift"}
+                                  placeholder={isGiftLoading ? "Loading..." : "Select Click4Details gift"}
                                   isDisabled={isGiftLoading}
                                   isClearable
                                   className="basic-single"
@@ -3453,7 +3453,7 @@ const Vehicle = () => {
                             {...register("v_is_saleBy_pbl")}
                           />
                           <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                            I am Click4Details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                             <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                               Terms and Conditions
                             </Link>. Please Sale My Product and Increase My Profit.
@@ -3472,7 +3472,7 @@ const Vehicle = () => {
                             {...register("v_to_be_partner")}
                           />
                           <label htmlFor="partnership" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                            I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                           </label>
                         </div> */}
 

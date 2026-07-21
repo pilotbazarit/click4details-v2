@@ -103,7 +103,7 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                                         Fb Page Pilot Bazar Automobiles : https://rb.gy/f7srjcFb Page Pilot Bazar : https://rb.gy/psidwuFb
                                         Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : pilot_bazar
                                         \To Experience This Vehicle Please Visit Our Showroom: \ Pilot Bazar Automobiles Please Visit
-                                        Website: https://pilotbazar.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
+                                        Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
                                         find us by : Pilot Bazar Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
                                     </p>
 
@@ -130,7 +130,7 @@ const ProductDetailsDescription = ({ productDetails, basePath }) => {
                                         Fb Page Pilot Bazar Automobiles : https://rb.gy/f7srjcFb Page Pilot Bazar : https://rb.gy/psidwuFb
                                         Group : https://rb.gy/elefyfYoutube: https ://rb.gy/k1abln Fb Shop : https://rb.gy/nlo9xyInstagram : pilot_bazar
                                         \To Experience This Vehicle Please Visit Our Showroom: \ Pilot Bazar Automobiles Please Visit
-                                        Website: https://pilotbazar.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
+                                        Website: https://click4details.com/ 1/A, Road: 138, Lake Side, Gulshan-1, Dhaka-1212. Google Maps
                                         find us by : Pilot Bazar Ltd. We Are Open Every Day (10:00 AM to 10:00 PM)
                                     </p>
 

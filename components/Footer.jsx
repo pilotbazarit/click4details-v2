@@ -43,7 +43,7 @@ const Footer = () => {
     const src = getValidImage(assets.pilotBazarLogo);
     logo = (
       <div className="w-28 md:w-32 h-28 md:h-32 relative">
-        <Image src={src} alt="pilotbazar logo" fill className="object-contain" />
+        <Image src={src} alt="Click4Details logo" fill className="object-contain" />
       </div>
     );
   }
@@ -168,7 +168,7 @@ const Footer = () => {
         </div>
       </div>
       <p className="py-4 text-center text-xs md:text-sm">
-        Copyright 2025 © pilotbazar.com All Right Reserved.
+        Copyright 2025 © click4details.com All Right Reserved.
       </p>
     </footer>
   );

@@ -195,6 +195,11 @@ const ProductList = () => {
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow");
 
+
+  const canPermanentDeleteButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Vehicle", "PermanentDeleteButtonShow");
+
   const canUpdateB2BPrice =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "B2bPriceUpdate");
@@ -3311,8 +3316,8 @@ const ProductList = () => {
                           </button>
 
                           <button
-                            // disabled={!(selectedShop === "my-shop" ||
-                            //   hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
+                            disabled={!(selectedShop === "my-shop" ||
+                              hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canPermanentDeleteButton}
                             onClick={() => handlePermanentDelete(item?.v_id)}
                             className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
                             title="Permanent Delete Product"

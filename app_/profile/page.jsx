@@ -723,7 +723,7 @@ const Profile = () => {
                                 </button>
 
                                 <h2 className="text-[22px] font-extrabold leading-tight text-gray-900">
-                                    Become a PilotBazar Partner
+                                    Become a click4details Partner
                                 </h2>
 
                                 <p className="mt-6 text-base leading-relaxed text-gray-500">
