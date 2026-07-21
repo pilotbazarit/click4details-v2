@@ -17,6 +17,9 @@ import {
 import Loading from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import GeneralProductService from "@/services/GeneralProductService";
+import NotificationModal from "./modals/NotificationModal";
+import ProductChatModal from "./modals/ProductChatModal";
+
 
 const imageUrl = (image) => {
   if (!image) return "";
@@ -56,6 +59,9 @@ export default function GeneralProductApprovalView({ productId }) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeImage, setActiveImage] = useState("");
   const [decision, setDecision] = useState(null); // "approve" | "reject" while submitting
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatConversationId, setChatConversationId] = useState(0);
 
   useEffect(() => {
     if (!productId) return;
@@ -113,7 +119,7 @@ export default function GeneralProductApprovalView({ productId }) {
 
       if (response?.status === "success") {
         toast.success(
-          isApproved ? "Product approved for sale by PBL." : "Product's sale by PBL request was rejected."
+          isApproved ? "Product approved for sale by Click4Details." : "Product's sale by Click4Details request was rejected."
         );
         router.push("/dashboard/products/general-product/list");
       } else {
@@ -143,7 +149,9 @@ export default function GeneralProductApprovalView({ productId }) {
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       <button
         type="button"
-        onClick={() => router.back()}
+        onClick={() => {
+          setIsNotificationOpen(true);
+        }}
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 transition hover:text-orange-600"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -155,7 +163,7 @@ export default function GeneralProductApprovalView({ productId }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-white px-6 py-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-orange-600">
-              Sale by PBL — Approval Request
+              Sale by Click4Details — Approval Request
             </p>
             <h1 className="mt-1 text-xl font-bold text-gray-900">{product.p_name}</h1>
             <p className="mt-0.5 text-xs text-gray-500">Code: {product.p_code}</p>
@@ -177,7 +185,7 @@ export default function GeneralProductApprovalView({ productId }) {
               }`}
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              {saleByPblState === "approved" ? "PBL Approved" : "Pending Approval"}
+              {saleByPblState === "approved" ? "Click4Details Approved" : "Pending Approval"}
             </span>
           </div>
         </div>
@@ -239,7 +247,7 @@ export default function GeneralProductApprovalView({ productId }) {
             {product?.p_description?.pbl && (
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  PBL Description
+                  Click4Details Description
                 </p>
                 <p className="text-sm leading-relaxed text-gray-700">{product.p_description.pbl}</p>
               </div>
@@ -274,15 +282,30 @@ export default function GeneralProductApprovalView({ productId }) {
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               <Check className="mr-1.5 h-4 w-4" />
-              {decision === "approve" ? "Approving..." : "Approve Sale by PBL"}
+              {decision === "approve" ? "Approving..." : "Approve Sale by Click4Details"}
             </Button>
           </div>
         ) : (
           <div className="border-t border-gray-100 bg-blue-50 px-6 py-3 text-center text-sm font-medium text-blue-700">
-            This product has already been approved for sale by PBL.
+            This product has already been approved for sale by Click4Details.
           </div>
         )}
       </div>
+      <NotificationModal
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onOpenChat={(item) => {
+          // setChatConversationId(item?.conversationId || 0);
+          setIsNotificationOpen(false);
+          setChatOpen(true);
+        }}
+      />
+
+      <ProductChatModal
+        open={chatOpen}
+        setOpen={setChatOpen}
+        conversationId={chatConversationId}
+      />
     </div>
   );
 }

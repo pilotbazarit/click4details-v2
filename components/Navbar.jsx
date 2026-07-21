@@ -990,7 +990,23 @@ const NavbarContent = () => {
           </button> */}
 
 
-          {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
+
+           <button
+              type="button"
+              onClick={() => setIsNotificationOpen(true)}
+              className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative focus:outline-none"
+              aria-label="Notifications"
+            >
+              <div className="relative">
+                <Bell className="w-6 h-6" />
+                {/* <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                  {notificationCount}
+                </span> */}
+              </div>
+            </button>
+
+
+          {/* {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
@@ -1006,6 +1022,7 @@ const NavbarContent = () => {
                   </div>
                 </button>
               </Popover.Trigger>
+
               <Popover.Portal>
                 <Popover.Content
                   sideOffset={8}
@@ -1038,14 +1055,15 @@ const NavbarContent = () => {
                         className="block text-center text-sm font-medium hover:opacity-90 transition"
                         style={{ color: 'rgb(1 103 162)' }}
                       >
-                        View all notifications 
+                        View all notifications
                       </Link>
                     </Popover.Close>
                   </div>
                 </Popover.Content>
               </Popover.Portal>
+
             </Popover.Root>
-          ) : ''}
+          ) : ''} */}
 
         </ul>
 

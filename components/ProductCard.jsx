@@ -1419,7 +1419,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       });
 
       const response = await fetch(
-        `${API_URL}api/vehicle/delivery-challan-pdf?${queryParams.toString()}`,
+        `${API_URL}/api/vehicle/delivery-challan-pdf?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
@@ -1764,7 +1764,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       }
 
       const response = await fetch(
-        `${API_URL}api/vehicle/bill-copy-pdf/${productId}?${queryParams.toString()}`,
+        `${API_URL}/api/vehicle/bill-copy-pdf/${productId}?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
