@@ -17,6 +17,7 @@ import { hasPermission } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
+import GiftService from "@/services/GiftService";
 import VehicleModelService from "@/services/VehicleModelService";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
@@ -203,6 +204,8 @@ const UpdateProductForm = ({ productId }) => {
     const [colorData, setColorData] = useState([]);
     const [conditionData, setConditionData] = useState([]);
     const [packageData, setPackageData] = useState([]);
+    const [giftData, setGiftData] = useState([]);
+    const [isGiftLoading, setIsGiftLoading] = useState(false);
     const [skeletonData, setSkeletonData] = useState([]);
     const [transmissionData, setTransmissionData] = useState([]);
     const [gradeData, setGradeData] = useState([]);
@@ -1138,6 +1141,8 @@ const UpdateProductForm = ({ productId }) => {
                 setValue('v_brand_id', brandId);
                 setValue('v_model_id', modelId);
                 setValue('v_edition_id', editionId);
+                setValue('v_user_gift', data.v_user_gift || '');
+                setValue('v_pbl_gift', data.v_pbl_gift || '');
 
                 // === Fetch Models ===
                 if (brandId) {
@@ -1481,6 +1486,28 @@ const UpdateProductForm = ({ productId }) => {
 
     }
 
+    const getGiftData = async () => {
+        try {
+            setIsGiftLoading(true);
+            const response = await GiftService.Queries.getGifts({
+                _page: 1,
+                _perPage: 400,
+                _status: 'active',
+            });
+
+            const gifts = response.data?.data || [];
+            setGiftData(gifts.map((gift) => ({ value: gift.g_id, label: gift.g_title })));
+        } catch (error) {
+            if (error.errors) {
+                Object.values(error.errors).forEach((e) => toast.error(e[0]));
+            } else {
+                toast.error(error.message || "Something went wrong");
+            }
+        } finally {
+            setIsGiftLoading(false);
+        }
+    }
+
 
     // Load master data
     const loadAllMasterData = async () => {
@@ -1502,6 +1529,7 @@ const UpdateProductForm = ({ productId }) => {
                 getUserModeData(),
                 getAvailabilityData(),
                 getSeatData(),
+                getGiftData(),
             ]);
             setIsMasterDataReady(true);
         } catch (error) {
@@ -2009,6 +2037,50 @@ const UpdateProductForm = ({ productId }) => {
                                                 {errors.v_edition_id && (
                                                     <p className="text-red-500 text-sm">{errors.v_edition_id.message}</p>
                                                 )}
+                                            </div>
+
+                                            <div>
+                                                <label className="text-base font-medium" htmlFor="v_user_gift">
+                                                    User Gift
+                                                </label>
+                                                <select
+                                                    id="v_user_gift"
+                                                    name="v_user_gift"
+                                                    className="outline-none py-2 px-3 rounded border w-full"
+                                                    {...register("v_user_gift")}
+                                                    disabled={isGiftLoading}
+                                                >
+                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select gift from seller'}</option>
+                                                    {
+                                                        giftData.map((gift) => (
+                                                            <option key={gift.value} value={gift.value}>
+                                                                {gift.label}
+                                                            </option>
+                                                        ))
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                    PBL Gift
+                                                </label>
+                                                <select
+                                                    id="v_pbl_gift"
+                                                    name="v_pbl_gift"
+                                                    className="outline-none py-2 px-3 rounded border w-full"
+                                                    {...register("v_pbl_gift")}
+                                                    disabled={isGiftLoading}
+                                                >
+                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                    {
+                                                        giftData.map((gift) => (
+                                                            <option key={gift.value} value={gift.value}>
+                                                                {gift.label}
+                                                            </option>
+                                                        ))
+                                                    }
+                                                </select>
                                             </div>
 
                                             <div>

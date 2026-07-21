@@ -17,6 +17,7 @@ import constData from "@/lib/constant";
 import { formatPermissions, onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
+import GiftService from "@/services/GiftService";
 import VehicleModelService from "@/services/VehicleModelService";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
@@ -188,6 +189,8 @@ const Vehicle = () => {
   const [colorData, setColorData] = useState([]);
   const [conditionData, setConditionData] = useState([]);
   const [packageData, setPackageData] = useState([]);
+  const [giftData, setGiftData] = useState([]);
+  const [isGiftLoading, setIsGiftLoading] = useState(false);
   const [skeletonData, setSkeletonData] = useState([]);
   const [transmissionData, setTransmissionData] = useState([]);
   const [gradeData, setGradeData] = useState([]);
@@ -767,6 +770,8 @@ const Vehicle = () => {
       appendFormValue(formData, "v_skeleton_id", data.v_skeleton_id ? data.v_skeleton_id : '');
       appendFormValue(formData, "v_color_id", data.v_color_id ? data.v_color_id : '');
       appendFormValue(formData, "v_edition_id", data.v_edition_id ? data.v_edition_id : '');
+      appendFormValue(formData, "v_user_gift", data.v_user_gift ? data.v_user_gift : '');
+      appendFormValue(formData, "v_pbl_gift", data.v_pbl_gift ? data.v_pbl_gift : '');
 
 
 
@@ -1260,6 +1265,28 @@ const Vehicle = () => {
     }
   }
 
+  const getGiftData = async () => {
+    try {
+      setIsGiftLoading(true);
+      const response = await GiftService.Queries.getGifts({
+        _page: 1,
+        _perPage: 400,
+        _status: 'active',
+      });
+
+      const gifts = response.data?.data || [];
+      setGiftData(gifts.map((gift) => ({ value: gift.g_id, label: gift.g_title })));
+    } catch (error) {
+      if (error.errors) {
+        Object.values(error.errors).forEach((e) => toast.error(e[0]));
+      } else {
+        toast.error(error.message || "Something went wrong");
+      }
+    } finally {
+      setIsGiftLoading(false);
+    }
+  }
+
   const getSkeletonData = async () => {
     try {
       const skeleton_code = constData.SKELETON_MD_CODE;
@@ -1629,6 +1656,7 @@ const Vehicle = () => {
     getConditionData();
     getCountryData();
     // getEditionData();
+    getGiftData();
     getSkeletonData();
     getTransmissionData();
     getGradeData();
@@ -2693,6 +2721,52 @@ const Vehicle = () => {
                                   value={packageData.find(option => option.value === field.value)}
                                   placeholder={isPackageLoading ? "Loading..." : "Select Package"}
                                   isDisabled={isPackageLoading}
+                                  className="basic-single"
+                                  classNamePrefix="select"
+                                />
+                              )}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-base font-medium" htmlFor="v_user_gift">
+                              User Gift
+                            </label>
+                            <Controller
+                              name="v_user_gift"
+                              control={control}
+                              render={({ field }) => (
+                                <Select
+                                  {...field}
+                                  options={giftData}
+                                  onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
+                                  value={giftData.find(option => option.value === field.value) || null}
+                                  placeholder={isGiftLoading ? "Loading..." : "Select gift from seller"}
+                                  isDisabled={isGiftLoading}
+                                  isClearable
+                                  className="basic-single"
+                                  classNamePrefix="select"
+                                />
+                              )}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                              PBL Gift
+                            </label>
+                            <Controller
+                              name="v_pbl_gift"
+                              control={control}
+                              render={({ field }) => (
+                                <Select
+                                  {...field}
+                                  options={giftData}
+                                  onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
+                                  value={giftData.find(option => option.value === field.value) || null}
+                                  placeholder={isGiftLoading ? "Loading..." : "Select PilotBazar gift"}
+                                  isDisabled={isGiftLoading}
+                                  isClearable
                                   className="basic-single"
                                   classNamePrefix="select"
                                 />

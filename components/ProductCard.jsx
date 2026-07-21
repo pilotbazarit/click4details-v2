@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import Select from "react-select";
-import { assets } from "@/assets/assets";
 import Image from "next/image";
 import { FireExtinguisher, GitBranch, GitCompare, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing, MessageCircle, ShoppingCart, Copy, Edit, Clock, ChevronDown, X, Star, Palette, Loader2, Plus, Gift } from "lucide-react"
 import { FaWhatsapp, FaWhatsappSquare } from "react-icons/fa";
@@ -40,6 +39,7 @@ import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { getSessionId } from "@/lib/utils";
 import constData from "@/lib/constant";
+import GiftBadge from "@/components/GiftBadge";
 
 
 dayjs.extend(relativeTime);
@@ -1419,7 +1419,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       });
 
       const response = await fetch(
-        `${API_URL}/api/vehicle/delivery-challan-pdf?${queryParams.toString()}`,
+        `${API_URL}api/vehicle/delivery-challan-pdf?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
@@ -1589,7 +1589,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       }
 
       const response = await fetch(
-        `${API_URL}/api/vehicle/quotation-pdf/${productId}?${queryParams.toString()}`,
+        `${API_URL}api/vehicle/quotation-pdf/${productId}?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
@@ -1764,7 +1764,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       }
 
       const response = await fetch(
-        `${API_URL}/api/vehicle/bill-copy-pdf/${productId}?${queryParams.toString()}`,
+        `${API_URL}api/vehicle/bill-copy-pdf/${productId}?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {
@@ -2174,24 +2174,6 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
           </div>
         )}
 
-        {/* {product?.v_gift_offer && ( */}
-        <div className="absolute top-2 right-2 z-20 group/gift">
-          <div className="relative flex items-center justify-center">
-            {/* Gift Icon Button */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg cursor-pointer transition-transform duration-200 group-hover/gift:scale-110">
-              <Image src={assets.gift} alt="Gift" width={32} height={32} className="w-8 h-8 object-contain rounded-full" />
-            </div>
-            {/* Tooltip - hover করলে দেখাবে */}
-            <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-white text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover/gift:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover/gift:scale-100">
-              🎁 Gift Offer
-              {/* {product.v_gift_offer} */}
-              {/* Tooltip arrow */}
-              <span className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-rose-600"></span>
-            </div>
-          </div>
-        </div>
-        {/* )} */}
-
         {/* Message Notification Badge */}
         {/* <div 
           onClick={() => setChatOpen(true)}
@@ -2214,6 +2196,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 className="rounded-xl mb-3 w-full h-60 sm:h-72 md:h-72 lg:h-72 xl:h-60 3xl:h-72 object-cover aspect-[3/2] transition-transform duration-500 group-hover/image:scale-105"
               />
             )}
+            <GiftBadge userGift={product?.user_gift} pblGift={product?.pbl_gift} className="top-3 left-3" />
 
             {/* {(parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'supreme') && ( */}
             {/* <div
@@ -2562,7 +2545,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               (!isMyShop && !isCompanyShop) && (
                 <button
                   onClick={() => {
-                    const phoneNumber = parsedUser?.phone || '+8809638660077';
+                    const phoneNumber = parsedUser?.phone || '+8801969944400';
                     window.location.href = `tel:${phoneNumber}`;
                   }}
                   title="Contact Via Phone"

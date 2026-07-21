@@ -8,4 +8,4 @@
 
 // reads NEXT_PUBLIC_API_URL (set per-environment in .env/.env.docker/.env.local);
 // falls back to production so a missing env var never silently breaks a deploy
-export const API_URL = "https://api.pilotbazar.com";
+export const API_URL = "https://api.pilotbazar.com/";

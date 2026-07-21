@@ -31,6 +31,7 @@ import { formatPrice } from "@/helpers/functions";
 import { getSessionId } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
 import { pushDataLayerEvent } from "@/helpers/gtmEvents";
+import GiftBadge from "@/components/GiftBadge";
 
 dayjs.extend(relativeTime);
 
@@ -666,6 +667,7 @@ const GeneralProductDetails = ({ productDetails }) => {
                 <ShieldCheck className="h-3 w-3" /> PBL
               </span>
             )}
+            <GiftBadge userGift={productDetails?.user_gift} pblGift={productDetails?.pbl_gift} variant="inline" />
             {isMounted && productDetails?.p_created_at && (
               <span className="text-sm text-gray-400">{dayjs(productDetails.p_created_at).fromNow()}</span>
             )}

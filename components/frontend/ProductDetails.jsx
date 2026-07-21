@@ -19,6 +19,7 @@ import { getSessionId, hasPermission } from "@/lib/utils";
 import ModalSlider from "./ModalSlider";
 import { parseStoredUser } from "@/lib/parseStoredUser";
 import { pushDataLayerEvent } from "@/helpers/gtmEvents";
+import GiftBadge from "@/components/GiftBadge";
 
 dayjs.extend(relativeTime);
 
@@ -1274,6 +1275,9 @@ const ProductDetails = ({ productDetails }) => {
                             <TypewriterPrice text={productDetails?.v_title} />
                         </p>
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
+                        <div className="mt-2">
+                            <GiftBadge userGift={productDetails?.user_gift} pblGift={productDetails?.pbl_gift} variant="inline" />
+                        </div>
                     </div>
 
                     <motion.div

@@ -1287,7 +1287,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       }
 
       const response = await fetch(
-        `${API_URL}/api/payment/download-payment?${queryParams.toString()}`,
+        `${API_URL}api/payment/download-payment?${queryParams.toString()}`,
         {
           method: "GET",
           headers: {

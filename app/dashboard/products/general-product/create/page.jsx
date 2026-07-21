@@ -26,6 +26,7 @@ import LocationService from "@/services/LocationService";
 import MasterDataService from "@/services/MasterDataService";
 import OutletService from "@/services/OutletService";
 import PackageService from "@/services/PackageService";
+import GiftService from "@/services/GiftService";
 import ShopService from "@/services/ShopService";
 import SupplierService from "@/services/SupplierService";
 import VehicleModelService from "@/services/VehicleModelService";
@@ -53,6 +54,8 @@ const emptyBasic = {
   brandId: "",
   modelId: "",
   packageId: "",
+  userGiftId: "",
+  pblGiftId: "",
   shopId: "",
   supplierId: "",
   outletId: "",
@@ -631,6 +634,7 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
   const [brandOptions, setBrandOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
   const [packageOptions, setPackageOptions] = useState([]);
+  const [giftOptions, setGiftOptions] = useState([]);
   const [shopOptions, setShopOptions] = useState([]);
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [outletOptions, setOutletOptions] = useState([]);
@@ -715,6 +719,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
           brandId: stringValue(product?.p_brand_id ?? product?.brand?.md_id),
           modelId: stringValue(product?.p_model_id ?? product?.model?.vm_id ?? product?.model?.md_id),
           packageId: stringValue(product?.p_package_id ?? product?.package?.p_id ?? product?.package?.md_id),
+          userGiftId: stringValue(product?.p_user_gift ?? product?.user_gift?.g_id),
+          pblGiftId: stringValue(product?.p_pbl_gift ?? product?.pbl_gift?.g_id),
           shopId: stringValue(product?.p_shop_id ?? product?.shop?.s_id),
           supplierId: stringValue(product?.p_supplier_id ?? product?.supplier?.s_id),
           outletId: stringValue(product?.p_outlet_id ?? product?.outlet?.uo_id),
@@ -829,17 +835,19 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
             })
             : Promise.resolve({ data: [] });
 
-        const [typesRes, brandsRes, countriesRes, shopsRes] = await Promise.all([
+        const [typesRes, brandsRes, countriesRes, shopsRes, giftsRes] = await Promise.all([
           CategoryService.Queries.getCategories({ _page: 1, _perPage: 1000, _parent_id: 0 }),
           MasterDataService.Queries.getMasterDataByTypeCode(constData.BRAND_MD_CODE),
           MasterDataService.Queries.getMasterDataByTypeCode(constData.COUNTRY_CODE),
           shopRequest,
+          GiftService.Queries.getGifts({ _page: 1, _perPage: 400, _status: 'active' }),
         ]);
 
         setProductTypeOptions(toOptions(typesRes?.data?.data, "c_id", "c_name"));
         setBrandOptions(toOptions(brandsRes?.data?.master_data, "md_id", "md_title"));
         setCountryOptions(toOptions(countriesRes?.data?.master_data, "md_id", "md_title"));
         setShopOptions(toShopOptions(canSeeAllShops(currentUser) ? shopsRes?.data?.data : shopsRes?.data));
+        setGiftOptions(toOptions(giftsRes?.data?.data, "g_id", "g_title"));
       } catch (error) {
         toast.error(error?.message || "Failed to load product form data");
       }
@@ -1229,6 +1237,8 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
     formData.append("p_brand_id", basic.brandId);
     formData.append("p_model_id", basic.modelId);
     formData.append("p_package_id", basic.packageId);
+    formData.append("p_user_gift", basic.userGiftId);
+    formData.append("p_pbl_gift", basic.pblGiftId);
     formData.append("p_shop_id", basic.shopId);
     formData.append("p_supplier_id", basic.supplierId || "");
     formData.append("p_outlet_id", basic.outletId || 0);
@@ -1518,6 +1528,20 @@ export function GeneralProductFormWizard({ mode = "create", productId = "" } = {
                     options={packageOptions}
                     disabled={!basic.modelId}
                     onChange={(value) => setBasicValue("packageId", value)}
+                  />
+
+                  <SearchableSelect
+                    label="User Gift"
+                    value={basic.userGiftId}
+                    options={giftOptions}
+                    onChange={(value) => setBasicValue("userGiftId", value)}
+                  />
+
+                  <SearchableSelect
+                    label="PBL Gift"
+                    value={basic.pblGiftId}
+                    options={giftOptions}
+                    onChange={(value) => setBasicValue("pblGiftId", value)}
                   />
 
                   <SearchableSelect
