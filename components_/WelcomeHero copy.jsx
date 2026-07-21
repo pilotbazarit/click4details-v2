@@ -21,7 +21,7 @@ const WelcomeHero = () => {
               <h1 className="text-5xl md:text-6xl font-bold leading-tight animate-fade-in">
                 স্বাগতম
                 {/* <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-400">
-                  Pilot Bazar
+                  Click4Details
                 </span>
                 এ */}
               </h1>
@@ -32,7 +32,7 @@ const WelcomeHero = () => {
 
             {/* Description */}
             <p className="text-lg text-blue-50 max-w-lg leading-relaxed animate-fade-in-delay-2">
-              Pilot Bazar একটি আধুনিক ই-কমার্স প্ল্যাটফর্ম যেখানে ক্রেতা এবং বিক্রেতারা একসাথে ব্যবসা করতে পারেন। আমরা সর্বোচ্চ মানের সেবা এবং নিরাপত্তা নিশ্চিত করি।
+              Click4Details একটি আধুনিক ই-কমার্স প্ল্যাটফর্ম যেখানে ক্রেতা এবং বিক্রেতারা একসাথে ব্যবসা করতে পারেন। আমরা সর্বোচ্চ মানের সেবা এবং নিরাপত্তা নিশ্চিত করি।
             </p>
 
             {/* CTA Buttons */}

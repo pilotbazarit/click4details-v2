@@ -795,7 +795,7 @@ const ProductDetails = ({ productDetails }) => {
         .map((value) => formatDetailValue(value))
         .filter((value) => value !== "-")
         .join("/");
-    const agencyName = formatDetailValue(productDetails?.shop?.s_name || productDetails?.user?.name || "Pilot Bazar Ltd.");
+    const agencyName = formatDetailValue(productDetails?.shop?.s_name || productDetails?.user?.name || "Click4Details Ltd.");
 
     const gdocDownloadControl = shouldShowGdocButton ? (
         <button

@@ -21,7 +21,7 @@ const WelcomeHero = () => {
               <h1 className="text-5xl md:text-6xl font-bold leading-tight animate-fade-in">
                 স্বাগতম
                 {/* <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-400">
-                  Pilot Bazar
+                  Click4Details
                 </span>
                 এ */}
               </h1>

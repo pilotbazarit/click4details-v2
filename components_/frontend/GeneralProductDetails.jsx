@@ -432,7 +432,7 @@ const GeneralProductDetails = ({ productDetails }) => {
   const shareProduct = async () => {
     const productUrl = productUrlFor(productDetails);
     const shareData = {
-      title: productDetails?.p_name || "Pilot Bazar product",
+      title: productDetails?.p_name || "Click4Details product",
       text: `${productDetails?.p_name || "Product"} - ${selectedVariant ? money(selectedVariant.sellingPrice) : ""}`,
       url: productUrl,
     };
