@@ -1030,11 +1030,7 @@ const ProductList = () => {
           effectiveCompanyShops.forEach((item, idx) => {
             params[`_shop_ids[${idx}]`] = item?.value ?? item;
           });
-          if (user?.user_mode !== 'supreme' && user?.id) {
-            params._user_id = user.id;
-          } else {
-            delete params._user_id;
-          }
+          delete params._user_id;
 
         } else {
           params['_shop_ids[0]'] = shopToFilter;
@@ -1072,8 +1068,12 @@ const ProductList = () => {
         params._order = newCreatedAtQuery;
       }
 
-      if (newOwnerQuery) {
+      if (newOwnerQuery && shopToFilter !== 'company-shop') {
         params._user_id = newOwnerQuery;
+      }
+
+      if (shopToFilter === 'company-shop') {
+        delete params._user_id;
       }
 
       if (newBrandQuery) {
@@ -1129,9 +1129,8 @@ const ProductList = () => {
     const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
     const shouldPassLoginUserId =
       activeUser?.id &&
-      (shopType === "company-shop"
-        ? activeUser?.user_mode !== "supreme"
-        : !canAllShopView(activeUser));
+      shopType !== "company-shop" &&
+      !canAllShopView(activeUser);
     const params = {
       // _user_id: user?.id,
       ...(shouldPassLoginUserId && { _user_id: activeUser.id }),
