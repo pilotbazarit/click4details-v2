@@ -1,5 +1,5 @@
 import ConversationService from "@/services/ConversationService";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NotificationService from "@/services/NotificationService";
 import { Bell, Car, MessageCircle, Package, Search, UserPlus, X } from "lucide-react";
@@ -65,6 +65,16 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   const loadingRef = useRef(false);
   const userIdRef = useRef(null);
   const requestIdRef = useRef(0);
+
+  const canViewSearchNotifications = user?.user_mode === "supreme" || user?.user_mode === "admin";
+  const visibleNotificationTabs = useMemo(
+    () => (
+      canViewSearchNotifications
+        ? NOTIFICATION_TABS
+        : NOTIFICATION_TABS.filter((tab) => tab.key !== "search")
+    ),
+    [canViewSearchNotifications]
+  );
 
   const parseLocalUser = useCallback(() => {
     try {
@@ -151,7 +161,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       if (replace) setIsLoading(true);
       else setIsLoadingMore(true);
 
-      const selectedTab = NOTIFICATION_TABS.find((tab) => tab.key === activeTab) || NOTIFICATION_TABS[0];
+      const selectedTab = visibleNotificationTabs.find((tab) => tab.key === activeTab) || visibleNotificationTabs[0];
 
       if (selectedTab.key === "search") {
         const response = await NotificationService.Queries.getNotifications({
@@ -235,7 +245,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         setIsLoadingMore(false);
       }
     }
-  }, [activeTab, normalizeNotificationItem, normalizeSearchNotificationItem]);
+  }, [activeTab, normalizeNotificationItem, normalizeSearchNotificationItem, visibleNotificationTabs]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -269,6 +279,12 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     hasMoreRef.current = true;
     fetchNotificationsPage({ nextPage: 1, replace: true });
   }, [activeTab, fetchNotificationsPage, isOpen, user?.id]);
+
+  useEffect(() => {
+    if (!visibleNotificationTabs.some((tab) => tab.key === activeTab)) {
+      setActiveTab(visibleNotificationTabs[0].key);
+    }
+  }, [activeTab, visibleNotificationTabs]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -387,8 +403,10 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         </div>
 
         <div className="border-b border-gray-100 bg-gray-50/70 px-5 py-3">
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 sm:grid-cols-4">
-            {NOTIFICATION_TABS.map((tab) => {
+          <div className={`grid grid-cols-2 gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 ${
+            visibleNotificationTabs.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-4"
+          }`}>
+            {visibleNotificationTabs.map((tab) => {
               const isActive = activeTab === tab.key;
               const TabIcon = tab.icon;
 
