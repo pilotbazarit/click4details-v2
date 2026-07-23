@@ -67,13 +67,14 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
   const requestIdRef = useRef(0);
 
   const canViewSearchNotifications = user?.user_mode === "supreme" || user?.user_mode === "admin";
+  const canViewPartnerNotifications = ["supreme", "admin", "pbl"].includes(user?.user_mode);
   const visibleNotificationTabs = useMemo(
-    () => (
-      canViewSearchNotifications
-        ? NOTIFICATION_TABS
-        : NOTIFICATION_TABS.filter((tab) => tab.key !== "search")
-    ),
-    [canViewSearchNotifications]
+    () => NOTIFICATION_TABS.filter((tab) => {
+      if (tab.key === "search") return canViewSearchNotifications;
+      if (tab.key === "partner") return canViewPartnerNotifications;
+      return true;
+    }),
+    [canViewPartnerNotifications, canViewSearchNotifications]
   );
 
   const parseLocalUser = useCallback(() => {
@@ -404,7 +405,11 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
 
         <div className="border-b border-gray-100 bg-gray-50/70 px-5 py-3">
           <div className={`grid grid-cols-2 gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 ${
-            visibleNotificationTabs.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-4"
+            visibleNotificationTabs.length === 2
+              ? "sm:grid-cols-2"
+              : visibleNotificationTabs.length === 3
+                ? "sm:grid-cols-3"
+                : "sm:grid-cols-4"
           }`}>
             {visibleNotificationTabs.map((tab) => {
               const isActive = activeTab === tab.key;
