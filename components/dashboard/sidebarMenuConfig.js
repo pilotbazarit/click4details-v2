@@ -243,6 +243,7 @@ export const dashboardMenuItems = [
         name: "Recycled Products",
         path: "/dashboard/recycled-product-list/",
         icon: PackageSearch,
+        allowedModes: [ADMIN, SUPREME, PBL],
         // allowedModes: ADMIN_AND_SUPREME,
         requiredPermission: {
           section: "Vehicle",

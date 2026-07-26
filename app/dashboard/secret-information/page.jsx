@@ -230,7 +230,35 @@ const SecretInformationPage = () => {
                 </div>
               )}
 
-              {!detail.secret_text && !detail.secret_video_link && (!detail.secret_docs || detail.secret_docs.length === 0) && (
+              {Array.isArray(detail.secret_docs_2) && detail.secret_docs_2.length > 0 && (
+                <div>
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <FileIcon className="h-4 w-4" /> Secret Documents 2
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {detail.secret_docs_2.filter(Boolean).map((doc, index) => (
+                      <a
+                        key={index}
+                        href={doc?.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="border rounded-lg overflow-hidden flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition"
+                      >
+                        {isImageDoc(doc) ? (
+                          <img src={doc?.url} alt={`Secret document 2 ${index + 1}`} className="w-full h-32 object-cover" />
+                        ) : (
+                          <div className="w-full h-32 flex flex-col items-center justify-center gap-2 text-gray-500">
+                            <FileIcon className="h-8 w-8" />
+                            <span className="text-xs">View Document</span>
+                          </div>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!detail.secret_text && !detail.secret_video_link && (!detail.secret_docs || detail.secret_docs.length === 0) && (!detail.secret_docs_2 || detail.secret_docs_2.length === 0) && (
                 <p className="text-sm text-gray-500">No secret data found for this listing.</p>
               )}
             </div>

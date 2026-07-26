@@ -347,7 +347,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         );
     const shouldUseUserPrice = pathname === '/my-shop/' || pathname === '/company-shop/';
     const shouldOpenPriceSelectModal =
-        !isStock && (!isCompanyShop || hasPermissionShowSelectPriceDialog);
+        Boolean(user) && !isStock && (!isCompanyShop || hasPermissionShowSelectPriceDialog);
 
     const getShareDisplayPrice = () => {
         const rawPrice = shouldUseUserPrice
@@ -1132,7 +1132,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                             const imageFiles = await Promise.all(
                                 images.map(async (img, index) => {
                                     try {
-                                        const response = await fetch(img.url);
+                                        const response = await fetch(img?.url);
                                         const blob = await response.blob();
                                         return new File([blob], `image-${index + 1}.jpg`, { type: 'image/jpeg' });
                                     } catch (error) {

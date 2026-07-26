@@ -387,6 +387,8 @@ const Profile = () => {
                 data[`up_docs[${i}][name]`] = doc.name;
                 if (doc.file) {
                     data[`up_docs[${i}][file]`] = doc.file;
+                } else if (doc.publicId) {
+                    data[`up_docs[${i}][public_id]`] = doc.publicId;
                 }
             });
 

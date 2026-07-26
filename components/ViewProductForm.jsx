@@ -136,6 +136,7 @@ const ViewProductForm = ({ productId }) => {
     const [additionalImages, setAdditionalImages] = useState([]); // store File objects
     const [additionalPreviews, setAdditionalPreviews] = useState([]); // for UI previews
     const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]);
+    const [secretDocument2Previews, setSecretDocument2Previews] = useState([]);
 
     const [shopData, setShopData] = useState([]);
     const [brandData, setBrandData] = useState([]);
@@ -829,8 +830,18 @@ const ViewProductForm = ({ productId }) => {
                     });
                 }
 
+                const vehicleSecretDoc2Arr = [];
+                if (data?.v_secret_docs_2?.length > 0) {
+                    data.v_secret_docs_2.forEach((doc) => {
+                        if (doc?.url) {
+                            vehicleSecretDoc2Arr.push(doc.url);
+                        }
+                    });
+                }
+
                 setAdditionalPreviews(vehicleImgArr);
                 setSecretDocumentPreviews(vehicleSecretDocArr);
+                setSecretDocument2Previews(vehicleSecretDoc2Arr);
                 setPreview(data?.vehicle_front_image?.url);
 
                 // Populate other form fields
@@ -2032,6 +2043,49 @@ const ViewProductForm = ({ productId }) => {
                                                     </div>
                                                 </div>
 
+                                                <div className="mb-3 mt-4">
+                                                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents 2</h4>
+                                                    <div className="flex w-20 h-0.5">
+                                                        <div className="w-1/2 bg-green-500"></div>
+                                                        <div className="w-1/2 bg-gray-500/20"></div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-4">
+                                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                                        {secretDocument2Previews.length > 0 ? (
+                                                            secretDocument2Previews.map((doc, index) => (
+                                                                <a
+                                                                    key={`${doc}-${index}`}
+                                                                    href={doc}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-blue-400"
+                                                                >
+                                                                    {isImageDocumentUrl(doc) ? (
+                                                                        <img
+                                                                            src={doc}
+                                                                            alt={`Secret Document 2 ${index + 1}`}
+                                                                            className="h-40 w-full object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="flex h-40 items-center justify-center bg-gray-50 p-4 text-center text-sm font-medium text-gray-600">
+                                                                            {getDocumentFileName(doc)}
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="border-t border-gray-200 px-3 py-2 text-xs font-medium text-blue-600">
+                                                                        View document
+                                                                    </div>
+                                                                </a>
+                                                            ))
+                                                        ) : (
+                                                            <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-sm text-gray-500 sm:col-span-2 xl:col-span-4">
+                                                                No secret documents uploaded.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 <div className="grid grid-cols-4 gap-4 mb-4">
 
                                                     <div className="mb-2">
@@ -2405,7 +2459,7 @@ const ViewProductForm = ({ productId }) => {
                                                     {...register("v_is_saleBy_pbl")}
                                                 />
                                                 <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                    I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                     <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                         Terms and Conditions
                                                     </Link>. Please Sale My Product and Increase My Profit.
@@ -2424,7 +2478,7 @@ const ViewProductForm = ({ productId }) => {
                                                     {...register("want_to_be_partner")}
                                                 />
                                                 <label htmlFor="want_to_be_partner" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                                                    I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                                                 </label>
                                             </div>
 

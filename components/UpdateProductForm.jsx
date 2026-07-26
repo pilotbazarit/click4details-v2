@@ -57,24 +57,24 @@ const deliveryConditionOptions = [
 
 const auctionTypeOptions = [
     {
-      value: "orginal_auc",
-      label: "Orginal Auc",
+        value: "orginal_auc",
+        label: "Orginal Auc",
     },
     {
-      value: "dealer_auc",
-      label: "Dealer Auc",
+        value: "dealer_auc",
+        label: "Dealer Auc",
     },
     {
-      value: "car_mods_bd",
-      label: "Car Mods BD",
+        value: "car_mods_bd",
+        label: "Car Mods BD",
     },
     {
-      value: "ussr_auc",
-      label: "USSR Auc",
+        value: "ussr_auc",
+        label: "USSR Auc",
     },
     {
-      value: "not_orginal_auc",
-      label: "Not Orginal Auc",
+        value: "not_orginal_auc",
+        label: "Not Orginal Auc",
     },
 ];
 
@@ -197,6 +197,9 @@ const UpdateProductForm = ({ productId }) => {
     const [secretDocumentFiles, setSecretDocumentFiles] = useState([]); // store File objects
     const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]); // for UI previews
     const [secretDocumentPublicIds, setSecretDocumentPublicIds] = useState([]); // public_id per preview, null for unsaved local files
+    const [secretDocument2Files, setSecretDocument2Files] = useState([]); // store File objects
+    const [secretDocument2Previews, setSecretDocument2Previews] = useState([]); // for UI previews
+    const [secretDocument2PublicIds, setSecretDocument2PublicIds] = useState([]); // public_id per preview, null for unsaved local files
 
     const [shopData, setShopData] = useState([]);
     const [partnerData, setPartnerData] = useState([]);
@@ -221,6 +224,7 @@ const UpdateProductForm = ({ productId }) => {
     const [removeAdditionalImage, setRemoveAdditionalImage] = useState([]);
     const [removeAdditionalDocument, setRemoveAdditionalDocument] = useState([]);
     const [removeSecretDocument, setRemoveSecretDocument] = useState([]);
+    const [removeSecretDocument2, setRemoveSecretDocument2] = useState([]);
     const [fontImageError, setFontImageError] = useState(false);
     const [selectedFsId, setSelectedFsId] = useState([]);
     const [isPblAdditionalDropdownOpen, setIsPblAdditionalDropdownOpen] = useState(false);
@@ -802,6 +806,44 @@ const UpdateProductForm = ({ productId }) => {
         setSecretDocumentPublicIds((prev) => prev.filter((_, i) => i !== index));
     };
 
+    const handleSecretDocument2FileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const totalAllowed = 12;
+        const remainingSlots = totalAllowed - secretDocument2Previews.length;
+
+        if (remainingSlots <= 0) return;
+
+        const filesToAdd = files.slice(0, remainingSlots);
+        const previews = filesToAdd.map((file) => URL.createObjectURL(file));
+
+        setSecretDocument2Files((prev) => [...prev, ...filesToAdd]);
+        setSecretDocument2Previews((prev) => [...prev, ...previews]);
+        setSecretDocument2PublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
+        e.target.value = "";
+    };
+
+    const handleDeleteSecretDocument2 = (url, index) => {
+        const isNewDocument = typeof url === "string" && url.startsWith("blob:");
+        const publicId = secretDocument2PublicIds[index];
+
+        if (publicId && !removeSecretDocument2.includes(publicId)) {
+            setRemoveSecretDocument2(prev => [...prev, publicId]);
+        }
+
+        if (isNewDocument) {
+            const newDocumentIndex = secretDocument2Previews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setSecretDocument2Files((prev) => prev.filter((_, i) => i !== newDocumentIndex));
+        }
+
+        setSecretDocument2Previews((prev) => prev.filter((_, i) => i !== index));
+        setSecretDocument2PublicIds((prev) => prev.filter((_, i) => i !== index));
+    };
+
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
 
@@ -1239,12 +1281,25 @@ const UpdateProductForm = ({ productId }) => {
                     });
                 }
 
+                const vehicleSecretDoc2Arr = [];
+                const vehicleSecretDoc2PublicIds = [];
+                if (data?.v_secret_docs_2?.length > 0) {
+                    data.v_secret_docs_2.forEach((doc) => {
+                        if (doc?.url) {
+                            vehicleSecretDoc2Arr.push(doc.url);
+                            vehicleSecretDoc2PublicIds.push(doc?.public_id || null);
+                        }
+                    });
+                }
+
                 setAdditionalPreviews(vehicleImgArr);
                 setAdditionalImagePublicIds(vehicleImgPublicIds);
                 setAdditionalDocumentPreviews(vehicleDocArr);
                 setAdditionalDocumentPublicIds(vehicleDocPublicIds);
                 setSecretDocumentPreviews(vehicleSecretDocArr);
                 setSecretDocumentPublicIds(vehicleSecretDocPublicIds);
+                setSecretDocument2Previews(vehicleSecretDoc2Arr);
+                setSecretDocument2PublicIds(vehicleSecretDoc2PublicIds);
                 setPreview(data?.vehicle_front_image?.url);
 
                 // Populate other form fields
@@ -1673,6 +1728,9 @@ const UpdateProductForm = ({ productId }) => {
         secretDocumentFiles && secretDocumentFiles.forEach((file, index) => {
             formData.append(`v_secret_docs[${index}]`, file);
         });
+        secretDocument2Files && secretDocument2Files.forEach((file, index) => {
+            formData.append(`v_secret_docs_2[${index}]`, file);
+        });
 
         if (removeAdditionalImage && removeAdditionalImage.length > 0) {
             removeAdditionalImage.forEach(img => {
@@ -1687,6 +1745,11 @@ const UpdateProductForm = ({ productId }) => {
         if (removeSecretDocument && removeSecretDocument.length > 0) {
             removeSecretDocument.forEach((doc, index) => {
                 formData.append(`v_secret_docs_remove[${index}]`, doc);
+            });
+        }
+        if (removeSecretDocument2 && removeSecretDocument2.length > 0) {
+            removeSecretDocument2.forEach((doc, index) => {
+                formData.append(`v_secret_docs_2_remove[${index}]`, doc);
             });
         }
 
@@ -1707,6 +1770,9 @@ const UpdateProductForm = ({ productId }) => {
                 setSecretDocumentFiles([]);
                 setSecretDocumentPreviews([]);
                 setRemoveSecretDocument([]);
+                setSecretDocument2Files([]);
+                setSecretDocument2Previews([]);
+                setRemoveSecretDocument2([]);
                 setPreview(null);
                 setLoading(false);
                 toast.success("Vehicle updated successfully!");
@@ -2061,7 +2127,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 </select>
                                             </div>
 
-                                            <div>
+                                            {/* <div>
                                                 <label className="text-base font-medium" htmlFor="v_pbl_gift">
                                                     PBL Gift
                                                 </label>
@@ -2072,7 +2138,7 @@ const UpdateProductForm = ({ productId }) => {
                                                     {...register("v_pbl_gift")}
                                                     disabled={isGiftLoading}
                                                 >
-                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select Click4Details gift'}</option>
+                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
                                                     {
                                                         giftData.map((gift) => (
                                                             <option key={gift.value} value={gift.value}>
@@ -2081,7 +2147,7 @@ const UpdateProductForm = ({ productId }) => {
                                                         ))
                                                     }
                                                 </select>
-                                            </div>
+                                            </div> */}
 
                                             <div>
                                                 <label className="text-base font-medium" htmlFor="customer-name">
@@ -2457,7 +2523,7 @@ const UpdateProductForm = ({ productId }) => {
                                             <div>
                                                 <div>
                                                     <label className="text-base font-medium" htmlFor="customer-name">
-                                                         Google link (Pic)
+                                                        Google link (Pic)
                                                     </label>
                                                     {/* <input type="date" {...register("v_arrival_date")} className="outline-none py-2 px-3 rounded border w-full" /> */}
                                                     <Input
@@ -2470,7 +2536,7 @@ const UpdateProductForm = ({ productId }) => {
                                             </div>
                                         </div>
 
-                                       
+
 
                                         {/* <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
                                             <div>
@@ -3175,6 +3241,81 @@ const UpdateProductForm = ({ productId }) => {
                                                     </div>
                                                 </div>
 
+                                                <div>
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents 2</h4>
+                                                        <div className="flex w-20 h-0.5">
+                                                            <div className="w-1/2 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                        <div className="flex justify-center items-center">
+                                                            <label
+                                                                htmlFor="secret-documents-2-upload"
+                                                                className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                                            >
+                                                                <svg
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    className="w-6 h-6 text-gray-500"
+                                                                    fill="none"
+                                                                    viewBox="0 0 24 24"
+                                                                    stroke="currentColor"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={2}
+                                                                        d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                                    />
+                                                                    <circle cx="12" cy="13" r="4" />
+                                                                </svg>
+                                                                <input
+                                                                    type="file"
+                                                                    id="secret-documents-2-upload"
+                                                                    name="secretDocuments2"
+                                                                    accept="image/*,.pdf,.doc,.docx"
+                                                                    multiple
+                                                                    className="hidden"
+                                                                    onChange={handleSecretDocument2FileChange}
+                                                                />
+                                                            </label>
+                                                        </div>
+
+                                                        <div className="col-span-4">
+                                                            <div className="grid grid-cols-6 gap-4 image-preview">
+                                                                {secretDocument2Previews.map((doc, index) => (
+                                                                    <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                        <img
+                                                                            src={doc}
+                                                                            alt={`Secret Document 2 Preview ${index}`}
+                                                                            className="object-cover w-full h-full"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteSecretDocument2(doc, index)}
+                                                                            className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                            aria-label="Delete secret document 2 image"
+                                                                        >
+                                                                            <svg
+                                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                                className="h-4 w-4 text-red-500"
+                                                                                fill="none"
+                                                                                viewBox="0 0 24 24"
+                                                                                stroke="currentColor"
+                                                                                strokeWidth={2}
+                                                                            >
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                                 <div className="mb-2 w-[50%]">
                                                     <label className="text-base font-medium" htmlFor="v_secret_text">
                                                         Secret Text
@@ -3189,6 +3330,29 @@ const UpdateProductForm = ({ productId }) => {
                                                     ></textarea>
                                                 </div>
 
+
+                                                {/* <div>
+                                                    <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                        PBL Gift
+                                                    </label>
+                                                    <select
+                                                        id="v_pbl_gift"
+                                                        name="v_pbl_gift"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_pbl_gift")}
+                                                        disabled={isGiftLoading}
+                                                    >
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        {
+                                                            giftData.map((gift) => (
+                                                                <option key={gift.value} value={gift.value}>
+                                                                    {gift.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div> */}
+
                                                 <div className="mb-2 w-[50%]">
                                                     <label className="text-base font-medium" htmlFor="v_secret_video_link">
                                                         Secret Video Link
@@ -3199,6 +3363,28 @@ const UpdateProductForm = ({ productId }) => {
                                                         placeholder="Enter Secret Video Link"
                                                         {...register("v_secret_video_link")}
                                                     />
+                                                </div>
+
+                                                <div className="mb-2 w-[50%]">
+                                                    <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                        PBL Gift
+                                                    </label>
+                                                    <select
+                                                        id="v_pbl_gift"
+                                                        name="v_pbl_gift"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_pbl_gift")}
+                                                        disabled={isGiftLoading}
+                                                    >
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        {
+                                                            giftData.map((gift) => (
+                                                                <option key={gift.value} value={gift.value}>
+                                                                    {gift.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
                                                 </div>
 
 
@@ -3384,7 +3570,7 @@ const UpdateProductForm = ({ productId }) => {
 
 
                                                     {
-                                                       
+
 
                                                         user && (user.user_mode === 'pbl' || user.user_mode === 'admin' || user.user_mode === 'supreme') && (
                                                             <>
@@ -3426,7 +3612,7 @@ const UpdateProductForm = ({ productId }) => {
 
 
 
-                                                    
+
 
                                                     <div>
                                                         <label className="text-base font-medium" htmlFor="v_auction_type">
@@ -3646,7 +3832,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("v_is_saleBy_pbl")}
                                             />
                                             <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                 <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                     Terms and Conditions
                                                 </Link>. Please Sale My Product and Increase My Profit.

@@ -180,8 +180,11 @@ const Vehicle = () => {
   const [additionalDocumentPreviews, setAdditionalDocumentPreviews] = useState([]);
   const [secretDocumentFiles, setSecretDocumentFiles] = useState([]);
   const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]);
+  const [secretDocument2Files, setSecretDocument2Files] = useState([]);
+  const [secretDocument2Previews, setSecretDocument2Previews] = useState([]);
   const [sellerInfoRows, setSellerInfoRows] = useState([{ name: "", phone: "" }]);
   const [removeSecretDocument, setRemoveSecretDocument] = useState([]);
+  const [removeSecretDocument2, setRemoveSecretDocument2] = useState([]);
   const [moreInformation, setMoreInformation] = useState([{ id: "more-info-0", key: "", value: "" }]);
 
   const [shopData, setShopData] = useState([]);
@@ -609,6 +612,9 @@ const Vehicle = () => {
         secretDocumentFiles.forEach((file, index) => {
           formData.append(`v_secret_docs[${index}]`, file);
         });
+        secretDocument2Files.forEach((file, index) => {
+          formData.append(`v_secret_docs_2[${index}]`, file);
+        });
 
         setShowAdditionalFields(true);
 
@@ -800,6 +806,12 @@ const Vehicle = () => {
           removeSecretDocument.forEach((docId, index) => {
             formData.append(`v_secret_docs_remove[${index}]`, docId);
           });
+          secretDocument2Files.forEach((file, index) => {
+            formData.append(`v_secret_docs_2[${index}]`, file);
+          });
+          removeSecretDocument2.forEach((docId, index) => {
+            formData.append(`v_secret_docs_2_remove[${index}]`, docId);
+          });
 
           // setShowAdditionalFields(true);
 
@@ -814,6 +826,9 @@ const Vehicle = () => {
               setSecretDocumentFiles([]);
               setSecretDocumentPreviews([]);
               setRemoveSecretDocument([]);
+              setSecretDocument2Files([]);
+              setSecretDocument2Previews([]);
+              setRemoveSecretDocument2([]);
               setPreview(null);
               reset();
               setLoading(false);
@@ -839,6 +854,9 @@ const Vehicle = () => {
         removeSecretDocument.forEach((docId, index) => {
           formData.append(`v_secret_docs_remove[${index}]`, docId);
         });
+        removeSecretDocument2.forEach((docId, index) => {
+          formData.append(`v_secret_docs_2_remove[${index}]`, docId);
+        });
         // additionalDocumentFiles.forEach((file, index) => {
         //   formData.append(`v_docs[${index}]`, file);
         // });
@@ -857,6 +875,9 @@ const Vehicle = () => {
             setSecretDocumentFiles([]);
             setSecretDocumentPreviews([]);
             setRemoveSecretDocument([]);
+            setSecretDocument2Files([]);
+            setSecretDocument2Previews([]);
+            setRemoveSecretDocument2([]);
             setPreview(null);
             reset();
             setLoading(false);
@@ -990,6 +1011,52 @@ const Vehicle = () => {
     });
   };
 
+  const handleSecretDocument2FileChange = (e) => {
+    const newFiles = Array.from(e.target.files || []);
+    if (newFiles.length === 0) return;
+
+    setSecretDocument2Files((prevFiles) => {
+      const combinedFiles = [...prevFiles, ...newFiles];
+      setSecretDocument2Previews((prevPreviews) => {
+        prevPreviews.forEach((item) => URL.revokeObjectURL(item.url));
+        return combinedFiles
+          .map((file, fileIndex) => ({ file, fileIndex }))
+          .filter(({ file }) => file.type.startsWith("image/"))
+          .map(({ file, fileIndex }) => ({ url: URL.createObjectURL(file), fileIndex }));
+      });
+      return combinedFiles;
+    });
+    e.target.value = "";
+  };
+
+  const handleDeleteSecretDocument2 = (fileIndexToDelete) => {
+    setSecretDocument2Files((prevFiles) => {
+      const fileToDelete = prevFiles[fileIndexToDelete];
+      const removedDocId =
+        fileToDelete?.public_id ||
+        fileToDelete?.publicId ||
+        fileToDelete?.doc?.public_id ||
+        null;
+
+      if (removedDocId) {
+        setRemoveSecretDocument2((prev) => {
+          if (prev.includes(removedDocId)) return prev;
+          return [...prev, removedDocId];
+        });
+      }
+
+      const updatedFiles = prevFiles.filter((_, index) => index !== fileIndexToDelete);
+      setSecretDocument2Previews((prevPreviews) => {
+        prevPreviews.forEach((item) => URL.revokeObjectURL(item.url));
+        return updatedFiles
+          .map((file, fileIndex) => ({ file, fileIndex }))
+          .filter(({ file }) => file.type.startsWith("image/"))
+          .map(({ file, fileIndex }) => ({ url: URL.createObjectURL(file), fileIndex }));
+      });
+      return updatedFiles;
+    });
+  };
+
   useEffect(() => {
     return () => {
       additionalDocumentPreviews.forEach((item) => URL.revokeObjectURL(item.url));
@@ -1001,6 +1068,12 @@ const Vehicle = () => {
       secretDocumentPreviews.forEach((item) => URL.revokeObjectURL(item.url));
     };
   }, [secretDocumentPreviews]);
+
+  useEffect(() => {
+    return () => {
+      secretDocument2Previews.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [secretDocument2Previews]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
@@ -2445,6 +2518,87 @@ const Vehicle = () => {
                               </div>
                             </div>
 
+                            <div>
+                              <div className="mb-3 mt-4">
+                                <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents 2</h4>
+                                <div className="flex w-20 h-0.5">
+                                  <div className="w-1/2 bg-green-500"></div>
+                                  <div className="w-1/2 bg-gray-500/20"></div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                <div className="flex justify-center items-center">
+                                  <label
+                                    htmlFor="secret-document-2-file"
+                                    className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="w-6 h-6 text-gray-500"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                      />
+                                      <circle cx="12" cy="13" r="4" />
+                                    </svg>
+                                    <input
+                                      id="secret-document-2-file"
+                                      type="file"
+                                      accept="image/*,.pdf,.doc,.docx"
+                                      multiple
+                                      className="hidden"
+                                      onChange={handleSecretDocument2FileChange}
+                                    />
+                                  </label>
+                                </div>
+
+                                <div className="col-span-4">
+                                  {secretDocument2Previews.length > 0 && (
+                                    <div className="grid grid-cols-6 gap-4">
+                                      {secretDocument2Previews.map((preview, index) => (
+                                        <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                          <img
+                                            src={preview.url}
+                                            alt={`Secret Document 2 Preview ${index + 1}`}
+                                            className="object-cover w-full h-full"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeleteSecretDocument2(preview.fileIndex)}
+                                            className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                            aria-label="Delete secret document 2 image"
+                                          >
+                                            <svg
+                                              xmlns="http://www.w3.org/2000/svg"
+                                              className="h-4 w-4 text-red-500"
+                                              fill="none"
+                                              viewBox="0 0 24 24"
+                                              stroke="currentColor"
+                                              strokeWidth={2}
+                                            >
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {secretDocument2Files.length > 0 && (
+                                    <p className="text-xs text-gray-600 mt-1">
+                                      {secretDocument2Files.length} file selected
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
                             <div className="mb-2 w-[50%]">
                               <label className="text-base font-medium" htmlFor="v_secret_text">
                                 Secret Text
@@ -2468,6 +2622,29 @@ const Vehicle = () => {
                                 name="v_secret_video_link"
                                 placeholder="Enter Secret Video Link"
                                 {...register("v_secret_video_link")}
+                              />
+                            </div>
+
+                            <div className="mb-2 w-[50%]">
+                              <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                PBL Gift
+                              </label>
+                              <Controller
+                                name="v_pbl_gift"
+                                control={control}
+                                render={({ field }) => (
+                                  <Select
+                                    {...field}
+                                    options={giftData}
+                                    onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
+                                    value={giftData.find(option => option.value === field.value) || null}
+                                    placeholder={isGiftLoading ? "Loading..." : "Select PilotBazar gift"}
+                                    isDisabled={isGiftLoading}
+                                    isClearable
+                                    className="basic-single"
+                                    classNamePrefix="select"
+                                  />
+                                )}
                               />
                             </div>
 
@@ -2742,29 +2919,6 @@ const Vehicle = () => {
                                   onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
                                   value={giftData.find(option => option.value === field.value) || null}
                                   placeholder={isGiftLoading ? "Loading..." : "Select gift from seller"}
-                                  isDisabled={isGiftLoading}
-                                  isClearable
-                                  className="basic-single"
-                                  classNamePrefix="select"
-                                />
-                              )}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-base font-medium" htmlFor="v_pbl_gift">
-                              PBL Gift
-                            </label>
-                            <Controller
-                              name="v_pbl_gift"
-                              control={control}
-                              render={({ field }) => (
-                                <Select
-                                  {...field}
-                                  options={giftData}
-                                  onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
-                                  value={giftData.find(option => option.value === field.value) || null}
-                                  placeholder={isGiftLoading ? "Loading..." : "Select Click4Details gift"}
                                   isDisabled={isGiftLoading}
                                   isClearable
                                   className="basic-single"
@@ -3453,7 +3607,7 @@ const Vehicle = () => {
                             {...register("v_is_saleBy_pbl")}
                           />
                           <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I am Click4Details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                            I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                             <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                               Terms and Conditions
                             </Link>. Please Sale My Product and Increase My Profit.
@@ -3472,7 +3626,7 @@ const Vehicle = () => {
                             {...register("v_to_be_partner")}
                           />
                           <label htmlFor="partnership" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                            I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                            I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                           </label>
                         </div> */}
 
