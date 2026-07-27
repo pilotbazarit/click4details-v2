@@ -223,10 +223,13 @@ const ProductList = () => {
 
   const canAllShopView = (targetUser = user) => {
     if (!targetUser) return false;
-    return (
-      (targetUser?.user_mode !== "pbl" && targetUser?.user_mode !== "admin") ||
-      hasPermission(permissionList, 0, "Vehicle", "AllShopView")
-    );
+
+    const userMode = targetUser?.user_mode;
+    if (userMode === "admin" || userMode === "pbl") {
+      return hasPermission(permissionList, 0, "Vehicle", "AllShopView");
+    }
+
+    return userMode === "supreme" || userMode === "superme";
   };
 
   const updateTopScrollbarMetrics = useCallback(() => {
@@ -1126,11 +1129,21 @@ const ProductList = () => {
     // console.log("shopType", shopType);
 
     const activeUser = userOverride || user || getStoredUser();
+
+
+    // console.log("activeUser1131", activeUser);
+
+
     const type = shopType === "company-shop" ? "company" : shopType === "my-shop" ? "own" : "all";
+    const userMode = activeUser?.user_mode;
+    const shouldForceLoginUserId = userMode === "user" || userMode === "partner";
+    const shouldCheckAllShopPermission = userMode === "admin" || userMode === "pbl";
     const shouldPassLoginUserId =
       activeUser?.id &&
-      shopType !== "company-shop" &&
-      !canAllShopView(activeUser);
+      (
+        shouldForceLoginUserId ||
+        (shouldCheckAllShopPermission && !canAllShopView(activeUser))
+      );
     const params = {
       // _user_id: user?.id,
       ...(shouldPassLoginUserId && { _user_id: activeUser.id }),
@@ -1138,10 +1151,12 @@ const ProductList = () => {
       _page: 1,
       _perPage: 1000
     };
+
+
     try {
       const response = await ShopService.Queries.getShopsWithCompanyShops(params);
 
-      //  console.log("response------`-474", response);
+      //  console.log("response------`-1144", response);
 
 
       const list = response?.data || [];
@@ -1152,6 +1167,9 @@ const ProductList = () => {
           return { value: shop.s_id, label: shop.s_title, phone: shop?.user?.phone || shop?.s_user_phone || "" };
         })
         .filter(Boolean);
+
+
+        // console.log("shopOptions------`-1157", shopOptions);
 
       setAllShop(shopOptions);
       setShopData(shopOptions);
