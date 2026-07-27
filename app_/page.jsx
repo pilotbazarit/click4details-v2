@@ -1,5 +1,5 @@
 'use client'
-import React, { Suspense, useState } from "react";
+import React, { useState } from "react";
 import { ProductContextProvider } from "@/context/ProductContext";
 import Login from "@/components/Login";
 import Register from "@/components/Register";
@@ -9,9 +9,8 @@ import LoginService from "@/services/LoginService";
 import { useRouter } from "next/navigation";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import Loading from "@/components/Loading";
 
-const HomeContent = () => {
+const Home = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(true);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
@@ -277,14 +276,6 @@ const HomeContent = () => {
       </div>
       {/* </div> */}
     </ProductContextProvider>
-  );
-};
-
-const Home = () => {
-  return (
-    <Suspense fallback={<Loading />}>
-      <HomeContent />
-    </Suspense>
   );
 };
 

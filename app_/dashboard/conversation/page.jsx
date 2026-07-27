@@ -7,7 +7,7 @@ import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
 import ShopModal from "@/components/modals/ShopModal";
 import StoreService from "@/services/ShopService";
-import { Car, Eye, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { Eye, Pencil, SmilePlus, Trash2 } from "lucide-react";
 
 import {
   Table,
@@ -218,19 +218,17 @@ const Conversation = () => {
                   conversations.map((conversation, index) => (
                     <TableRow key={conversation.id || index} className="border-b border-gray-200">
                       <TableCell className="border-r border-gray-200 text-center">{index + 1}</TableCell>
-                      <TableCell className="border-r border-gray-200 text-center">CON-{conversation?.conv_id}</TableCell>
+                      <TableCell className="border-r border-gray-200 text-center">{conversation?.conv_id}</TableCell>
                       <TableCell className="border-r border-gray-200 text-center">{conversation?.entity_details?.title}</TableCell>
                       <TableCell className="border-r border-gray-200 text-center">
                         <div>
                           <span>{conversation?.from_user?.name}</span><br/>
-                          <span> {conversation?.from_user?.email}</span><br/>
-                          <span>+880{conversation?.from_user?.phone}</span>
+                          <span>{conversation?.from_user?.email}</span>
                         </div>
                       </TableCell>
                       <TableCell className="border-r border-gray-200 text-center">
                         {conversation?.to_user?.name}<br/>
-                        {conversation?.to_user?.email} <br/>
-                        +880{conversation?.to_user?.phone}
+                        {conversation?.to_user?.email}
                       </TableCell>
                       <TableCell className="border-r border-gray-200 text-center">{formatNotificationTime(conversation?.conv_created_at)}</TableCell>
                       <TableCell className="flex justify-center gap-2 border-r border-gray-200 font-medium">
@@ -242,17 +240,6 @@ const Conversation = () => {
                         >
                           <Eye size={18} />
                         </button>
-
-                        <button
-                          className="text-blue-600 hover:text-blue-800"
-                          aria-label={`View Card`}
-                          title="View Card"
-                          onClick={() => window.open(`/product/${conversation?.entity_details?.id}`, '_blank')}
-                        >
-                          <Car size={18} />
-                        </button>
-
-                        {/* <Car /> */}
                       </TableCell>
                     </TableRow>
                   ))
