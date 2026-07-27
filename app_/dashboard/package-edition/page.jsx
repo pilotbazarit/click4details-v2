@@ -15,7 +15,6 @@ import VehicleModelAddModal from "@/components/modals/VehicleModelAddModal";
 import PackageAddModal from "@/components/modals/PackageAddModal";
 import FeatureSpecificationAddModal from "@/components/modals/FeatureSpecificationAddModal";
 import FeatureAddModal from "@/components/modals/FeatureAddModal";
-import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
 
 const PackageEdition = () => {
