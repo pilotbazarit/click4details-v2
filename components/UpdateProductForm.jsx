@@ -3831,11 +3831,15 @@ const UpdateProductForm = ({ productId }) => {
                                                 disabled={user?.user_mode == 'member'}
                                                 {...register("v_is_saleBy_pbl")}
                                             />
-                                            <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                            <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                {/* আমার এই প্রোডাক্ট টি pilotbazar.com এ বিক্রয় এর জন্য অনুমতি দেওয়া হলো এবং আমি pilotbazar.com এর সকল শর্ত মানতে রাজি আছি। &nbsp; */}
+                                                আমি আমার এই প্রোডাক্টটি pilotbazar.com এ বিক্রয়ের জন্য অনুমতি প্রদান করছি
+                                                এবং pilotbazar.com এর সকল
                                                 <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
-                                                    Terms and Conditions
-                                                </Link>. Please Sale My Product and Increase My Profit.
+                                                    {/* Terms and Conditions */} শর্তাবলী
+                                                </Link> মেনে নিতে সম্মত আছি।
+                                                {/* অনুগ্রহ করে আমার প্রোডাক্টটি বিক্রয়ে সহায়তা করুন এবং আমার ব্যবসার মুনাফা বৃদ্ধিতে সহায়তা করুন। */}
+                                                {/* Please Sale My Product and Increase My Profit. */}
                                             </label>
                                         </div>
 
