@@ -611,13 +611,13 @@ export const dashboardMenuItems = [
         name: "Payment List",
         path: "/dashboard/settings/payment-list/",
         icon: Box,
-        // allowedModes: [ADMIN, SUPREME, PBL],
-        // requiredPermission: {
-        //   section: "Settings",
-        //   action: "PaymentListMenuShow",
-        //   appliesToModes: [PBL, ADMIN],
-        //   pblShopId: 0,
-        // },
+        allowedModes: [ADMIN, SUPREME, PBL],
+        requiredPermission: {
+          section: "Settings",
+          action: "PaymentListMenuShow",
+          appliesToModes: [PBL, ADMIN],
+          pblShopId: 0,
+        },
       },
       {
         name: "Models",
