@@ -857,6 +857,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         setIsChalanCustomersLoading(true);
         const response = await ContactCustomerService.Queries.getContactCustomers({
           _user_id: chalanContactUserId,
+          _page: 1,
+          _perPage: 5000,
         });
         const rows = getProductCardCustomerListFromResponse(response);
         const customers = rows
@@ -953,6 +955,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         setIsQuotationCustomersLoading(true);
         const response = await ContactCustomerService.Queries.getContactCustomers({
           _user_id: chalanContactUserId,
+          _page: 1,
+          _perPage: 5000,
         });
         const rows = getProductCardCustomerListFromResponse(response);
         const customers = rows
@@ -1002,6 +1006,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
         setIsBillCopyCustomersLoading(true);
         const response = await ContactCustomerService.Queries.getContactCustomers({
           _user_id: chalanContactUserId,
+          _page: 1,
+          _perPage: 5000,
         });
         const rows = getProductCardCustomerListFromResponse(response);
         const customers = rows
@@ -1308,6 +1314,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       setIsChalanCustomersLoading(true);
       const response = await ContactCustomerService.Queries.getContactCustomers({
         _user_id: chalanContactUserId,
+        _page: 1,
+        _perPage: 5000,
       });
       const rows = getProductCardCustomerListFromResponse(response);
       const customers = rows
@@ -1327,6 +1335,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       setIsQuotationCustomersLoading(true);
       const response = await ContactCustomerService.Queries.getContactCustomers({
         _user_id: chalanContactUserId,
+        _page: 1,
+        _perPage: 5000,
       });
       const rows = getProductCardCustomerListFromResponse(response);
       const customers = rows

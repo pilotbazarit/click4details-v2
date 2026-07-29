@@ -759,6 +759,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       setIsCreatePaymentCustomersLoading(true);
       const response = await ContactCustomerService.Queries.getContactCustomers({
         _user_id: createPaymentContactUserId,
+        _page: 1,
+        _perPage: 5000,
       });
       const rows = getPaymentCustomerListFromResponse(response);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -45,6 +45,20 @@ const getContactCustomerListFromResponse = (response) => {
   if (Array.isArray(response?.list)) return response.list;
   if (Array.isArray(response)) return response;
   return [];
+};
+
+const getContactCustomerTotalFromResponse = (response, fallbackTotal = 0) => {
+  const possibleTotals = [
+    response?.data?.total,
+    response?.total,
+    response?.meta?.total,
+    response?.data?.meta?.total,
+    response?.pagination?.total,
+    response?.data?.pagination?.total,
+  ];
+
+  const total = possibleTotals.find((value) => Number.isFinite(Number(value)));
+  return total === undefined ? fallbackTotal : Number(total);
 };
 
 const getContactCustomerStatusMeta = (value) => {
@@ -164,6 +178,7 @@ const ContactCustomersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [contactCustomers, setContactCustomers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -183,54 +198,64 @@ const ContactCustomersPage = () => {
         : "";
   }, [activeUserId, parsedUser?.email, parsedUser?.name, parsedUser?.phone]);
 
-  const getContactCustomers = useCallback(
-    async (targetUserId = activeUserId) => {
-      if (!targetUserId) {
-        setContactCustomers([]);
+  const getContactCustomers = async (
+    value = searchQuery,
+    page = currentPage,
+    perPage = itemsPerPage,
+    targetUserId = activeUserId
+  ) => {
+    if (!targetUserId) {
+      setContactCustomers([]);
+      setTotalItems(0);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const params = {
+        _user_id: targetUserId,
+        _page: page,
+        _perPage: perPage,
+      };
+
+      const trimmedValue = String(value || "").trim();
+      if (trimmedValue) {
+        params._name = trimmedValue;
+      }
+
+      const response =
+        await ContactCustomerService.Queries.getContactCustomers(params);
+
+      if (response?.status === "success") {
+        const rows = getContactCustomerListFromResponse(response);
+        setContactCustomers(rows.map(normalizeContactCustomer));
+        setTotalItems(getContactCustomerTotalFromResponse(response, rows.length));
         return;
       }
 
-      try {
-        setLoading(true);
-        const response = await ContactCustomerService.Queries.getContactCustomers(
-          {
-            _user_id: targetUserId,
-          }
-        );
-
-        if (response?.status === "success") {
-          const rows = getContactCustomerListFromResponse(response).map(
-            normalizeContactCustomer
-          );
-          setContactCustomers(rows);
-          return;
-        }
-
-        setContactCustomers([]);
-        toast.error(
-          response?.message ||
-          response?.data?.message ||
-          "Failed to fetch contact customer list"
-        );
-      } catch (error) {
-        setContactCustomers([]);
-        toast.error(
-          error?.response?.data?.message ||
-          error?.message ||
-          "Failed to fetch contact customer list"
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [activeUserId]
-  );
+      setContactCustomers([]);
+      setTotalItems(0);
+      toast.error(
+        response?.message ||
+        response?.data?.message ||
+        "Failed to fetch contact customer list"
+      );
+    } catch (error) {
+      setContactCustomers([]);
+      setTotalItems(0);
+      toast.error(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to fetch contact customer list"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (activeUserId) {
-      getContactCustomers(activeUserId);
-    }
-  }, [activeUserId, getContactCustomers]);
+    getContactCustomers(searchQuery, currentPage, itemsPerPage, activeUserId);
+  }, [activeUserId, searchQuery, currentPage, itemsPerPage]);
 
   useEffect(() => {
     if (query.trim() === "" && searchQuery !== "") {
@@ -249,26 +274,7 @@ const ContactCustomersPage = () => {
     setSearchQuery("");
   };
 
-  const filteredContactCustomers = useMemo(() => {
-    if (!searchQuery) {
-      return contactCustomers;
-    }
-
-    const normalizedQuery = searchQuery.toLowerCase();
-
-    return contactCustomers.filter((item) =>
-      [item.name, item.phone, item.address, item.description, item.userName]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
-    );
-  }, [contactCustomers, searchQuery]);
-
-  const totalItems = filteredContactCustomers.length;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedContactCustomers = filteredContactCustomers.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
 
   const handleModalClose = (isOpen = false) => {
     setModalOpen(isOpen);
@@ -314,7 +320,7 @@ const ContactCustomersPage = () => {
 
       // if (response?.status === "success") {
       toast.success("Contact customer deleted successfully!");
-      await getContactCustomers(activeUserId);
+      await getContactCustomers(searchQuery, currentPage, itemsPerPage, activeUserId);
       return;
       // }
 
@@ -343,7 +349,7 @@ const ContactCustomersPage = () => {
 
   const handleSaved = async () => {
     handleModalClose(false);
-    await getContactCustomers(activeUserId);
+    await getContactCustomers(searchQuery, currentPage, itemsPerPage, activeUserId);
   };
 
   if (userLoading && !currentUserId) {
@@ -374,7 +380,9 @@ const ContactCustomersPage = () => {
 
             <Button
               variant="outline"
-              onClick={() => getContactCustomers(activeUserId)}
+              onClick={() =>
+                getContactCustomers(searchQuery, currentPage, itemsPerPage, activeUserId)
+              }
               disabled={loading || !activeUserId}
             >
               <RefreshCw className={loading ? "animate-spin" : ""} />
@@ -428,8 +436,8 @@ const ContactCustomersPage = () => {
             </TableHeader>
 
             <TableBody>
-              {!loading && paginatedContactCustomers.length > 0 ? (
-                paginatedContactCustomers.map((item, index) => (
+              {!loading && contactCustomers.length > 0 ? (
+                contactCustomers.map((item, index) => (
                   <TableRow
                     key={item.id || `${item.userId}-${index}`}
                     className="border-b border-gray-200"
@@ -474,8 +482,6 @@ const ContactCustomersPage = () => {
                             </button>
                           )
                         }
-
-
                         {
                           canShowDeleteContactCustomerButton && (
                             <button
