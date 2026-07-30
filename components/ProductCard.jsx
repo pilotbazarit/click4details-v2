@@ -221,7 +221,7 @@ const buildInitialQuotationForm = (product = {}) => ({
   price: "",
   priceInWords: "",
   priceNegotiation: "Fixed",
-  registrationCharge: "Included",
+  registrationCharge: "Excluded",
   vat: "Excluded",
   insurance: "Excluded",
   offerValidityDate: "",
