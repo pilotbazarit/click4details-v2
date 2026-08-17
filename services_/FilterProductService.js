@@ -353,11 +353,13 @@ const Queries = {
     const newCompanyShopsData = companyShopsDataFromAPI.map((shop) => ({
       value: shop.shop.s_id,
       label: shop.shop.s_title,
+      phone: shop?.shop?.user?.phone || shop?.shop?.s_user_phone || "",
     }));
 
     const userShopsData = shopsDataFromAPI.map((shop) => ({
       value: shop.s_id,
       label: shop.s_title,
+      phone: shop?.user?.phone || shop?.s_user_phone || "",
     }));
 
     return [{ value: "all", label: "All Shops" }, { value: "pbhome", label: "PBL Home" }, ...userShopsData, ...newCompanyShopsData];

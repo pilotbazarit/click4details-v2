@@ -68,7 +68,11 @@ export default function PosTerminal() {
     const filteredShops = useMemo(() => {
         if (!shopSearch.trim()) return shops;
         const q = shopSearch.toLowerCase();
-        return shops.filter(s => s.s_title?.toLowerCase().includes(q) || String(s.s_id).includes(q));
+        return shops.filter(s =>
+            s.s_title?.toLowerCase().includes(q) ||
+            String(s.s_id).includes(q) ||
+            String(s?.user?.phone || s?.s_user_phone || "").includes(q)
+        );
     }, [shops, shopSearch]);
 
     // Product search state
@@ -369,7 +373,12 @@ export default function PosTerminal() {
                                                     }`}
                                                 >
                                                     <Store className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                                                    <span className="truncate">{s.s_title}</span>
+                                                    <span className="flex flex-col truncate">
+                                                        <span className="truncate">{s.s_title}</span>
+                                                        {(s?.user?.phone || s?.s_user_phone) && (
+                                                            <span className="text-xs text-gray-400">{s?.user?.phone || s?.s_user_phone}</span>
+                                                        )}
+                                                    </span>
                                                 </button>
                                             ))
                                         )}

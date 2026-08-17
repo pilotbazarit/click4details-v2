@@ -6,6 +6,7 @@ import {
   Database,
   DatabaseZap,
   FileText,
+  Gift,
   Headset,
   History,
   LayoutDashboard,
@@ -242,6 +243,7 @@ export const dashboardMenuItems = [
         name: "Recycled Products",
         path: "/dashboard/recycled-product-list/",
         icon: PackageSearch,
+        allowedModes: [ADMIN, SUPREME, PBL],
         // allowedModes: ADMIN_AND_SUPREME,
         requiredPermission: {
           section: "Vehicle",
@@ -609,13 +611,13 @@ export const dashboardMenuItems = [
         name: "Payment List",
         path: "/dashboard/settings/payment-list/",
         icon: Box,
-        // allowedModes: [ADMIN, SUPREME, PBL],
-        // requiredPermission: {
-        //   section: "Settings",
-        //   action: "PaymentListMenuShow",
-        //   appliesToModes: [PBL, ADMIN],
-        //   pblShopId: 0,
-        // },
+        allowedModes: [ADMIN, SUPREME, PBL],
+        requiredPermission: {
+          section: "Settings",
+          action: "PaymentListMenuShow",
+          appliesToModes: [PBL, ADMIN],
+          pblShopId: 0,
+        },
       },
       {
         name: "Models",
@@ -661,6 +663,18 @@ export const dashboardMenuItems = [
         requiredPermission: {
           section: "Settings",
           action: "PackagesMenuShow",
+          appliesToModes: [PBL, ADMIN],
+          pblShopId: 0,
+        },
+      },
+      {
+        name: "Gift Management",
+        path: "/dashboard/gifts/",
+        icon: Gift,
+        allowedModes: [ADMIN, SUPREME, PBL],
+        requiredPermission: {
+          section: "Gift",
+          action: "GiftManagementMenuShow",
           appliesToModes: [PBL, ADMIN],
           pblShopId: 0,
         },

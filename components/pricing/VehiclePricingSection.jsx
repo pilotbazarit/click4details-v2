@@ -165,6 +165,7 @@ const VehiclePricingSection = ({
   hotlineText = "Call PBL Hotline to be Partner",
   showCurrencyField = true,
   selectedProduct = null,
+  pricingLocked = false,
 }) => {
   const [isFixedPriceDropdownOpen, setIsFixedPriceDropdownOpen] = useState(false);
   const [selectedFixedPriceOption, setSelectedFixedPriceOption] = useState("");
@@ -826,6 +827,16 @@ const VehiclePricingSection = ({
       <input type="hidden" {...register("vp_show_price")} />
       <input type="hidden" {...register("vp_conv_rate")} />
       <input type="hidden" {...register("vp_bd_tax")} />
+
+      {pricingLocked && (
+        <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Pricing is managed from <strong>Vehicle Purchase Calculation &amp; Payment</strong> — the costing
+          and purchase price fields below are read-only here.
+        </div>
+      )}
+
+      {/* fieldset disabled cascades to every nested input/select/button */}
+      <fieldset disabled={pricingLocked} className={pricingLocked ? "opacity-70" : ""}>
 
       {/* <div className="mb-3 mt-4">
         <span className="text-sm font-semibold text-gray-600 mb-1">{hotlineText}</span>
@@ -1879,6 +1890,7 @@ const VehiclePricingSection = ({
           </div>
         )}
       </div>
+      </fieldset>
     </>
   );
 };

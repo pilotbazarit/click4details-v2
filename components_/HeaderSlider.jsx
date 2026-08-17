@@ -15,27 +15,27 @@ const slides = [
   {
     image: slider1,
     title: 'Click4Details',
-    description: 'click4details.com',
+    description: 'click4details.com@gmail.com',
   },
   {
     image: slider2,
     title: 'Click4Details',
-    description: 'click4details.com',
+    description: 'click4details.com@gmail.com',
   },
    {
     image: slider3,
     title: 'Click4Details',
-    description: 'click4details.com',
+    description: 'click4details.com@gmail.com',
   },
   {
     image: slider4,
     title: 'Click4Details',
-    description: 'click4details.com',
+    description: 'click4details.com@gmail.com',
   },
   {
     image: slider5,
     title: 'Click4Details',
-    description: 'click4details.com',
+    description: 'click4details.com@gmail.com',
   }
 ];
 

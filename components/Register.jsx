@@ -11,6 +11,8 @@ import Swal from "sweetalert2";
 import "react-phone-input-2/lib/style.css";
 import { pushDataLayerEvent } from "@/helpers/gtmEvents";
 
+const YOUTUBE_LINK = "https://www.youtube.com/";
+
 // Yup Validation Schema
 const schema = yup.object().shape({
   name: yup.string().required("Name is required"),
@@ -246,7 +248,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
         <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
           <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Register in to Click4Details Ltd
+              Register to click4details.com
             </h3>
             <button
               type="button"
@@ -273,7 +275,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
 
           <div className="p-4 md:p-5">
             {step === "register" ? (
-              <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+              <form className="space-y-2" onSubmit={handleSubmit(onSubmit)}>
                 <div>
                   <label
                     htmlFor="name"
@@ -350,132 +352,134 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
                   )}
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      {...register("password")}
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      id="password"
-                      required
-                      placeholder="............."
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 pr-12 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="password"
+                      className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                     >
-                      {showPassword ? (
-                        <svg
-                          className="w-5 h-5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
-                          <path d="M1 1l22 22" />
-                          <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
-                          <path d="M14.12 14.12 9.88 9.88" />
-                          <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-5 h-5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        {...register("password")}
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        id="password"
+                        required
+                        placeholder="............."
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 pr-12 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <svg
+                            className="w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
+                            <path d="M1 1l22 22" />
+                            <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
+                            <path d="M14.12 14.12 9.88 9.88" />
+                            <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-red-500 text-sm">
+                        {errors.password.message}
+                      </p>
+                    )}
                   </div>
-                  {errors.password && (
-                    <p className="text-red-500 text-sm">
-                      {errors.password.message}
-                    </p>
-                  )}
-                </div>
 
-                <div>
-                  <label
-                    htmlFor="password_confirmation"
-                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Confirmation password
-                  </label>
-                  <div className="relative">
-                    <input
-                      {...register("password_confirmation")}
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="password_confirmation"
-                      id="password_confirmation"
-                      required
-                      placeholder="............."
-                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 pr-12 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  <div>
+                    <label
+                      htmlFor="password_confirmation"
+                      className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                     >
-                      {showConfirmPassword ? (
-                        <svg
-                          className="w-5 h-5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
-                          <path d="M1 1l22 22" />
-                          <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
-                          <path d="M14.12 14.12 9.88 9.88" />
-                          <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-5 h-5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
+                      Confirmation password
+                    </label>
+                    <div className="relative">
+                      <input
+                        {...register("password_confirmation")}
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="password_confirmation"
+                        id="password_confirmation"
+                        required
+                        placeholder="............."
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 pr-12 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      >
+                        {showConfirmPassword ? (
+                          <svg
+                            className="w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
+                            <path d="M1 1l22 22" />
+                            <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
+                            <path d="M14.12 14.12 9.88 9.88" />
+                            <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {errors.password_confirmation && (
+                      <p className="text-red-500 text-sm">
+                        {errors.password_confirmation.message}
+                      </p>
+                    )}
                   </div>
-                  {errors.password_confirmation && (
-                    <p className="text-red-500 text-sm">
-                      {errors.password_confirmation.message}
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex justify-between">
@@ -503,6 +507,19 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
                 >
                   {isOtpSending ? "Sending OTP..." : "Create your account"}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.open(YOUTUBE_LINK, "_blank", "noopener,noreferrer")}
+                  className="w-full border border-red-600 text-red-600 font-medium rounded-lg text-sm px-5 py-2.5 hover:bg-red-50 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  Watch Tutorial on YouTube
+                </button>
+
+                <p className="text-center text-sm text-gray-600 dark:text-gray-300">
+                  রেজিস্ট্রেশন করতে কোনো সমস্যা হলে, অনুগ্রহ করে আমাদের এই নম্বরে কল করুন
+                  <span className="ml-1 font-semibold text-blue-600">+8801969944400</span>
+                </p>
               </form>
             ) : (
               <form className="space-y-4" onSubmit={handleVerifyOtp}>

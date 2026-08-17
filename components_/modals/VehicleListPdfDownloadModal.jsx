@@ -126,7 +126,7 @@ const VehicleListPdfDownloadModal = ({
                 <option value="__CURRENT__">Current Page Scope</option>
                 {shopOptions.map((shop) => (
                   <option key={shop.value} value={String(shop.value)}>
-                    {shop.label}
+                    {shop.label}{(shop.phone || shop?.user?.phone) ? ` — ${shop.phone || shop?.user?.phone}` : ""}
                   </option>
                 ))}
               </select>

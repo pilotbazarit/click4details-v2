@@ -15,11 +15,18 @@ import {
 } from "@/components/ui/table";
 import Image from 'next/image';
 import { Trash2 } from 'lucide-react';
-import OrderService from '@/services/OrderService';
+import CartService from '@/services/CartService';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 
-const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem }) => {
+// Was previously wired to OrderService.Commands.deleteOrderItem({oi_id: id})
+// with a cart item's ci_id - this modal shows a Cart's items (ci_* fields
+// throughout, selectedItem is a Cart), not an Order's, so that call deleted
+// (or tried to delete) the wrong table's row entirely. The parent
+// (dashboard/cart-list/page.jsx) also passes a `setCartItems` prop, not
+// `setOrders` - the update callback here was silently undefined and would
+// have thrown on the first successful delete anyway.
+const CartitemModal = ({ open, setOpen, selectedItem, setCartItems, setSelectedItem }) => {
     const items = selectedItem?.items || [];
 
     const handleDelete = async (id) => {
@@ -41,15 +48,12 @@ const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem
 
         if (result.isConfirmed) {
           try {
-            const response = await OrderService.Commands.deleteOrderItem({
-              oi_id: id
-            });
-
+            const response = await CartService.Commands.deleteCartItem(id);
 
             if (response.status === "success") {
               Swal.fire({
                 title: "Deleted!",
-                text: "Order Item Deleted Successfully!",
+                text: "Cart Item Deleted Successfully!",
                 icon: "success"
               });
 
@@ -60,16 +64,16 @@ const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem
                 }
                 return {
                   ...prevSelectedItem,
-                  items: prevSelectedItem.items.filter((item) => item.oi_id !== id),
+                  items: prevSelectedItem.items.filter((item) => item.ci_id !== id),
                 };
               });
 
-              // Update orders list - remove the deleted item from the current order
-              setOrders((prevOrders) =>
-                prevOrders.map((order) =>
-                  order.o_id === selectedItem.o_id
-                    ? { ...order, items: order.items.filter((item) => item.oi_id !== id) }
-                    : order
+              // Update the cart list - remove the deleted item from the current cart
+              setCartItems((prevCarts) =>
+                prevCarts.map((cart) =>
+                  cart.c_id === selectedItem.c_id
+                    ? { ...cart, items: cart.items.filter((item) => item.ci_id !== id) }
+                    : cart
                 )
               );
 
@@ -94,7 +98,7 @@ const CartitemModal = ({ open, setOpen, selectedItem, setOrders, setSelectedItem
             <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold">
-                        Order Items - Order #{selectedItem?.o_id}
+                        Cart Items - Cart #{selectedItem?.c_id}
                     </DialogTitle>
                 </DialogHeader>
 

@@ -1,9 +1,8 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import Select from "react-select";
-import { assets } from "@/assets/assets";
 import Image from "next/image";
-import { FireExtinguisher, GitBranch, GitCompare, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing, MessageCircle, ShoppingCart, Copy, Edit, Clock, ChevronDown, X, Star, Palette, Loader2, Plus } from "lucide-react"
+import { FireExtinguisher, GitBranch, GitCompare, LifeBuoy, MapPin, ReceiptText, Share2, PhoneOutgoing, MessageCircle, ShoppingCart, Copy, Edit, Clock, ChevronDown, X, Star, Palette, Loader2, Plus, Gift } from "lucide-react"
 import { FaWhatsapp, FaWhatsappSquare } from "react-icons/fa";
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
@@ -40,6 +39,7 @@ import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { getSessionId } from "@/lib/utils";
 import constData from "@/lib/constant";
+import GiftBadge from "@/components/GiftBadge";
 
 
 dayjs.extend(relativeTime);
@@ -221,7 +221,7 @@ const buildInitialQuotationForm = (product = {}) => ({
   price: "",
   priceInWords: "",
   priceNegotiation: "Fixed",
-  registrationCharge: "Included",
+  registrationCharge: "Excluded",
   vat: "Excluded",
   insurance: "Excluded",
   offerValidityDate: "",
@@ -2206,6 +2206,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 className="rounded-xl mb-3 w-full h-60 sm:h-72 md:h-72 lg:h-72 xl:h-60 3xl:h-72 object-cover aspect-[3/2] transition-transform duration-500 group-hover/image:scale-105"
               />
             )}
+            <GiftBadge userGift={product?.user_gift} pblGift={product?.pbl_gift} className="top-3 left-3" />
 
             {/* {(parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'supreme') && ( */}
             {/* <div
@@ -2554,7 +2555,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               (!isMyShop && !isCompanyShop) && (
                 <button
                   onClick={() => {
-                    const phoneNumber = parsedUser?.phone || '+8809638660077';
+                    const phoneNumber = parsedUser?.phone || '+8801969944400';
                     window.location.href = `tel:${phoneNumber}`;
                   }}
                   title="Contact Via Phone"

@@ -1,5 +1,6 @@
 'use client'
 import React, { Suspense, useState } from "react";
+import { Noto_Sans_Bengali } from "next/font/google";
 import { ProductContextProvider } from "@/context/ProductContext";
 import Login from "@/components/Login";
 import Register from "@/components/Register";
@@ -11,6 +12,12 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Loading from "@/components/Loading";
 
+const banglaFont = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
 const HomeContent = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(true);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -21,6 +28,7 @@ const HomeContent = () => {
   const [loading, setLoading] = useState(false);
   const [fieldError, setFieldError] = useState(null);
   const [error, setError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { setUser } = useAppContext();
   const router = useRouter();
@@ -70,7 +78,7 @@ const HomeContent = () => {
     <ProductContextProvider>
       {/* <div> */}
       {/* <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"> */}
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-400 via-blue-400 to-purple-300 relative overflow-hidden">
+      <div className={`${banglaFont.className} min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-400 via-blue-400 to-purple-300 relative overflow-hidden`}>
         {/* Decorative Blurred Circles */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500 rounded-full filter blur-3xl opacity-40 -translate-x-1/2 -translate-y-1/2"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl opacity-40 translate-x-1/3 translate-y-1/3"></div>
@@ -162,6 +170,7 @@ const HomeContent = () => {
                     country={'bd'}
                     value={fullPhone}
                     onChange={handlePhoneChange}
+                    autoFormat={false}
                     inputProps={{
                       name: 'login',
                       required: true,
@@ -174,15 +183,36 @@ const HomeContent = () => {
                   )}
                 </div>
 
-                <div>
+                <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
+                    className="w-full px-4 py-3 pr-12 rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
                     onChange={handleChange}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3-11-8a11 11 0 0 1 5.06-6.06" />
+                        <path d="M1 1l22 22" />
+                        <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
+                        <path d="M14.12 14.12 9.88 9.88" />
+                        <path d="M7.5 7.5A11.08 11.08 0 0 1 12 4c5 0 9.27 3 11 8a10.94 10.94 0 0 1-2.34 3.74" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
                   {fieldError?.password && (
                     <p className="text-red-500 text-sm mt-1">
                       {fieldError.password[0]}
@@ -252,6 +282,21 @@ const HomeContent = () => {
                       Create Account
                     </button>
                   </p>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-white/30 bg-white/10 p-4 text-center shadow-lg backdrop-blur-sm">
+                  <p className="mb-2 text-xs font-medium text-red-500">
+                    লগইন করতে কোনো সমস্যা হলে,
+                  </p>
+                  <p className="mb-3 text-xs text-red-500">
+                    অনুগ্রহ করে আমাদের এই নম্বরে কল করুন
+                  </p>
+                  <a
+                    href="tel:+8801969944400"
+                    className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-base font-bold text-white transition hover:bg-blue-500"
+                  >
+                    +8801969944400
+                  </a>
                 </div>
               </form>
             </div>

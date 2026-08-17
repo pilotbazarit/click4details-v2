@@ -18,6 +18,8 @@ import { useAppContext } from "@/context/AppContext";
 import { getSessionId, hasPermission } from "@/lib/utils";
 import ModalSlider from "./ModalSlider";
 import { parseStoredUser } from "@/lib/parseStoredUser";
+import { pushDataLayerEvent } from "@/helpers/gtmEvents";
+import GiftBadge from "@/components/GiftBadge";
 
 dayjs.extend(relativeTime);
 
@@ -34,6 +36,58 @@ const formatLocalMobile = (value) => {
     const trimmed = String(value || "").trim();
     if (!trimmed) return "";
     return trimmed.startsWith("0") ? trimmed : `0${trimmed}`;
+};
+
+const getImageDownloadExtension = (url, contentType = "") => {
+    const normalizedType = String(contentType || "").split(";")[0].trim().toLowerCase();
+    const extensionByType = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/gif": "gif",
+        "image/webp": "webp",
+        "image/bmp": "bmp",
+        "image/svg+xml": "svg",
+    };
+
+    if (extensionByType[normalizedType]) {
+        return extensionByType[normalizedType];
+    }
+
+    const cleanUrl = String(url || "").split(/[?#]/)[0];
+    const urlExtension = cleanUrl.includes(".") ? cleanUrl.split(".").pop() : "";
+
+    return urlExtension || "jpg";
+};
+
+const fetchImageBlobForDownload = async (imageUrl) => {
+    const sourceUrl = String(imageUrl || "").trim();
+
+    if (!sourceUrl) {
+        throw new Error("Image URL is missing");
+    }
+
+    const fetchBlob = async (url) => {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Image request failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+
+        if (!blob.size) {
+            throw new Error("Image file is empty");
+        }
+
+        return blob;
+    };
+
+    try {
+        return await fetchBlob(sourceUrl);
+    } catch {
+        return fetchBlob(`/api/proxy-image?url=${encodeURIComponent(sourceUrl)}`);
+    }
 };
 
 const getDocumentUrl = (doc) => {
@@ -607,9 +661,9 @@ const ProductDetails = ({ productDetails }) => {
 
         for (let i = 0; i < sliderImage.length; i++) {
             try {
-                const response = await fetch(sliderImage[i]);
-                const blob = await response.blob();
-                const fileName = `image-${i + 1}.${blob.type.split("/")[1]}`;
+                const imageUrl = sliderImage[i];
+                const blob = await fetchImageBlobForDownload(imageUrl);
+                const fileName = `image-${i + 1}.${getImageDownloadExtension(imageUrl, blob.type)}`;
                 folder.file(fileName, blob);
             } catch (error) {
                 console.error(`Error downloading image ${i + 1}:`, error);
@@ -630,9 +684,9 @@ const ProductDetails = ({ productDetails }) => {
 
         for (let i = 0; i < sliderImage.length; i++) {
             try {
-                const response = await fetch(sliderImage[i]);
-                const blob = await response.blob();
-                const fileName = `${folderName}-image-${i + 1}.${blob.type.split("/")[1]}`;
+                const imageUrl = sliderImage[i];
+                const blob = await fetchImageBlobForDownload(imageUrl);
+                const fileName = `${folderName}-image-${i + 1}.${getImageDownloadExtension(imageUrl, blob.type)}`;
                 saveAs(blob, fileName);
             } catch (error) {
                 console.error(`Error downloading image ${i + 1}:`, error);
@@ -1189,10 +1243,16 @@ const ProductDetails = ({ productDetails }) => {
         };
 
         addToCart(item.v_id, cartItem);
+
+        pushDataLayerEvent("add_to_cart", {
+            value: price || 0,
+            currency: "BDT",
+            items: [{ item_id: item.v_id, item_name: item.v_title, price: price || 0 }],
+        });
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8809638660077";
+        const phoneNumber = user?.phone || "+8801969944400";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1215,6 +1275,9 @@ const ProductDetails = ({ productDetails }) => {
                             <TypewriterPrice text={productDetails?.v_title} />
                         </p>
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
+                        <div className="mt-2">
+                            <GiftBadge userGift={productDetails?.user_gift} pblGift={productDetails?.pbl_gift} variant="inline" />
+                        </div>
                     </div>
 
                     <motion.div

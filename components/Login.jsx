@@ -99,7 +99,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
             <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
               <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Sign in to Our Click4Details
+                  Sign in to Our Pilot Bazar
                 </h3>
                 <button
                   type="button"
@@ -297,23 +297,31 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
                     </a>
                   </div>
 
-                  <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700 text-center">
-                    <div className="flex items-center justify-center mb-3">
-                      <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.92 7.02C17.45 4.18 14.97 2 12 2c-2.97 0-5.45 2.18-5.92 5.02C3.97 7.55 2 9.98 2 13c0 4.42 3.58 8 8 8h9c3.35 0 6-2.65 6-6 0-3.07-2.29-5.63-5.27-5.98zM10 18c-.55 0-1-.45-1-1v-3H6c-.55 0-1-.45-1-1s.45-1 1-1h3V9c0-.55.45-1 1-1s1 .45 1 1v3h3c.55 0 1 .45 1 1s-.45 1-1 1h-3v3c0 .55-.45 1-1 1z"/>
-                      </svg>
+                  <div className="mt-6 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 text-center shadow-sm dark:border-blue-700 dark:from-blue-950/60 dark:to-indigo-950/60">
+                    <div className="mb-3 flex items-center justify-center">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/70 dark:text-blue-300">
+                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 3.08 4.18 2 2 0 0 1 5.06 2h3a2 2 0 0 1 2 1.72l.4 2.04a2 2 0 0 1-.56 1.88L8.1 8.9a16 16 0 0 0 7 7l1.26-1.8a2 2 0 0 1 1.88-.56l2.04.4A2 2 0 0 1 22 16.92Z" />
+                        </svg>
+                      </div>
                     </div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                      লগইন করতে সমস্যা হচ্ছে?
+
+                    <h4 className="mb-2 text-sm font-bold text-gray-900 dark:text-white">
+                      লগইন করতে সমস্যা হলে
                     </h4>
-                    <p className="text-xs  mb-3">
-                      <span className="text-gray-700 dark:text-gray-300">সহায়তার জন্য কল করুন</span> 
-                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400"> +8809638660077</span>
+
+                    <p className="mb-2 text-xs text-gray-700 dark:text-gray-200">
+                      অনুগ্রহ করে আমাদের এই নম্বরে কল করুন
                     </p>
-                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2">
-                      
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+
+                    <a
+                      href="tel:+8801969944400"
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-base font-bold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                    >
+                      <span>+8801969944400</span>
+                    </a>
+
+                    <p className="mt-3 text-[11px] font-medium text-gray-600 dark:text-gray-300">
                       প্রতিদিন | সকাল ৮টা থেকে সন্ধ্যা ৬টা
                     </p>
                   </div>

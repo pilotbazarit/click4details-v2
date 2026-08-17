@@ -8,6 +8,7 @@ import { useAppContext } from "@/context/AppContext";
 import { getSessionId } from "@/lib/utils";
 import ProductShareModal from "./modals/ProductShareModal";
 import AddToCartModal from "./modals/AddToCartModal";
+import GiftBadge from "@/components/GiftBadge";
 
 const parseMaybeJson = (value) => {
   if (typeof value !== "string") return value;
@@ -214,6 +215,8 @@ const GeneralProductCard = ({ product }) => {
             PBL
           </span>
         )}
+
+        <GiftBadge userGift={product?.user_gift} pblGift={product?.pbl_gift} className="top-2 right-2" />
 
         {/* Image dots */}
         {allImages.length > 1 && (

@@ -4,38 +4,38 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import slider1 from '../assets/click4details/slider1.jpg';
-import slider2 from '../assets/click4details/slider2.jpg';
-import slider3 from '../assets/click4details/slider3.jpg';
-import slider4 from '../assets/click4details/slider4.jpg';
-import slider5 from '../assets/click4details/slider5.jpg';
+import slider1 from '../assets/slider1.jpg';
+import slider2 from '../assets/slider2.jpg';
+import slider3 from '../assets/slider3.jpg';
+import slider4 from '../assets/slider4.jpg';
+import slider5 from '../assets/slider5.jpg';
 
 
 const slides = [
   {
     image: slider1,
-    title: 'Click4Details',
-    description: 'click4details.com@gmail.com',
+    title: 'Pilot Bazar',
+    description: 'pilotbazar.com',
   },
   {
     image: slider2,
-    title: 'Click4Details',
-    description: 'click4details.com@gmail.com',
+    title: 'Pilot Bazar',
+    description: 'pilotbazar.com',
   },
    {
     image: slider3,
-    title: 'Click4Details',
-    description: 'click4details.com@gmail.com',
+    title: 'Pilot Bazar',
+    description: 'pilotbazar.com',
   },
   {
     image: slider4,
-    title: 'Click4Details',
-    description: 'click4details.com@gmail.com',
+    title: 'Pilot Bazar',
+    description: 'pilotbazar.com',
   },
   {
     image: slider5,
-    title: 'Click4Details',
-    description: 'click4details.com@gmail.com',
+    title: 'Pilot Bazar',
+    description: 'pilotbazar.com',
   }
 ];
 

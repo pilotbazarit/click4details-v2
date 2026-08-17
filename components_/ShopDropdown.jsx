@@ -1,8 +1,8 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronDown, Check, ChevronsUpDown, Plug, LogOut, Store } from 'lucide-react';
+import { ChevronDown, Check, ChevronsUpDown, Plug, LogOut, Search, Store } from 'lucide-react';
 import { useAppContext } from "@/context/AppContext";
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -16,6 +16,7 @@ const ShopDropdown = () => {
     const [isOpenManageModal, setIsOpenManageModal] = useState(false);
     const [isOpenNewShopModal, setIsOpenNewShopModal] = useState(false);
     const [openCollapsible, setOpenCollapsible] = useState(null);
+    const [search, setSearch] = useState("");
     const productType = String(searchParams.get('product_type') || '').toLowerCase();
     const uploadProductHref = productType === 'general'
         ? '/dashboard/products/general-product/create/'
@@ -24,6 +25,15 @@ const ShopDropdown = () => {
     const handleSelect = (shop) => {
         setSelectedShop(shop);
     };
+
+    const filteredShops = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        if (!term) return shops || [];
+        return (shops || []).filter((shop) => {
+            const phone = shop?.user?.phone || shop?.s_user_phone || "";
+            return shop.s_title?.toLowerCase().includes(term) || String(phone).includes(term);
+        });
+    }, [shops, search]);
 
     return (
         <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -40,7 +50,21 @@ const ShopDropdown = () => {
                     className="z-[9999] rounded bg-white p-2 shadow-lg border border-gray-200 w-56"
                 >
                     <div className="flex flex-col gap-1">
-                        {shops && shops.length > 0 && shops.map((shop) => (
+                        {shops && shops.length > 3 && (
+                            <div className="relative mb-1">
+                                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Search shop or phone"
+                                    className="w-full rounded border border-gray-200 py-1.5 pl-7 pr-2 text-xs outline-none focus:border-indigo-400"
+                                />
+                            </div>
+                        )}
+                        {filteredShops.length === 0 && (
+                            <p className="px-3 py-2 text-xs text-gray-400">No shops found</p>
+                        )}
+                        {filteredShops.map((shop) => (
                             <Collapsible.Root
                                 key={shop.s_id}
                                 open={openCollapsible === shop.s_id}
@@ -49,9 +73,12 @@ const ShopDropdown = () => {
                                 <div className="flex items-center justify-between w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">
                                     <button
                                         onClick={() => handleSelect(shop)}
-                                        className="flex-grow text-left flex items-center"
+                                        className="flex-grow text-left flex flex-col items-start"
                                     >
                                         <span className={`truncate ${selectedShop && selectedShop.s_id === shop.s_id ? 'font-bold' : ''}`}>{shop.s_title}</span>
+                                        {(shop?.user?.phone || shop?.s_user_phone) && (
+                                            <span className="text-[11px] text-gray-400">{shop?.user?.phone || shop?.s_user_phone}</span>
+                                        )}
                                     </button>
                                     {selectedShop && selectedShop.s_id === shop.s_id && <Check className="h-4 w-4 mr-2" />}
                                     <Collapsible.Trigger asChild>

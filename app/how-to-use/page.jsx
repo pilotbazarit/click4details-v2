@@ -167,6 +167,13 @@ const HowToUse = () => {
             description: "Click4Details-এ গাড়ির আমদানী খরচ ও বিক্রয় মূল্য হিসাব করার নিয়ম জানুন। খরচ, চার্জ এবং প্রাইসিং পরিষ্কারভাবে নির্ধারণ করে ব্যবসার সিদ্ধান্ত সহজ করুন।",
             videoId: "0U_dOU235IU",
             src: "https://www.youtube.com/embed/0U_dOU235IU"
+        },
+        {
+            id: 24,
+            title: "কিভাবে Purchase Calculation & Payment করবেন? | Click4Details",
+            description: "Click4Details-এ Purchase Calculation & Payment করার সহজ ধাপগুলো জানুন। আপনার গাড়ি বা প্রোডাক্টের জন্য সঠিক হিসাব এবং নিরাপদ পেমেন্ট নিশ্চিত করুন।",
+            videoId: "0U_dOU235IU",
+            src: "https://www.youtube.com/embed/6YGR8r2VnOA?si=WzOcj8sNNf6wVzs9"
         }
     ];
 

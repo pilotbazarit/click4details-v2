@@ -119,7 +119,7 @@ export default function GeneralProductApprovalView({ productId }) {
 
       if (response?.status === "success") {
         toast.success(
-          isApproved ? "Product approved for sale by Click4Details." : "Product's sale by Click4Details request was rejected."
+          isApproved ? "Product approved for sale by PBL." : "Product's sale by PBL request was rejected."
         );
         router.push("/dashboard/products/general-product/list");
       } else {
@@ -163,7 +163,7 @@ export default function GeneralProductApprovalView({ productId }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-white px-6 py-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-orange-600">
-              Sale by Click4Details — Approval Request
+              Sale by PBL — Approval Request
             </p>
             <h1 className="mt-1 text-xl font-bold text-gray-900">{product.p_name}</h1>
             <p className="mt-0.5 text-xs text-gray-500">Code: {product.p_code}</p>
@@ -185,7 +185,7 @@ export default function GeneralProductApprovalView({ productId }) {
               }`}
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              {saleByPblState === "approved" ? "Click4Details Approved" : "Pending Approval"}
+              {saleByPblState === "approved" ? "PBL Approved" : "Pending Approval"}
             </span>
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function GeneralProductApprovalView({ productId }) {
             {product?.p_description?.pbl && (
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Click4Details Description
+                  PBL Description
                 </p>
                 <p className="text-sm leading-relaxed text-gray-700">{product.p_description.pbl}</p>
               </div>
@@ -282,12 +282,12 @@ export default function GeneralProductApprovalView({ productId }) {
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               <Check className="mr-1.5 h-4 w-4" />
-              {decision === "approve" ? "Approving..." : "Approve Sale by Click4Details"}
+              {decision === "approve" ? "Approving..." : "Approve Sale by PBL"}
             </Button>
           </div>
         ) : (
           <div className="border-t border-gray-100 bg-blue-50 px-6 py-3 text-center text-sm font-medium text-blue-700">
-            This product has already been approved for sale by Click4Details.
+            This product has already been approved for sale by PBL.
           </div>
         )}
       </div>

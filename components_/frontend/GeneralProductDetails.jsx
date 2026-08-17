@@ -30,10 +30,12 @@ import toast from "react-hot-toast";
 import { formatPrice } from "@/helpers/functions";
 import { getSessionId } from "@/lib/utils";
 import { useAppContext } from "@/context/AppContext";
+import { pushDataLayerEvent } from "@/helpers/gtmEvents";
+import GiftBadge from "@/components/GiftBadge";
 
 dayjs.extend(relativeTime);
 
-const DEFAULT_PHONE = "+8809638660077";
+const DEFAULT_PHONE = "+8801969944400";
 
 const formatLocalMobile = (value) => {
   const trimmed = String(value || "").trim();
@@ -482,6 +484,12 @@ const GeneralProductDetails = ({ productDetails }) => {
     if (selectedVariant.variantId) cartPayload.ci_product_variant_id = selectedVariant.variantId;
     if (selectedVariant.legacyPriceId) cartPayload.ci_product_price_id = selectedVariant.legacyPriceId;
     addToCart(productDetails.p_id, cartPayload);
+
+    pushDataLayerEvent("add_to_cart", {
+      value: price,
+      currency: "BDT",
+      items: [{ item_id: productDetails.p_id, item_name: cartPayload.ci_name, price }],
+    });
   };
 
   const leftFacts = [
@@ -659,6 +667,7 @@ const GeneralProductDetails = ({ productDetails }) => {
                 <ShieldCheck className="h-3 w-3" /> PBL
               </span>
             )}
+            <GiftBadge userGift={productDetails?.user_gift} pblGift={productDetails?.pbl_gift} variant="inline" />
             {isMounted && productDetails?.p_created_at && (
               <span className="text-sm text-gray-400">{dayjs(productDetails.p_created_at).fromNow()}</span>
             )}

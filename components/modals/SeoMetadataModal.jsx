@@ -498,7 +498,7 @@ const SeoMetadataModal = ({ open, setOpen, onSaved, initialEntityType = "", init
                             <Textarea
                                 id="sm_meta_description"
                                 className="border-gray-400"
-                                placeholder="Buy Toyota Premio from Click4Details."
+                                placeholder="Buy Toyota Premio from Pilot Bazar."
                                 disabled={isSubmitting}
                                 {...register("sm_meta_description")}
                             />

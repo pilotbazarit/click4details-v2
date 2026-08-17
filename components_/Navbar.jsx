@@ -295,6 +295,7 @@ const NavbarContent = () => {
         _page: 1,
         _perPage: 10000,
         _parent_id: parentId,
+        _status: "active",
       });
 
       if (response?.status === "success") {
@@ -411,10 +412,10 @@ const NavbarContent = () => {
 
     if (categoryType === "vehicle") {
       console.log("category type vehicle", category?.name);
-      if(category.name === 'Vehicle'){
+      if (category.name === 'Vehicle') {
         router.push('/');
         return;
-      }else{
+      } else {
         // console.log("Else--------", category?.name);
 
         const categoryId = category?.id;
@@ -473,6 +474,7 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
+  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -694,12 +696,14 @@ const NavbarContent = () => {
   };
 
 
-   useEffect(() => {
+  useEffect(() => {
     if (!parsedUser) return; // Only run if user is logged in
 
-     getUnreadNotifications();
-     
+    getUnreadNotifications();
+
   }, [parsedUser]);
+
+  const totalNotificationCount = (Number(notificationCount) || 0) + (Number(unreadNotificationCount) || 0);
 
 
 
@@ -869,6 +873,18 @@ const NavbarContent = () => {
 
 
 
+            <Link
+              href="/how-to-use"
+              className={`transition duration-300 ${isActiveHowToUse
+                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
+                : 'hover:text-gray-900'
+                }`}
+            >
+              How to Use
+            </Link>
+
+
+
 
           </div>
         </div>
@@ -908,7 +924,7 @@ const NavbarContent = () => {
                   <MyHomePopover
                     setLogout={setLogout}
                     setIsNotificationOpen={setIsNotificationOpen}
-                    unreadNotificationCount={unreadNotificationCount}
+                    unreadNotificationCount={totalNotificationCount}
                   />
                 }
               </div>
@@ -989,7 +1005,23 @@ const NavbarContent = () => {
           </button> */}
 
 
-          {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
+
+          <button
+            type="button"
+            onClick={() => setIsNotificationOpen(true)}
+            className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative focus:outline-none"
+            aria-label="Notifications"
+          >
+            <div className="relative">
+              <Bell className="w-6 h-6" />
+              <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                {totalNotificationCount}
+              </span>
+            </div>
+          </button>
+
+
+          {/* {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
@@ -1005,6 +1037,7 @@ const NavbarContent = () => {
                   </div>
                 </button>
               </Popover.Trigger>
+
               <Popover.Portal>
                 <Popover.Content
                   sideOffset={8}
@@ -1037,14 +1070,15 @@ const NavbarContent = () => {
                         className="block text-center text-sm font-medium hover:opacity-90 transition"
                         style={{ color: 'rgb(1 103 162)' }}
                       >
-                        View all notifications 
+                        View all notifications
                       </Link>
                     </Popover.Close>
                   </div>
                 </Popover.Content>
               </Popover.Portal>
+
             </Popover.Root>
-          ) : ''}
+          ) : ''} */}
 
         </ul>
 
@@ -1260,7 +1294,7 @@ const NavbarContent = () => {
                   </button>
                 </li>
 
-         
+
                 {/* -------------------- */}
 
                 {

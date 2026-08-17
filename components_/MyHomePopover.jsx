@@ -80,7 +80,7 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                         </button>
 
 
-                        {
+                        {/* {
                             unreadNotificationCount > 0 && (
                                 <span
                                     className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white ring-2 ring-white"
@@ -89,7 +89,7 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                                     <span>{unreadNotificationCount}</span>
                                 </span>
                             )
-                        }
+                        } */}
 
 
 
@@ -207,7 +207,7 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                                 </li>
 
 
-                                <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
+                                {/* <li className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer transition-colors duration-150">
                                     <button
                                         onClick={() => {
                                             setIsNotificationOpen(true);
@@ -229,10 +229,7 @@ const MyHomePopover = ({ setLogout, setIsNotificationOpen, unreadNotificationCou
                                             </span>
                                         )
                                     }
-
-
-
-                                </li>
+                                </li> */}
 
 
 

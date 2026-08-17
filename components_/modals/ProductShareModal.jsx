@@ -94,6 +94,34 @@ const ensureFileNameHasExtension = (fileName, mimeType) => {
     return `${cleanedName}${extension}`;
 };
 
+const fetchShareImageBlob = async (imageUrl) => {
+    const sourceUrl = cleanShareValue(imageUrl);
+
+    if (!sourceUrl) {
+        throw new Error("Image URL is missing");
+    }
+
+    const fetchBlob = async (requestUrl) => {
+        const response = await fetch(requestUrl);
+        if (!response.ok) {
+            throw new Error(`Image request failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        if (!blob.size) {
+            throw new Error("Image file is empty");
+        }
+
+        return blob;
+    };
+
+    try {
+        return await fetchBlob(sourceUrl);
+    } catch (error) {
+        return fetchBlob(`/api/proxy-image?url=${encodeURIComponent(sourceUrl)}`);
+    }
+};
+
 const normalizeShareList = (value) => {
     if (value === undefined || value === null) {
         return [];
@@ -347,7 +375,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         );
     const shouldUseUserPrice = pathname === '/my-shop/' || pathname === '/company-shop/';
     const shouldOpenPriceSelectModal =
-        !isStock && (!isCompanyShop || hasPermissionShowSelectPriceDialog);
+        Boolean(user) && !isStock && (!isCompanyShop || hasPermissionShowSelectPriceDialog);
 
     const getShareDisplayPrice = () => {
         const rawPrice = shouldUseUserPrice
@@ -774,8 +802,30 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         return businessCardMessage;
     };
 
-    const shareProductImagesWithFallback = async (shareMessage) => {
+    const buildAllImagesFallbackMessage = () => {
         const imageUrls = getProductShareImageUrls();
+
+        let imageMessage = `*${product?.v_title || product?.v_title}*\n\n`;
+
+        if (imageUrls.length > 0) {
+            imageMessage += `All Images:\n\n`;
+            imageUrls.forEach((imageUrl, index) => {
+                imageMessage += `${index + 1}. ${imageUrl}\n\n`;
+            });
+        } else {
+            imageMessage += `No images found.\n\n`;
+        }
+
+        imageMessage += `Product Link:\n${url}`;
+        return imageMessage;
+    };
+
+    const shareProductImagesWithFallback = async (
+        shareMessage,
+        fallbackMessage = shareMessage,
+        imageUrls = getProductShareImageUrls(),
+        allowFilesOnlyShare = true
+    ) => {
         const canUseWebShare =
             typeof navigator !== "undefined" &&
             typeof navigator.share === "function" &&
@@ -786,15 +836,10 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 const shareableFiles = await Promise.all(
                     imageUrls.map(async (imageUrl, index) => {
                         try {
-                            const response = await fetch(imageUrl);
-                            if (!response.ok) {
-                                throw new Error(`Failed to fetch image ${index + 1}`);
-                            }
-
-                            const blob = await response.blob();
+                            const blob = await fetchShareImageBlob(imageUrl);
                             const fileName = ensureFileNameHasExtension(
                                 extractProductDocName(imageUrl, imageUrl, index),
-                                blob.type
+                                blob.type || "image/jpeg"
                             );
 
                             return new File([blob], fileName, {
@@ -807,7 +852,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                     })
                 );
 
-                const validFiles = shareableFiles.filter(Boolean);
+                const validFiles = shareableFiles.filter((file) => file?.type?.startsWith("image/"));
 
                 if (validFiles.length > 0) {
                     const shareData = {
@@ -820,40 +865,51 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                         await navigator.share(shareData);
                         return true;
                     }
+
+                    const filesOnlyShareData = { files: validFiles };
+                    if (allowFilesOnlyShare && navigator.canShare(filesOnlyShareData)) {
+                        await navigator.share(filesOnlyShareData);
+                        return true;
+                    }
                 }
             } catch (shareError) {
                 console.log("Product image share failed:", shareError?.message || shareError);
             }
         }
 
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fallbackMessage)}`;
         window.open(whatsappUrl, '_blank');
         return false;
     };
 
+    const shareProductFirstImageWithFallback = async (shareMessage, fallbackMessage = shareMessage) => {
+        const firstImageUrl = getProductShareImageUrls()[0];
+        const imageUrls = firstImageUrl ? [firstImageUrl] : [];
 
+        return shareProductImagesWithFallback(shareMessage, fallbackMessage, imageUrls, false);
+    };
     // console.log("isStock 109", isStock);
 
     // Function to handle price selection and share
     const handlePriceShare = async (priceData) => {
         if (priceModalType === 'allImages') {
-            handleBusinessShare('allImages');
+            await handleBusinessShare('allImages');
             return;
         }
         if (priceModalType === 'details') {
-            handleBusinessShare('details');
+            await handleBusinessShare('details');
             return;
         }
         if (priceModalType === 'oneImageShortDetails') {
-            handleBusinessShare('oneImageShortDetails');
+            await handleBusinessShare('oneImageShortDetails');
             return;
         }
         if (priceModalType === 'priceLinkDetailsImage') {
-            handleBusinessShare('priceLinkDetailsImage');
+            await handleBusinessShare('priceLinkDetailsImage');
             return;
         }
         if (priceModalType === 'priceLinkDetails') {
-            handleBusinessShare('priceLinkDetails');
+            await handleBusinessShare('priceLinkDetails');
             return;
         }
         if (priceModalType === 'featureAndSpecification') {
@@ -993,6 +1049,11 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                                     : 'featureAndSpecification'
         );
 
+        if (priceModalType === 'withPrice' || priceModalType === 'withoutPrice') {
+            await shareProductFirstImageWithFallback(message);
+            return;
+        }
+
         // WhatsApp open korbe message niye
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
@@ -1095,109 +1156,12 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
         // All Images option er jonno special handling - Image files share korbe
         if (option === 'allImages') {
-            const images = product?.vehicle_images || [];
-
-            if (isStock) {
-                let imageMessage = `*${productName}*\n\n`;
-
-                if (images.length > 0) {
-                    imageMessage += `All Images:\n\n`;
-                    images.forEach((img, index) => {
-                        if (img?.url) {
-                            imageMessage += `${index + 1}. ${img.url}\n`;
-                        }
-                    });
-                } else {
-                    imageMessage += `No images found.\n`;
-                }
-
-                imageMessage += `\nView Details:\n${url}`;
-                const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(imageMessage)}`;
-                window.open(whatsappUrl, '_blank');
-                return;
-            }
-
-            if (images.length > 0) {
-                try {
-                    // Step 1: Native Web Share API (files) try kora
-                    const canUseWebShare =
-                        typeof navigator !== "undefined" &&
-                        typeof navigator.share === "function" &&
-                        typeof navigator.canShare === "function";
-
-                    if (canUseWebShare) {
-                        try {
-
-                            // Sob image download kore File object banano
-                            const imageFiles = await Promise.all(
-                                images.map(async (img, index) => {
-                                    try {
-                                        const response = await fetch(img.url);
-                                        const blob = await response.blob();
-                                        return new File([blob], `image-${index + 1}.jpg`, { type: 'image/jpeg' });
-                                    } catch (error) {
-                                        console.error(`Image ${index + 1} load error:`, error);
-                                        return null;
-                                    }
-                                })
-                            );
-
-                            // Null files filter kore remove kora
-                            const validFiles = imageFiles.filter(file => file !== null);
-
-                            if (validFiles.length > 0) {
-                                // Share data ready kora
-                                const shareData = {
-                                    title: productName,
-                                    text: `${productName}\n\n${url}`,
-                                    files: validFiles
-                                };
-
-                                // Check if files share supported
-                                if (navigator.canShare(shareData)) {
-                                    await navigator.share(shareData);
-                                    // console.log(" Web Share API successful");
-                                    return;
-                                } else {
-                                    console.log(" Files not shareable, falling back...");
-                                }
-                            }
-                        } catch (shareError) {
-                            // Web Share API error - silently fallback
-                            console.log(" Web Share API failed:", shareError.message);
-                            // Continue to fallback methods
-                        }
-                    }
-
-                    // Step 2: Fallback - WhatsApp e shob image URL pathano
-                    let imageMessage = `*${productName}*\n\n`;
-                    imageMessage += `All Images:\n\n`;
-
-                    images.forEach((img, index) => {
-                        if (img?.url) {
-                            imageMessage += `${index + 1}. ${img.url}\n\n`;
-                        }
-                    });
-
-                    imageMessage += `\nProduct Link:\n${url}`;
-
-                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(imageMessage)}`;
-                    window.open(whatsappUrl, '_blank');
-
-                } catch (error) {
-                    console.error('Share error:', error);
-                    // Error hole fallback WhatsApp URL share
-                    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${productName}\n\n${url}`)}`;
-                    window.open(whatsappUrl, '_blank');
-                }
-            } else {
-                // Kono image na thakle
-                const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${productName}\n\n${url}`)}`;
-                window.open(whatsappUrl, '_blank');
-            }
+            await shareProductImagesWithFallback(
+                `${productName}\n\nProduct Link:\n${url}`,
+                buildAllImagesFallbackMessage()
+            );
             return;
         }
-
         // featureAndSpecification
         if (option === 'featureAndSpecification') {
             const featureMessage = buildFeatureAndSpecificationMessage();
@@ -1222,20 +1186,20 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         switch (option) {
             case 'details':
                 message = buildVehicleDetailsMessage();
-                break;
+                await shareProductFirstImageWithFallback(message);
+                return;
 
             case 'detailsWithPrice':
                 message = buildVehicleDetailsMessage({ includePrice: true });
-                break;
+                await shareProductFirstImageWithFallback(message);
+                return;
 
             case 'detailsWithoutPrice':
                 message = buildVehicleDetailsMessage();
-                break;
-
+                await shareProductFirstImageWithFallback(message);
+                return;
             case 'oneImageShortDetails':
                 // One image with detailed product information for WhatsApp
-                const images = product?.vehicle_images || [];
-
                 // Build detailed message
                 let oneImageDetailsMessage = `*${productName}*\n\n`;
 
@@ -1325,50 +1289,8 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 // Product Link
                 oneImageDetailsMessage += `\n More Details:\n${url}`;
 
-                if (images.length > 0) {
-                    const firstImage = images[0];
-
-                    try {
-                        // Mobile device check
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-                        if (isMobile && navigator.share && navigator.canShare) {
-                            // Mobile Web Share API - only for mobile
-                            try {
-
-                                const response = await fetch(firstImage.url);
-                                const blob = await response.blob();
-                                const imageFile = new File([blob], `${productName.replace(/[^a-z0-9]/gi, '_')}.jpg`, { type: 'image/jpeg' });
-
-                                const shareData = {
-                                    title: productName,
-                                    text: oneImageDetailsMessage,
-                                    files: [imageFile]
-                                };
-
-                                if (navigator.canShare(shareData)) {
-                                    await navigator.share(shareData);
-                                    console.log("Web Share API successful for one image");
-                                    return;
-                                }
-                            } catch (shareError) {
-                                console.log("Web Share API failed:", shareError.message);
-                            }
-                        }
-
-                        // Fallback for desktop or if Web Share API fails
-                        message = oneImageDetailsMessage;
-
-                    } catch (error) {
-                        console.error('Share error:', error);
-                        message = oneImageDetailsMessage;
-                    }
-                } else {
-                    // No image available
-                    message = oneImageDetailsMessage;
-                }
-                break;
-
+                await shareProductFirstImageWithFallback(oneImageDetailsMessage);
+                return;
             case 'priceLinkDetailsImage':
                 // Same as 'details' case - formatted vehicle details message
                 let priceLinkDetailsImageMessage = `*${productName}*\n\n`;
@@ -1747,7 +1669,7 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                             className='flex items-center justify-between border border-gray-300 rounded p-3 cursor-pointer hover:bg-gray-50 transition'
                             onClick={() => openPriceShareModal('allImages')}
                         >
-                            <span className='text-gray-700'>All Image Link (Mobile Version Only)</span>
+                            <span className='text-gray-700'>All Images (Mobile Version Only)</span>
                             <div className='flex items-center gap-3'>
                                 {renderInfoButton('allImages')}
                                 <div className='w-5 h-5 rounded-full border-2 border-gray-400 flex items-center justify-center'>

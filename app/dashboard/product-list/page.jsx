@@ -7,7 +7,7 @@ import TableFilter from "@/components/TableFilter";
 import Pagination from "@/components/Pagination";
 import ShopModal from "@/components/modals/ShopModal";
 import StoreService from "@/services/ShopService";
-import { DollarSign, Funnel, Loader2, Pencil, Trash2, Settings, Eye, Download, Printer, Calculator, Check, X } from "lucide-react";
+import { DollarSign, Funnel, Loader2, Pencil, Trash2, Settings, Eye, EyeOff, Download, Printer, Calculator, Check, X, Receipt, FileText, CloudDownload, User, Star } from "lucide-react";
 import Select from 'react-select';
 import constData from "@/lib/constant";
 import ColumnVisibilityToggle from "@/components/ColumnVisibilityToggle";
@@ -35,15 +35,18 @@ import PackageService from "@/services/PackageService";
 import PriceHistoryModal from "@/components/modals/PriceHistoryModal";
 import PricePreviewModal from "@/components/modals/PricePreviewModal";
 import VehicleListPdfDownloadModal from "@/components/modals/VehicleListPdfDownloadModal";
+import ClientPaymentHistoryModal from "@/components/modals/ClientPaymentHistoryModal";
 import { set } from "lodash";
 import { useAppContext } from "@/context/AppContext";
 import { hasPermission } from "@/lib/utils";
 import ShopService from "@/services/ShopService";
+import PurchasePaymentService from "@/services/PurchasePaymentService";
 
 import { parseStoredUser } from "@/lib/parseStoredUser";
 
 const ProductList = () => {
   const [loading, setLoading] = useState(false);
+  const [isPdfDownloading, setIsPdfDownloading] = useState(false);
   const [query, setQuery] = useState("")
   const [codeQuery, setCodeQuery] = useState("");
   const [showCodeSearch, setShowCodeSearch] = useState(false);
@@ -164,8 +167,23 @@ const ProductList = () => {
   const [allShop, setAllShop] = useState([]);
   const [isVehicleListPdfModalOpen, setIsVehicleListPdfModalOpen] = useState(false);
   const [isVehicleListPdfDownloading, setIsVehicleListPdfDownloading] = useState(false);
+  const [clientPaymentHistoryOpen, setClientPaymentHistoryOpen] = useState(false);
+  const [clientPaymentHistoryProduct, setClientPaymentHistoryProduct] = useState(null);
+  const [userInfoModalOpen, setUserInfoModalOpen] = useState(false);
+  const [userInfoModalData, setUserInfoModalData] = useState(null);
+  const [userInfoPhoneVisible, setUserInfoPhoneVisible] = useState(false);
+  const [userInfoPhone2Visible, setUserInfoPhone2Visible] = useState(false);
+  const [userInfoDetailsExpanded, setUserInfoDetailsExpanded] = useState(false);
+  const [userInfoPopoverPos, setUserInfoPopoverPos] = useState({ top: 0, left: 0 });
 
   const canViewPriceColumn = user?.user_mode === "supreme" || user?.user_mode === "admin";
+  const hasClientPaymentHistoryPermission =
+    user?.user_mode === "supreme" ||
+    hasPermission(permissionList, 0, "Vehicle", "ClientPaymentView");
+
+  const hasShowUserInfoPermission =
+    user?.user_mode === "supreme" ||
+    hasPermission(permissionList, 0, "Vehicle", "UserInfoButtonShow");
 
   const canShowAddProductButton =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
@@ -174,7 +192,7 @@ const ProductList = () => {
   const canShowVehicleListPdfButton =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "ShowVehicleListPdfButton");
-  
+
   const canShowPriceCalculatorButton =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "PriceCalculatorButtonShow");
@@ -195,6 +213,10 @@ const ProductList = () => {
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow");
 
+  const canShowCostingPaymentButton =
+    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    hasPermission(permissionList, 0, "Vehicle", "CostingPaymentButtonShow");
+
 
   const canPermanentDeleteButton =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
@@ -212,7 +234,7 @@ const ProductList = () => {
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "AskingPriceUpdate");
 
-  
+
   const canUpdatePurchasePrice =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "PurchasePriceUpdate");
@@ -1169,7 +1191,7 @@ const ProductList = () => {
         .filter(Boolean);
 
 
-        // console.log("shopOptions------`-1157", shopOptions);
+      // console.log("shopOptions------`-1157", shopOptions);
 
       setAllShop(shopOptions);
       setShopData(shopOptions);
@@ -1683,7 +1705,7 @@ const ProductList = () => {
 
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: "This product will be permanently deleted and cannot be restored!",
+      text: "You will Loose all Financial Data As Well. It is Better to Delete the Product Instead of Permanent Delete!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -2509,7 +2531,7 @@ const ProductList = () => {
                   </TableHead>
                 )}
 
-                
+
                 {isColumnVisible('location') && (
                   <TableHead className="border-r border-gray-300">
                     <div className="flex items-center">
@@ -3176,7 +3198,7 @@ const ProductList = () => {
                       {isColumnVisible('condition') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_condition_name}</TableCell>}
 
                       {isColumnVisible('location') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_location?.location_name}</TableCell>}
-                      
+
                       {isColumnVisible('outlet') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_location?.uo_address}</TableCell>}
 
                       {isColumnVisible('owner') && <TableCell className="border-r border-gray-200 font-medium py-4">{item?.v_shop_user_name}</TableCell>}
@@ -3267,15 +3289,15 @@ const ProductList = () => {
                       )}
 
                       {isColumnVisible('actions') && (
-                        <TableCell className="flex justify-end gap-2 border-r border-gray-200 font-medium py-4">
+                        <TableCell className="border-r border-gray-200 font-medium py-2">
+                          <div className="flex flex-wrap justify-end gap-2" style={{ minWidth: '160px', maxWidth: '210px', marginLeft: 'auto' }}>
 
 
-                          {/* { */}
-                          {/* // canShowPriceActionButtons && ( */}
-                          <>
+                            {/* { */}
+                            {/* // canShowPriceActionButtons && ( */}
 
 
-                            <button
+                            {/* <button
                               disabled={!hasShowPriceCalculatorPermission || !canShowPriceCalculatorButton}
                               onClick={() => handlePricePreview(item)}
                               className="text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400"
@@ -3283,9 +3305,93 @@ const ProductList = () => {
                               aria-label={`Calculator`}
                             >
                               <Calculator size={18} />
-                            </button>
+                            </button> */}
 
                             {/* <Calculator /> */}
+
+
+                            <button
+                              disabled={!hasShowUserInfoPermission}
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setUserInfoPopoverPos({ top: rect.top + window.scrollY, left: rect.left + window.scrollX });
+                                setUserInfoPhoneVisible(false);
+                                setUserInfoPhone2Visible(false);
+                                setUserInfoDetailsExpanded(false);
+                                setUserInfoModalData(item?.user);
+                                setUserInfoModalOpen(true);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                              title="User Info"
+                              aria-label={`User info for ${item?.v_name}`}
+                            >
+                              <User size={18} />
+                            </button>
+
+
+
+
+
+                            <button
+                              disabled={!canShowCostingPaymentButton}
+                              onClick={() => router.push(`/dashboard/products/purchase-payments/?entity_type=vehicle&entity_id=${item.v_id}`)}
+                              className="text-emerald-600 hover:text-emerald-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                              title="Costing and Payment"
+                              aria-label={`Costing and payment for ${item.v_name}`}
+                            >
+                              <Receipt size={18} />
+                            </button>
+
+
+
+
+
+                            <button
+                              disabled={isPdfDownloading}
+                              onClick={async () => {
+                                try {
+                                  setIsPdfDownloading(true);
+                                  const response = await PurchasePaymentService.Queries.downloadPurchasePaymentPdf({
+                                    entity_type: "vehicle",
+                                    entity_id: item.v_id,
+                                    _is_down: 1,
+                                  });
+                                  const blob = new Blob([response], { type: "application/pdf" });
+                                  const objectUrl = window.URL.createObjectURL(blob);
+                                  const link = document.createElement("a");
+                                  link.href = objectUrl;
+                                  link.download = `purchase-payment-vehicle-${item.v_id}.pdf`;
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                  window.URL.revokeObjectURL(objectUrl);
+                                } catch (error) {
+                                  toast.error(error?.response?.data?.message || error.message || "Failed to download PDF");
+                                } finally {
+                                  setIsPdfDownloading(false);
+                                }
+                              }}
+                              className="text-orange-600 hover:text-orange-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                              title="Payment PDF"
+                              aria-label={`Download payment PDF for ${item.v_name}`}
+                            >
+                              <CloudDownload size={18} />
+                            </button>
+
+
+
+                            <button
+                              disabled={!hasClientPaymentHistoryPermission}
+                              onClick={() => {
+                                setClientPaymentHistoryProduct(item);
+                                setClientPaymentHistoryOpen(true);
+                              }}
+                              className="text-gray-600 hover:text-gray-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                              title="Money Receipt"
+                              aria-label={`Money Receipt for ${item.v_name}`}
+                            >
+                              <FileText size={18} />
+                            </button>
 
                             <button
                               disabled={!hasShowPriceHistoryButtonPermission || !canShowPriceHistoryButton}
@@ -3306,43 +3412,50 @@ const ProductList = () => {
                             >
                               <Download size={18} />
                             </button>
-                          </>
-                          {/* // ) */}
-                          {/* // } */}
 
-                          <button
-                            disabled={!(selectedShop === "my-shop" ||
-                              hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Update")) || !canEditButton}
-                            onClick={() => handleEdit(item.v_id)}
-                            className="text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400"
-                            title="Product Edit"
-                            aria-label={`Edit product ${item.v_name}`}
-                          >
-                            <Pencil size={18} />
-                          </button>
 
-                          <button
-                            disabled={!(selectedShop === "my-shop" ||
-                              hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
-                            onClick={() => handleDelete(item?.v_id)}
-                            className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-400"
-                            title="Delete Product"
-                            aria-label={`Delete product ${item.v_name}`}
-                          >
-                            <Trash2 size={21} />
-                          </button>
 
-                          <button
-                            disabled={!(selectedShop === "my-shop" ||
-                              hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canPermanentDeleteButton}
-                            onClick={() => handlePermanentDelete(item?.v_id)}
-                            className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
-                            title="Permanent Delete Product"
-                            aria-label={`Permanent delete product ${item?.v_name || item?.v_id}`}
-                          >
-                            <Trash2 size={16} />
-                            {/* <span>Permanent Delete</span> */}
-                          </button>
+                            {/* // ) */}
+                            {/* // } */}
+
+                            <button
+                              disabled={!(selectedShop === "my-shop" ||
+                                hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Update")) || !canEditButton}
+                              onClick={() => handleEdit(item.v_id)}
+                              className="text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                              title="Product Edit"
+                              aria-label={`Edit product ${item.v_name}`}
+                            >
+                              <Pencil size={18} />
+                            </button>
+
+                            <button
+                              disabled={!(selectedShop === "my-shop" ||
+                                hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
+                              onClick={() => handleDelete(item?.v_id)}
+                              className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                              title="Delete Product"
+                              aria-label={`Delete product ${item.v_name}`}
+                            >
+                              <Trash2 size={21} />
+                            </button>
+
+                            <button
+                              disabled={!(selectedShop === "my-shop" ||
+                                hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canPermanentDeleteButton}
+                              onClick={() => handlePermanentDelete(item?.v_id)}
+                              className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
+                              title="Permanent Delete Product"
+                              aria-label={`Permanent delete product ${item?.v_name || item?.v_id}`}
+                            >
+                              <Trash2 size={16} />
+                              {/* <span>Permanent Delete</span> */}
+                            </button>
+
+
+
+
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
@@ -3415,6 +3528,154 @@ const ProductList = () => {
           onColumnsChange={setVisibleColumns}
           onClose={() => setShowColumnToggle(false)}
         />
+      )}
+
+      <ClientPaymentHistoryModal
+        open={clientPaymentHistoryOpen}
+        setOpen={setClientPaymentHistoryOpen}
+        product={clientPaymentHistoryProduct}
+        parsedUser={user}
+      />
+
+      {/* User Info Popover Card */}
+      {userInfoModalOpen && (
+        <>
+          {/* Backdrop - invisible, closes on click */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setUserInfoModalOpen(false)}
+          />
+          <div
+            className="fixed z-50 w-64 rounded-xl bg-white shadow-2xl border border-gray-100 overflow-hidden"
+            style={{
+              top: userInfoPopoverPos.top,
+              left: userInfoPopoverPos.left,
+              transform: 'translateX(calc(-100% - 8px))'
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-2 bg-indigo-600 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-white">
+                <User size={14} />
+                <span className="text-xs font-bold">User Info</span>
+              </div>
+              <button
+                onClick={() => setUserInfoModalOpen(false)}
+                className="rounded p-0.5 text-white/80 hover:bg-white/20 hover:text-white transition"
+                aria-label="Close user info"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-3 py-3 space-y-2">
+
+              {/* Collapsible toggle row — shows only avatar/icon, name is hidden */}
+              <button
+                onClick={() => setUserInfoDetailsExpanded(v => !v)}
+                className="w-full flex items-center justify-between text-left group"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                    <User size={16} />
+                  </div>
+                  <span className="text-xs text-gray-400 italic">
+                    {userInfoDetailsExpanded ? "Hide info" : "Show info"}
+                  </span>
+                </div>
+                <svg
+                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${userInfoDetailsExpanded ? 'rotate-180' : ''
+                    }`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Collapsible: Name / Rating / Email */}
+              {userInfoDetailsExpanded && (
+                <div className="space-y-2 border-t border-gray-100 pt-2">
+                  {/* Name */}
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 w-10 shrink-0">Name</span>
+                    <span className="text-xs font-bold text-gray-900 break-all">
+                      {userInfoModalData?.name || "N/A"}
+                    </span>
+                  </div>
+                  {/* Rating stars */}
+                  {userInfoModalData?.user_rating != null && (
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          size={9}
+                          className={i < Number(userInfoModalData.user_rating) ? "text-yellow-400 fill-yellow-400" : "text-gray-300 fill-gray-300"}
+                        />
+                      ))}
+                      <span className="ml-1 text-xs font-semibold text-gray-500">
+                        {Number(userInfoModalData.user_rating).toFixed(1)} / 10
+                      </span>
+                    </div>
+                  )}
+                  {/* Email */}
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 w-10 shrink-0">Email</span>
+                    <span className="text-xs font-medium text-gray-800 break-all">
+                      {userInfoModalData?.email || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-gray-100" />
+
+              {/* Phone - 2 lines, each with eye toggle */}
+              <div className="flex items-start gap-2">
+                {/* <span className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 w-10 shrink-0">Phone</span> */}
+                {userInfoModalData?.phone ? (
+                  <div className="flex items-center gap-3">
+                    {/* Section 1: first 6 digits + eye button */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-mono font-medium text-gray-800 tracking-wider">
+                        {userInfoPhoneVisible
+                          ? userInfoModalData.phone.slice(0, 6)
+                          : "••••••"}
+                      </span>
+                      <button
+                        onClick={() => setUserInfoPhoneVisible(v => !v)}
+                        className="text-gray-400 hover:text-indigo-600 transition"
+                        title={userInfoPhoneVisible ? "Hide" : "Show"}
+                      >
+                        {userInfoPhoneVisible ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </button>
+                    </div>
+                    {/* Section 2: next 4 digits + eye button */}
+                    {userInfoModalData.phone.length > 6 && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-mono font-medium text-gray-800 tracking-wider">
+                          {userInfoPhone2Visible
+                            ? userInfoModalData.phone.slice(6, 10)
+                            : "••••"}
+                        </span>
+                        <button
+                          onClick={() => setUserInfoPhone2Visible(v => !v)}
+                          className="text-gray-400 hover:text-indigo-600 transition"
+                          title={userInfoPhone2Visible ? "Hide" : "Show"}
+                        >
+                          {userInfoPhone2Visible ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs font-medium text-gray-800">N/A</span>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

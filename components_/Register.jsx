@@ -9,6 +9,7 @@ import LoginService from "@/services/LoginService";
 import PhoneInput from "react-phone-input-2";
 import Swal from "sweetalert2";
 import "react-phone-input-2/lib/style.css";
+import { pushDataLayerEvent } from "@/helpers/gtmEvents";
 
 // Yup Validation Schema
 const schema = yup.object().shape({
@@ -184,6 +185,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
       console.log("responseOtp", responseOtp);
       if (responseOtp?.status == "success") {
           toast.success("Registration successfully");
+          pushDataLayerEvent("sign_up", { method: "phone_otp" });
           setOtp("");
           setPendingForm(null);
           setStep("register");

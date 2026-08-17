@@ -44,6 +44,8 @@ const Commands = {
 
 
     clearCart: (cartId) => commandApi.delete(`/api/cart/${cartId}`, {}),
+
+    deleteCartItem: (ciId) => commandApi.delete(`/api/cart/item/${ciId}`, {}),
 };
 
 const Queries = {

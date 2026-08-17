@@ -1006,6 +1006,7 @@ const WelcomeHero = () => {
       return (response?.data?.data || []).map((shop) => ({
         value: shop?.s_id,
         label: shop?.s_title,
+        phone: shop?.user?.phone || shop?.s_user_phone || '',
         s_user_id: shop?.s_user_id,
         s_id: shop?.s_id,
         shop_name: 'my-shop',
@@ -1040,6 +1041,7 @@ const WelcomeHero = () => {
             shopOptions.push({
               value: item.shop.s_id,
               label: item.shop.s_title,
+              phone: item?.shop?.user?.phone || item?.shop?.s_user_phone || '',
               s_user_id: item.shop.s_user_id,
               s_id: item.shop.s_id,
               shop_name: 'company-shop',
@@ -1258,6 +1260,20 @@ const WelcomeHero = () => {
                     classNamePrefix="select"
                     styles={shopSelectStyles}
                     menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                    formatOptionLabel={(option) => (
+                      <div className="flex items-center justify-between gap-3">
+                        <span>{option.label}</span>
+                        {option.phone ? <span className="text-xs text-gray-400">{option.phone}</span> : null}
+                      </div>
+                    )}
+                    filterOption={(option, input) => {
+                      const term = input.trim().toLowerCase();
+                      if (!term) return true;
+                      return (
+                        option.label.toLowerCase().includes(term) ||
+                        String(option.data.phone || '').toLowerCase().includes(term)
+                      );
+                    }}
                   />
                 </label>
               </div>

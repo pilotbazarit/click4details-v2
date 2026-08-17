@@ -1,6 +1,7 @@
 "use client";
 
 import dayjs from "dayjs";
+import { FacebookIcon, MessengerIcon } from "@/components/dashboard/sales-team-activity/ActivityIcons";
 
 const EMPTY = "—";
 
@@ -183,8 +184,22 @@ export default function CustomerFoundDetailsSection({ customer, activities = [],
   ];
 
   const socialRows = [
-    { label: "Facebook link", value: formatExternalLink(c.facebook_id_link) },
-    { label: "Messenger link", value: formatExternalLink(c.facebook_messenger_link) },
+    {
+      label: "Links", value: (c.facebook_id_link || c.facebook_messenger_link) ? (
+        <div className="inline-flex items-center gap-2">
+          {c.facebook_id_link && (
+            <a href={c.facebook_id_link} target="_blank" rel="noreferrer" className="hover:opacity-80" title="Open Facebook">
+              <FacebookIcon />
+            </a>
+          )}
+          {c.facebook_messenger_link && (
+            <a href={c.facebook_messenger_link} target="_blank" rel="noreferrer" className="hover:opacity-80" title="Open Messenger">
+              <MessengerIcon />
+            </a>
+          )}
+        </div>
+      ) : EMPTY
+    },
   ];
 
   const purchaseRows = [

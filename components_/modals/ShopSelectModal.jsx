@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -6,7 +6,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { useAppContext } from '@/context/AppContext';
-import { Store } from 'lucide-react';
+import { Search, Store } from 'lucide-react';
 import ShopService from "@/services/ShopService";
 import VehicleService from '@/services/VehicleService';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
     const [selectedShop, setSelectedShop] = useState(null);
     const [shopData, setShopData] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [search, setSearch] = useState('');
 
 
     const getShops = async () => {
@@ -34,6 +35,7 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
             const shopOptions = response.data.data.map((shop) => ({
                 value: shop.s_id,
                 label: shop.s_title,
+                phone: shop?.user?.phone || shop?.s_user_phone || '',
             }));
 
             setShopData(shopOptions);
@@ -73,6 +75,15 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
         setSelectedShop(shop);
     };
 
+    const filteredShopData = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        if (!term) return shopData;
+        return shopData.filter((shop) =>
+            String(shop.label || '').toLowerCase().includes(term) ||
+            String(shop.phone || '').includes(term)
+        );
+    }, [shopData, search]);
+
     // Function to handle save/ok button
     const handleSave = async () => {
         if (!selectedShop || isSaving) {
@@ -111,9 +122,20 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
                     </p>
                 </DialogHeader>
 
+                {shopData && shopData.length > 3 && (
+                    <div className='relative'>
+                        <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400' />
+                        <input
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder='Search shop or phone'
+                            className='w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-teal-400'
+                        />
+                    </div>
+                )}
                 <div className='space-y-3 max-h-[400px] overflow-y-auto py-4'>
-                    {shopData && shopData.length > 0 ? (
-                        shopData.map((shop, index) => (
+                    {filteredShopData && filteredShopData.length > 0 ? (
+                        filteredShopData.map((shop, index) => (
                             <div
                                 key={index}
                                 className={`flex items-center gap-4 border border-gray-200 rounded-lg p-4 transition ${
@@ -127,9 +149,12 @@ const ShopSelectModal = ({ open, setOpen, product }) => {
                                     <Store className="w-6 h-6 text-teal-600" />
                                 </div>
                                 <div className='flex-1'>
-                                    <span className='text-gray-900 font-medium text-base'>
-                                        {shop.label || shop.label || `Shop ${shop.value}`}
+                                    <span className='block text-gray-900 font-medium text-base'>
+                                        {shop.label || `Shop ${shop.value}`}
                                     </span>
+                                    {shop.phone ? (
+                                        <span className='block text-sm text-gray-500'>{shop.phone}</span>
+                                    ) : null}
                                 </div>
                                 <div className='w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center'>
                                     {selectedShop?.value === shop.value && (

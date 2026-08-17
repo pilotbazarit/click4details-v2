@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react'
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import ShopSelect from "@/components/ShopSelect"
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import toast from "react-hot-toast";
@@ -37,7 +38,8 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
         formState: { errors, isSubmitting },
         reset,
         setValue,
-        watch
+        watch,
+        control
     } = useForm({
         resolver: yupResolver(schema),
         defaultValues: defaultFormValues,
@@ -214,24 +216,18 @@ const OutletModal = ({ open, setOpen, initialData, setRows, shopData }) => {
                             <label className="text-base font-medium" htmlFor="uo_shop_id">
                                 Shop
                             </label>
-                            <select
-                                id="uo_shop_id"
-                                className="outline-none py-2 px-3 rounded border border-gray-400 w-full"
-                                {...register("uo_shop_id")}
-                                // onChange={(e) => {
-                                //     setValue("uo_shop_id", e.target.value);
-                                //     getLocations(e.target.value);
-                                // }}
-                            >
-                                <option value="">Select Shop</option>
-                                {
-                                    shopData.length > 0 && shopData?.map((shop) => (
-                                        <option key={shop.value} value={shop.value}>
-                                            {shop.label}
-                                        </option>
-                                    ))
-                                }
-                            </select>
+                            <Controller
+                                name="uo_shop_id"
+                                control={control}
+                                render={({ field }) => (
+                                    <ShopSelect
+                                        shops={shopData}
+                                        value={field.value}
+                                        onChange={(shopId) => field.onChange(shopId)}
+                                        placeholder="Select Shop"
+                                    />
+                                )}
+                            />
                             {errors.uo_shop_id && (
                                 <p className="text-red-500 text-sm">{errors.uo_shop_id.message}</p>
                             )}

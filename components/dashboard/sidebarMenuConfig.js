@@ -217,6 +217,46 @@ export const dashboardMenuItems = [
       },
     ],
   },
+
+  {
+    name: "Accounts",
+    icon: UserCog,
+    allowedModes: [ADMIN, SUPREME, PBL],
+    // requiredPermission: {
+    //   section: "Accounts",
+    //   action: "AccountsMenuShow",
+    //   appliesToModes: [PBL, ADMIN],
+    //   pblShopId: 0,
+    // },
+    children: [
+      {
+        name: "Vehicle Purchase Calculation & Payment",
+        path: "/dashboard/products/purchase-payments",
+        icon: FileText,
+        allowedModes: [SUPREME, PBL, ADMIN],
+        requiredPermission: {
+          section: "SidebarMenu",
+          action: "VehiclePurchasCalculationPaymentMenuShow",
+          appliesToModes: [PBL, ADMIN],
+          pblShopId: 0,
+        },
+      },
+      // {
+      //   name: "Account List",
+      //   path: "/dashboard/accounts",
+      //   icon: List,
+      //   allowedModes: [ADMIN, SUPREME, PBL],
+      //   requiredPermission: {
+      //     section: "Accounts",
+      //     action: "AccountListMenuShow",
+      //     appliesToModes: [PBL, ADMIN],
+      //     pblShopId: 0,
+      //   },
+      // },
+    ],
+  },
+
+
   {
     name: "Products",
     icon: PackageSearch,
@@ -256,7 +296,7 @@ export const dashboardMenuItems = [
         name: "Archived Products",
         path: "/dashboard/archive-product-list/",
         icon: PackageSearch,
-         allowedModes: [ADMIN, SUPREME, PBL],
+        allowedModes: [ADMIN, SUPREME, PBL],
         requiredPermission: {
           section: "Vehicle",
           action: "ArchivedProductsMenuShow",
@@ -288,6 +328,17 @@ export const dashboardMenuItems = [
           pblShopId: 0,
         }
       },
+      // {
+      //   name: "Vehicle Purchase Calculation & Payment",
+      //   path: "/dashboard/products/purchase-payments/",
+      //   icon: Receipt,
+      //   requiredPermission: {
+      //     section: "PurchasePayment",
+      //     action: "PurchasePaymentMenuShow",
+      //     appliesToModes: [ADMIN, PBL],
+      //     pblShopId: 0,
+      //   },
+      // },
     ],
   },
   {
@@ -552,7 +603,7 @@ export const dashboardMenuItems = [
         path: "/dashboard/settings/master-data-type/",
         icon: DatabaseZap,
         allowedModes: [ADMIN, SUPREME, PBL],
-          requiredPermission: {
+        requiredPermission: {
           section: "Settings",
           action: "MasterDataTypeMenuShow",
           appliesToModes: [PBL, ADMIN],
