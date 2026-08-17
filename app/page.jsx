@@ -157,7 +157,7 @@ const HomeContent = () => {
 
               <div className="text-center mb-8">
                 <p className="text-white text-sm font-medium tracking-wider mb-2">
-                  WELCOME BACK Click4Details
+                  WELCOME To Click4Details
                 </p>
                 <p className="text-white/80 text-xs">
                   LOG IN TO CONTINUE
@@ -285,15 +285,15 @@ const HomeContent = () => {
                 </div>
 
                 <div className="mt-5 rounded-2xl border border-white/30 bg-white/10 p-4 text-center shadow-lg backdrop-blur-sm">
-                  <p className="mb-2 text-xs font-medium text-red-500">
+                  <p className="mb-2 text-md font-medium text-red-500">
                     লগইন করতে কোনো সমস্যা হলে,
                   </p>
-                  <p className="mb-3 text-xs text-red-500">
+                  <p className="mb-3 text-md text-red-500">
                     অনুগ্রহ করে আমাদের এই নম্বরে কল করুন
                   </p>
                   <a
                     href="tel:+8801969944400"
-                    className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-base font-bold text-white transition hover:bg-blue-500"
+                    className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-md font-bold text-white transition hover:bg-blue-500"
                   >
                     +8801969944400
                   </a>
