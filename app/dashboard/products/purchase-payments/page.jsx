@@ -15,6 +15,7 @@ import {
   Package as PackageIcon,
   ChevronDown,
   ChevronUp,
+  Youtube,
 } from "lucide-react";
 import AsyncSelect from "react-select/async";
 
@@ -354,6 +355,17 @@ const PurchasePaymentsContent = () => {
               <p className="text-sm text-teal-100">Vehicle purchase calculation & payment tracking</p>
             </div>
           </div>
+
+          <a
+            href="https://www.youtube.com/watch?v=6YGR8r2VnOA"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open tutorial video"
+            className="inline-flex items-center gap-2 rounded-full border border-red-400 bg-red-600 px-4 py-2.5 text-white shadow-md transition hover:scale-105 hover:bg-red-500"
+          >
+            <Youtube className="h-5 w-5" />
+            <span className="text-sm font-semibold">How to Use</span>
+          </a>
         </div>
 
         <div className="p-6">

@@ -2,7 +2,7 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Play, CheckCircle, Car, Search, ShoppingCart } from 'lucide-react';
+import { Play, CheckCircle, Car, Search, ShoppingCart, Youtube } from 'lucide-react';
 
 const HowToUse = () => {
     const videoTutorials = [
@@ -207,6 +207,18 @@ const HowToUse = () => {
             {/* Hero Section */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <div className="mb-6 flex justify-center">
+                        <a
+                            href="https://www.youtube.com/watch?v=6YGR8r2VnOA"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Watch tutorial video on YouTube"
+                            className="inline-flex items-center gap-3 rounded-full bg-red-600 px-5 py-3 text-white shadow-lg transition hover:scale-105 hover:bg-red-500"
+                        >
+                            <Youtube className="h-7 w-7" />
+                            <span className="text-base font-semibold tracking-wide">How to Use</span>
+                        </a>
+                    </div>
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">
                         Click4Details ব্যবহার করার পদ্ধতি
                     </h1>
