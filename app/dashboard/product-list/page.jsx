@@ -186,62 +186,88 @@ const ProductList = () => {
     hasPermission(permissionList, 0, "Vehicle", "UserInfoButtonShow");
 
   const canShowAddProductButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "ShowProductAddButton");
+    hasPermission(permissionList, 0, "Vehicle", "ShowProductAddButton") ||
+    hasPermission(permissionList, 0, "Vehicle", "Create");
 
   const canShowVehicleListPdfButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "ShowVehicleListPdfButton");
 
   const canShowPriceCalculatorButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "PriceCalculatorButtonShow");
+    hasPermission(permissionList, 0, "Vehicle", "PriceCalculatorButtonShow") ||
+    hasPermission(permissionList, 0, "Vehicle", "ShowPriceCalculatorButton");
 
   const canShowPriceHistoryButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "PriceHistoryButtonShow");
+    hasPermission(permissionList, 0, "Vehicle", "PriceHistoryButtonShow") ||
+    hasPermission(permissionList, 0, "Vehicle", "ShowPriceHistoryButton");
 
   const canShowDownloadPriceDocumentButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "DownloadPriceDocumentButtonShow");
+    hasPermission(permissionList, 0, "Vehicle", "DownloadPriceDocumentButtonShow") ||
+    hasPermission(permissionList, 0, "Vehicle", "ShowDownloadPriceDocumentButton");
 
   const canEditButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "EditButtonShow");
+    hasPermission(permissionList, 0, "Vehicle", "EditButtonShow") ||
+    hasPermission(permissionList, 0, "Vehicle", "Update") ||
+    hasPermission(permissionList, 0, "Vehicle", "Edit");
 
   const canDeleteButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow");
+    hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow") ||
+    hasPermission(permissionList, 0, "Vehicle", "Delete");
 
   const canShowCostingPaymentButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "Vehicle", "CostingPaymentButtonShow");
 
-
   const canPermanentDeleteButton =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "PermanentDeleteButtonShow");
+    hasPermission(permissionList, 0, "Vehicle", "PermanentDeleteButtonShow") ||
+    hasPermission(permissionList, 0, "Vehicle", "Delete");
 
   const canUpdateB2BPrice =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "B2bPriceUpdate");
+    hasPermission(permissionList, 0, "Vehicle", "B2bPriceUpdate") ||
+    hasPermission(permissionList, 0, "Vehicle", "Update");
 
   const canUpdateFixedPrice =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "FixedPriceUpdate");
+    hasPermission(permissionList, 0, "Vehicle", "FixedPriceUpdate") ||
+    hasPermission(permissionList, 0, "Vehicle", "Update");
 
   const canUpdateAskingPrice =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "AskingPriceUpdate");
-
+    hasPermission(permissionList, 0, "Vehicle", "AskingPriceUpdate") ||
+    hasPermission(permissionList, 0, "Vehicle", "Update");
 
   const canUpdatePurchasePrice =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "PurchasePriceUpdate");
+    hasPermission(permissionList, 0, "Vehicle", "PurchasePriceUpdate") ||
+    hasPermission(permissionList, 0, "Vehicle", "Update");
 
   const canUpdateAvailabilityStatus =
+    user?.user_mode === "supreme" ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Vehicle", "UpdateAvailabilityStatus");
+    hasPermission(permissionList, 0, "Vehicle", "UpdateAvailabilityStatus") ||
+    hasPermission(permissionList, 0, "Vehicle", "ChangeSold/Booked") ||
+    hasPermission(permissionList, 0, "Vehicle", "Update");
 
   const canAllShopView = (targetUser = user) => {
     if (!targetUser) return false;
@@ -2833,42 +2859,56 @@ const ProductList = () => {
             <TableBody>
               {!loading && products?.length > 0 ? (
                 products.map((item, index) => {
-                  let updateAction = "UpdatePurchasePrice";
+                  const isOwnVehicle =
+                    Number(item?.v_user_id) === Number(user?.id) ||
+                    selectedShop === "my-shop";
+
+                  const checkVehicleRowPermission = (action, fallbackActions = []) => {
+                    if (user?.user_mode === "supreme") return true;
+                    if (isOwnVehicle) return true;
+                    const actionsToCheck = [action, ...(Array.isArray(fallbackActions) ? fallbackActions : [fallbackActions])];
+                    for (const act of actionsToCheck) {
+                      if (!act) continue;
+                      if (hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", act)) return true;
+                      if (hasPermission(permissionList, 0, "Vehicle", act)) return true;
+                      if (hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "*")) return true;
+                      if (hasPermission(permissionList, 0, "Vehicle", "*")) return true;
+                    }
+                    return false;
+                  };
+
                   const hasUpdatePermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", updateAction);
+                    checkVehicleRowPermission("UpdatePurchasePrice", ["PurchasePriceUpdate", "Update", "Edit"]);
 
-                  let updateVariablePriceAction = "UpdateVariablePrice";
                   const hasUpdateVariablePricePermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", updateVariablePriceAction);
+                    checkVehicleRowPermission("UpdateVariablePrice", ["Update", "Edit"]);
 
-                  let updateFixedPriceAction = "UpdateFixedPrice";
                   const hasUpdateFixedPricePermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", updateFixedPriceAction);
+                    checkVehicleRowPermission("UpdateFixedPrice", ["FixedPriceUpdate", "Update", "Edit"]);
 
-                  let updateAskingPriceAction = "UpdateAskingPrice";
                   const hasUpdateAskingPricePermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", updateAskingPriceAction);
+                    checkVehicleRowPermission("UpdateAskingPrice", ["AskingPriceUpdate", "Update", "Edit"]);
 
-                  let updateAvailabilityStatusAction = "ChangeSold/Booked";
                   const hasUpdateAvailabilityStatusPermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", updateAvailabilityStatusAction);
-                  let showPriceCalculatorAction = "ShowPriceCalculatorButton";
+                    checkVehicleRowPermission("ChangeSold/Booked", ["UpdateAvailabilityStatus", "Update", "Edit"]);
+
                   const hasShowPriceCalculatorPermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", showPriceCalculatorAction);
-                  let showPriceHistoryButtonAction = "ShowPriceHistoryButton";
+                    checkVehicleRowPermission("ShowPriceCalculatorButton", ["PriceCalculatorButtonShow"]);
+
                   const hasShowPriceHistoryButtonPermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", showPriceHistoryButtonAction);
-                  let showDownloadPriceDocumentButtonAction = "ShowDownloadPriceDocumentButton";
+                    checkVehicleRowPermission("ShowPriceHistoryButton", ["PriceHistoryButtonShow"]);
+
                   const hasShowDownloadPriceDocumentButtonPermission =
-                    selectedShop === "my-shop" ||
-                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", showDownloadPriceDocumentButtonAction);
+                    checkVehicleRowPermission("ShowDownloadPriceDocumentButton", ["DownloadPriceDocumentButtonShow"]);
+
+                  const canEditThisVehicle =
+                    checkVehicleRowPermission("Update", ["Edit", "EditButtonShow"]) && canEditButton;
+
+                  const canDeleteThisVehicle =
+                    checkVehicleRowPermission("Delete", ["DeleteButtonShow"]) && canDeleteButton;
+
+                  const canPermanentDeleteThisVehicle =
+                    checkVehicleRowPermission("Delete", ["PermanentDeleteButtonShow", "DeleteButtonShow"]) && canPermanentDeleteButton;
                   // const canShowPriceActionButtons =
                   //   user &&
                   //   (
@@ -3419,8 +3459,7 @@ const ProductList = () => {
                             {/* // } */}
 
                             <button
-                              disabled={!(selectedShop === "my-shop" ||
-                                hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Update")) || !canEditButton}
+                              disabled={!canEditThisVehicle}
                               onClick={() => handleEdit(item.v_id)}
                               className="text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400"
                               title="Product Edit"
@@ -3430,8 +3469,7 @@ const ProductList = () => {
                             </button>
 
                             <button
-                              disabled={!(selectedShop === "my-shop" ||
-                                hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
+                              disabled={!canDeleteThisVehicle}
                               onClick={() => handleDelete(item?.v_id)}
                               className="text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-400"
                               title="Delete Product"
@@ -3441,8 +3479,7 @@ const ProductList = () => {
                             </button>
 
                             <button
-                              disabled={!(selectedShop === "my-shop" ||
-                                hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canPermanentDeleteButton}
+                              disabled={!canPermanentDeleteThisVehicle}
                               onClick={() => handlePermanentDelete(item?.v_id)}
                               className="inline-flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
                               title="Permanent Delete Product"

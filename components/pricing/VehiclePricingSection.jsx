@@ -337,6 +337,20 @@ const VehiclePricingSection = ({
   const userVariablePrice = watch("vp_user_variable_price");
   const userCostingPrice = watch("vp_user_costing_price");
   const userToPblPrice = watch("vp_user_to_pbl_price");
+  const isUrgentSale = watch("v_urgent_sale");
+
+  useEffect(() => {
+    if (isUrgentSale) {
+      // Rule 13: Auto Dot Switch to fixed
+      if (showPriceValue !== "fixed") {
+        setValue("vp_show_price", "fixed", { shouldDirty: true, shouldValidate: true });
+      }
+      // Rule 14: Auto sync B2B Partner Price = Fixed Price
+      if (userFixedPrice && userToPblPrice !== userFixedPrice) {
+        setValue("vp_user_to_pbl_price", userFixedPrice, { shouldDirty: true, shouldValidate: true });
+      }
+    }
+  }, [isUrgentSale, userFixedPrice, showPriceValue, userToPblPrice, setValue]);
 
   const fixedPriceOptions = useMemo(() => buildPriceOptions(userFixedPrice), [userFixedPrice]);
   const askingPriceOptions = useMemo(() => buildPriceOptions(userAskingPrice), [userAskingPrice]);
@@ -1245,19 +1259,50 @@ const VehiclePricingSection = ({
             </div>
           </div>
 
-          <div className="mt-2">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="v_urgent_sale"
-                name="v_urgent_sale"
-                className="mr-2 h-5 w-5"
-                {...register("v_urgent_sale")}
-              />
-              <label htmlFor="v_urgent_sale" className="text-lg font-semibold text-gray-600">
-                Urgent Sell &nbsp;
-              </label>
+          <div className="mt-3 rounded-xl border border-gray-200 bg-white p-3 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="v_urgent_sale"
+                  name="v_urgent_sale"
+                  className="mr-2 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  {...register("v_urgent_sale")}
+                  onChange={(e) => {
+                    register("v_urgent_sale").onChange(e);
+                    if (e.target.checked) {
+                      if (!userFixedPrice || Number(String(userFixedPrice).replace(/,/g, "")) <= 0) {
+                        toast.error("Fixed Price is mandatory to select Urgent Sale.");
+                      }
+                      setValue("vp_show_price", "fixed", { shouldDirty: true, shouldValidate: true });
+                      if (userFixedPrice) {
+                        setValue("vp_user_to_pbl_price", userFixedPrice, { shouldDirty: true, shouldValidate: true });
+                      }
+                    }
+                  }}
+                />
+                <label htmlFor="v_urgent_sale" className="text-lg font-semibold text-gray-700">
+                  Urgent Sell &nbsp;
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label htmlFor="vp_validity_date" className="text-sm font-medium text-gray-600 whitespace-nowrap">
+                  Price Validity Date:
+                </label>
+                <Input
+                  id="vp_validity_date"
+                  type="date"
+                  {...register("vp_validity_date")}
+                  className="h-10 w-full sm:w-auto rounded-lg border-gray-300 bg-white px-3 text-sm"
+                />
+              </div>
             </div>
+            {Boolean(isUrgentSale) && (!userFixedPrice || Number(String(userFixedPrice).replace(/,/g, "")) <= 0) && (
+              <p className="mt-1 text-sm font-medium text-red-600">
+                * Urgent Sale সিলেক্ট করার জন্য Fixed Price থাকা বাধ্যতামূলক।
+              </p>
+            )}
           </div>
         </div>
 

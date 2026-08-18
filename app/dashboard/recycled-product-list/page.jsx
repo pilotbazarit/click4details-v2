@@ -73,8 +73,10 @@ const ProductList = () => {
     const [selectedShop] = useState("my-shop");
 
     const canDeleteButton =
+        user?.user_mode === "supreme" ||
         (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-        hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow");
+        hasPermission(permissionList, 0, "Vehicle", "DeleteButtonShow") ||
+        hasPermission(permissionList, 0, "Vehicle", "Delete");
 
 
     useEffect(() => {
@@ -776,16 +778,29 @@ const ProductList = () => {
                                                 <Trash2 size={18} />
                                             </button> */}
 
-                                            <button
-                                                disabled={!(selectedShop === "my-shop" ||
-                                                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete")) || !canDeleteButton}
-                                                onClick={() => handleArchiveDelete(item.v_id)}
-                                                title="Archive Delete"
-                                                className="text-orange-600 hover:text-orange-800 disabled:cursor-not-allowed disabled:text-gray-400"
-                                                aria-label={`Archive Delete ${item.s_title}`}
-                                            >
-                                                <Archive size={18} />
-                                            </button>
+                                            {(() => {
+                                                const isOwnVehicle =
+                                                    Number(item?.v_user_id) === Number(user?.id) ||
+                                                    selectedShop === "my-shop";
+                                                const canDeleteThisVehicle =
+                                                    user?.user_mode === "supreme" ||
+                                                    isOwnVehicle ||
+                                                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "Delete") ||
+                                                    hasPermission(permissionList, 0, "Vehicle", "Delete") ||
+                                                    hasPermission(permissionList, Number(item?.v_shop_id), "Vehicle", "*");
+
+                                                return (
+                                                    <button
+                                                        disabled={!canDeleteThisVehicle || !canDeleteButton}
+                                                        onClick={() => handleArchiveDelete(item.v_id)}
+                                                        title="Archive Delete"
+                                                        className="text-orange-600 hover:text-orange-800 disabled:cursor-not-allowed disabled:text-gray-400"
+                                                        aria-label={`Archive Delete ${item.s_title}`}
+                                                    >
+                                                        <Archive size={18} />
+                                                    </button>
+                                                );
+                                            })()}
                                         </TableCell>
                                     </TableRow> 
                                 ))

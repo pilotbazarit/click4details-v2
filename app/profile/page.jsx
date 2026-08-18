@@ -3,7 +3,7 @@
 import React from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Select from "react-select";
 import constData from "@/lib/constant";
 import MasterDataService from "@/services/MasterDataService";
@@ -16,13 +16,14 @@ import RangeSlider from "@/components/RangeSlider";
 import PageHeaderSection from "@/components/advance-filter/PageHeaderSection";
 import CardViewFilteredProducts from "@/components/advance-filter/CardViewFilteredProducts";
 import { AdvanceFilterProductContextProvider } from "@/context/AdvanceFilterProductContextProvider";
-import { ArrowLeft, BarChart3, CreditCard, ExternalLink, Eye, EyeOff, FileText, FolderOpen, Headset, Mail, MapPin, Phone, Plus, Share2, Upload, UserRound, Youtube, Minus, Package } from "lucide-react";
+import { ArrowLeft, BarChart3, CreditCard, ExternalLink, Eye, EyeOff, FileText, FolderOpen, Headset, Mail, MapPin, Phone, Plus, Share2, Upload, UserRound, Youtube, Minus, Package, History, Download, RefreshCw, Clock, Globe, ArrowRight, Layers, X, Calendar, Search } from "lucide-react";
 import user_icon from "@/assets/user_icon.svg";
 import Image from "next/image";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
 import UserService from "@/services/UserService";
+import UserActivityLogService from "@/services/UserActivityLogService";
 import { method } from "lodash";
 
 import { parseStoredUser } from "@/lib/parseStoredUser";
@@ -75,6 +76,7 @@ const profileMenuItems = [
     { id: "google-drive-links", label: "Google Drive", description: "Drive document links", icon: FolderOpen },
     { id: "bank-accounts", label: "Bank Account", description: "Bank information", icon: CreditCard },
     { id: "essential-documents", label: "Documents", description: "Essential documents", icon: FileText },
+    { id: "activity-log", label: "Activity Log", description: "My activity history & reports", icon: History },
 ];
 
 const legacyProfileHashMap = {
@@ -152,6 +154,101 @@ const Profile = () => {
     }, [profileImagePreview]);
 
     const [isToBePartnerHide, setIsTobePartnerHide] = useState(false);
+
+    // Activity log states
+    const [myActivityLogs, setMyActivityLogs] = useState([]);
+    const [myActivityLoading, setMyActivityLoading] = useState(false);
+    const [myActivityExporting, setMyActivityExporting] = useState(false);
+    const [myActivityDateFilter, setMyActivityDateFilter] = useState("all");
+    const [myActivityFromDate, setMyActivityFromDate] = useState("");
+    const [myActivityToDate, setMyActivityToDate] = useState("");
+    const [myActivitySearch, setMyActivitySearch] = useState("");
+    const [myActivitySearchInput, setMyActivitySearchInput] = useState("");
+    const [myActivityPagination, setMyActivityPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        per_page: 15,
+        total: 0,
+        from: 0,
+        to: 0,
+    });
+    const [selectedMyLogDetail, setSelectedMyLogDetail] = useState(null);
+
+    const fetchMyActivityLogs = useCallback(async (page = 1) => {
+        setMyActivityLoading(true);
+        try {
+            const params = {
+                page,
+                per_page: myActivityPagination.per_page,
+            };
+            if (myActivityDateFilter !== "all") {
+                params.date_filter = myActivityDateFilter;
+            }
+            if (myActivityDateFilter === "custom") {
+                if (myActivityFromDate) params.from_date = myActivityFromDate;
+                if (myActivityToDate) params.to_date = myActivityToDate;
+            }
+            if (myActivitySearch) {
+                params.search = myActivitySearch;
+            }
+            const res = await UserActivityLogService.Queries.getMyLogs(params);
+            if (res?.status === "success" && res?.data) {
+                const paginated = res.data;
+                setMyActivityLogs(paginated.data || []);
+                setMyActivityPagination({
+                    current_page: paginated.current_page || 1,
+                    last_page: paginated.last_page || 1,
+                    per_page: paginated.per_page || 15,
+                    total: paginated.total || 0,
+                    from: paginated.from || 0,
+                    to: paginated.to || 0,
+                });
+            } else {
+                setMyActivityLogs([]);
+            }
+        } catch (err) {
+            setMyActivityLogs([]);
+        } finally {
+            setMyActivityLoading(false);
+        }
+    }, [myActivityDateFilter, myActivityFromDate, myActivityToDate, myActivitySearch, myActivityPagination.per_page]);
+
+    useEffect(() => {
+        if (activeProfileSection === "activity-log") {
+            fetchMyActivityLogs(1);
+        }
+    }, [activeProfileSection, fetchMyActivityLogs]);
+
+    const handleDownloadMyActivityPdf = async () => {
+        try {
+            setMyActivityExporting(true);
+            toast.loading("Generating your activity log PDF...", { id: "my-pdf-gen" });
+            const params = {};
+            if (myActivityDateFilter !== "all") params.date_filter = myActivityDateFilter;
+            if (myActivityDateFilter === "custom") {
+                if (myActivityFromDate) params.from_date = myActivityFromDate;
+                if (myActivityToDate) params.to_date = myActivityToDate;
+            }
+            if (myActivitySearch) params.search = myActivitySearch;
+
+            const response = await UserActivityLogService.Queries.downloadMyPdf(params);
+            const blob = response instanceof Blob ? response : (response?.data instanceof Blob ? response.data : new Blob([response?.data || response], { type: "application/pdf" }));
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `my-activity-log-${new Date().toISOString().split("T")[0]}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            toast.success("PDF downloaded successfully!", { id: "my-pdf-gen" });
+        } catch (err) {
+            toast.error("Failed to generate PDF report.", { id: "my-pdf-gen" });
+        } finally {
+            setMyActivityExporting(false);
+        }
+    };
 
 
     // const getUserById = async (id) => {
@@ -1594,22 +1691,370 @@ const Profile = () => {
                                     </>
                                 )}
 
-                                <div className="w-full mt-3 mb-6 border-gray-200 pb-4">
-                                    <button
-                                        type="submit"
-                                        className="px-3 py-1.5 bg-gradient-to-r gap-1 from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-sm shadow-md transition-all duration-200 transform hover:-translate-y-1 hover:shadow-lg flex items-center float-right"
-                                        disabled={isUpdating}
-                                    >
-                                        {isUpdating ? 'Updating...' : <>
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
-                                                <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
-                                            </svg>
-                                            Update
-                                        </>}
-                                    </button>
+                                {activeProfileSection === "activity-log" && (
+                                    <>
+                                        {/* My Activity Log Section */}
+                                        <div className="w-full lg:w-full mt-4 space-y-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 mb-2">
+                                                <div>
+                                                    <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                                                        <History className="w-5 h-5 text-blue-600" />
+                                                        My Activity Log
+                                                    </h2>
+                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                        View and export your actions, data modifications, and account activity.
+                                                    </p>
+                                                </div>
 
-                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fetchMyActivityLogs(myActivityPagination.current_page)}
+                                                        disabled={myActivityLoading}
+                                                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition flex items-center gap-1.5"
+                                                        title="Refresh"
+                                                    >
+                                                        <RefreshCw className={`w-3.5 h-3.5 ${myActivityLoading ? "animate-spin" : ""}`} />
+                                                        Refresh
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleDownloadMyActivityPdf}
+                                                        disabled={myActivityExporting || myActivityLoading || myActivityPagination.total === 0}
+                                                        className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center gap-1.5 disabled:opacity-50"
+                                                    >
+                                                        <Download className="w-3.5 h-3.5" />
+                                                        <span>{myActivityExporting ? "Generating PDF..." : "Download PDF"}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Filters Box */}
+                                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                                                {/* Date Presets */}
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+                                                        <Calendar className="w-3.5 h-3.5" /> Date:
+                                                    </span>
+                                                    {[
+                                                        { id: "all", label: "All Time" },
+                                                        { id: "today", label: "Today" },
+                                                        { id: "yesterday", label: "Yesterday" },
+                                                        { id: "last_week", label: "Last Week" },
+                                                        { id: "last_month", label: "Last Month" },
+                                                        { id: "custom", label: "Custom Date" },
+                                                    ].map((preset) => (
+                                                        <button
+                                                            key={preset.id}
+                                                            type="button"
+                                                            onClick={() => setMyActivityDateFilter(preset.id)}
+                                                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                                                                myActivityDateFilter === preset.id
+                                                                    ? "bg-blue-600 text-white shadow-xs"
+                                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                            }`}
+                                                        >
+                                                            {preset.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Custom Date Pickers */}
+                                                {myActivityDateFilter === "custom" && (
+                                                    <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-gray-500 font-medium">From:</span>
+                                                            <input
+                                                                type="date"
+                                                                value={myActivityFromDate}
+                                                                onChange={(e) => setMyActivityFromDate(e.target.value)}
+                                                                className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-blue-500 bg-slate-50"
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-gray-500 font-medium">To:</span>
+                                                            <input
+                                                                type="date"
+                                                                value={myActivityToDate}
+                                                                onChange={(e) => setMyActivityToDate(e.target.value)}
+                                                                className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-blue-500 bg-slate-50"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Search bar */}
+                                                <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                                                    <div className="relative flex-1">
+                                                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search your activity..."
+                                                            value={myActivitySearchInput}
+                                                            onChange={(e) => setMyActivitySearchInput(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    e.preventDefault();
+                                                                    setMyActivitySearch(myActivitySearchInput);
+                                                                }
+                                                            }}
+                                                            className="w-full pl-8 pr-8 py-1.5 border border-gray-200 rounded-xl text-xs outline-none focus:border-blue-500 bg-slate-50"
+                                                        />
+                                                        {myActivitySearchInput && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setMyActivitySearchInput("");
+                                                                    setMyActivitySearch("");
+                                                                }}
+                                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setMyActivitySearch(myActivitySearchInput)}
+                                                        className="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition"
+                                                    >
+                                                        Search
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Activity Logs List Table */}
+                                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                                {myActivityLoading ? (
+                                                    <div className="p-10 text-center text-gray-500 space-y-2">
+                                                        <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+                                                        <p className="text-xs">Loading activity logs...</p>
+                                                    </div>
+                                                ) : myActivityLogs.length === 0 ? (
+                                                    <div className="p-10 text-center text-gray-500 space-y-2">
+                                                        <History className="w-8 h-8 mx-auto text-gray-300" />
+                                                        <p className="text-sm font-semibold text-gray-700">No activity logs found</p>
+                                                        <p className="text-xs text-gray-400">
+                                                            No activity records found for the selected date range.
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead className="bg-slate-50 border-b border-gray-100 text-gray-600 uppercase tracking-wider font-semibold">
+                                                                <tr>
+                                                                    <th className="py-3 px-4">Date &amp; Time</th>
+                                                                    <th className="py-3 px-4 text-center">Action</th>
+                                                                    <th className="py-3 px-4">Module</th>
+                                                                    <th className="py-3 px-4">Description</th>
+                                                                    <th className="py-3 px-4 text-right">Details</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-gray-100">
+                                                                {myActivityLogs.map((log) => {
+                                                                    const act = (log.action || "").toLowerCase();
+                                                                    let badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
+                                                                    if (act.includes("create") || act.includes("add") || act.includes("store")) {
+                                                                        badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                                                                    } else if (act.includes("update") || act.includes("edit")) {
+                                                                        badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+                                                                    } else if (act.includes("delete") || act.includes("remove")) {
+                                                                        badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+                                                                    } else if (act.includes("approve")) {
+                                                                        badgeStyle = "bg-purple-50 text-purple-700 border-purple-200";
+                                                                    }
+
+                                                                    return (
+                                                                        <tr key={log.id} className="hover:bg-slate-50/70 transition">
+                                                                            <td className="py-3 px-4 whitespace-nowrap">
+                                                                                <div className="font-medium text-gray-800">
+                                                                                    {new Date(log.created_at).toLocaleDateString("en-GB", {
+                                                                                        day: "2-digit",
+                                                                                        month: "short",
+                                                                                        year: "numeric",
+                                                                                    })}
+                                                                                </div>
+                                                                                <div className="text-[10px] text-gray-400">
+                                                                                    {new Date(log.created_at).toLocaleTimeString("en-GB", {
+                                                                                        hour: "2-digit",
+                                                                                        minute: "2-digit",
+                                                                                    })}
+                                                                                </div>
+                                                                            </td>
+
+                                                                            <td className="py-3 px-4 text-center whitespace-nowrap">
+                                                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle}`}>
+                                                                                    {log.action}
+                                                                                </span>
+                                                                            </td>
+
+                                                                            <td className="py-3 px-4 whitespace-nowrap">
+                                                                                <div className="font-semibold text-gray-800">{log.module}</div>
+                                                                                {log.entity_id && (
+                                                                                    <div className="text-[10px] text-gray-400">ID: #{log.entity_id}</div>
+                                                                                )}
+                                                                            </td>
+
+                                                                            <td className="py-3 px-4 max-w-xs sm:max-w-md">
+                                                                                <div className="text-gray-800">{log.description || "Action performed"}</div>
+                                                                                {log.changes && Object.keys(log.changes).length > 0 && (
+                                                                                    <span className="inline-block mt-0.5 text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                                                                        {Object.keys(log.changes).length} field(s) modified
+                                                                                    </span>
+                                                                                )}
+                                                                            </td>
+
+                                                                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                                                                                {log.changes && Object.keys(log.changes).length > 0 ? (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setSelectedMyLogDetail(log)}
+                                                                                        className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg font-medium transition inline-flex items-center gap-1 text-[11px]"
+                                                                                    >
+                                                                                        <Eye className="w-3 h-3" /> View Changes
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <span className="text-gray-300">-</span>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+
+                                                {/* Pagination */}
+                                                {!myActivityLoading && myActivityPagination.total > 0 && (
+                                                    <div className="p-3 border-t border-gray-100 flex items-center justify-between bg-slate-50/50 text-xs">
+                                                        <span className="text-gray-500">
+                                                            Total: <strong className="text-gray-800">{myActivityPagination.total}</strong> record(s)
+                                                        </span>
+
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => fetchMyActivityLogs(myActivityPagination.current_page - 1)}
+                                                                disabled={myActivityPagination.current_page <= 1}
+                                                                className="px-2.5 py-1 border border-gray-200 bg-white hover:bg-slate-50 rounded-lg text-gray-700 disabled:opacity-40 transition"
+                                                            >
+                                                                Prev
+                                                            </button>
+
+                                                            <span className="font-semibold text-gray-800">
+                                                                Page {myActivityPagination.current_page} of {myActivityPagination.last_page}
+                                                            </span>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => fetchMyActivityLogs(myActivityPagination.current_page + 1)}
+                                                                disabled={myActivityPagination.current_page >= myActivityPagination.last_page}
+                                                                className="px-2.5 py-1 border border-gray-200 bg-white hover:bg-slate-50 rounded-lg text-gray-700 disabled:opacity-40 transition"
+                                                            >
+                                                                Next
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* My Activity Detail Modal */}
+                                        {selectedMyLogDetail && (
+                                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
+                                                <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-gray-100">
+                                                    <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+                                                        <div className="flex items-center gap-2">
+                                                            <FileText className="w-5 h-5 text-blue-600" />
+                                                            <h3 className="text-base font-bold text-gray-800">Activity Changes</h3>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedMyLogDetail(null)}
+                                                            className="p-1 text-gray-400 hover:text-gray-700 rounded-lg"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="p-4 overflow-y-auto space-y-3">
+                                                        <div className="text-xs text-gray-500 mb-2">
+                                                            {selectedMyLogDetail.module} #{selectedMyLogDetail.entity_id || ""} -{" "}
+                                                            {new Date(selectedMyLogDetail.created_at).toLocaleString("en-GB")}
+                                                        </div>
+
+                                                        {selectedMyLogDetail.changes && typeof selectedMyLogDetail.changes === "object" ? (
+                                                            <div className="space-y-2">
+                                                                {Object.entries(selectedMyLogDetail.changes)
+                                                                    .filter(([field, diff]) => {
+                                                                        if (!diff) return false;
+                                                                        const oldVal = typeof diff === "object" && "old" in diff ? diff.old : null;
+                                                                        const newVal = typeof diff === "object" && "new" in diff ? diff.new : diff;
+                                                                        const isOldNull = oldVal === null || oldVal === undefined || oldVal === "" || String(oldVal).toLowerCase() === "null";
+                                                                        const isNewNull = newVal === null || newVal === undefined || newVal === "" || String(newVal).toLowerCase() === "null";
+                                                                        return !isOldNull && !isNewNull && String(oldVal) !== String(newVal);
+                                                                    })
+                                                                    .map(([field, diff]) => {
+                                                                    const oldVal = diff && typeof diff === "object" && "old" in diff ? diff.old : "N/A";
+                                                                    const newVal = diff && typeof diff === "object" && "new" in diff ? diff.new : diff;
+
+                                                                    return (
+                                                                        <div key={field} className="p-2.5 border border-gray-200 rounded-xl bg-white text-xs">
+                                                                            <div className="font-bold text-gray-700 mb-1">
+                                                                                {field.replace(/^(v_|vp_|ed_|p_|s_)/, "").replace(/_/g, " ").toUpperCase()}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="flex-1 bg-rose-50 border border-rose-100 rounded-lg p-1.5 text-rose-700 line-through text-[11px]">
+                                                                                    {typeof oldVal === "object" ? JSON.stringify(oldVal) : String(oldVal ?? "null")}
+                                                                                </div>
+                                                                                <ArrowRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                                                                <div className="flex-1 bg-emerald-50 border border-emerald-100 rounded-lg p-1.5 text-emerald-800 font-semibold text-[11px]">
+                                                                                    {typeof newVal === "object" ? JSON.stringify(newVal) : String(newVal ?? "null")}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-500">No diff details available.</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="p-3 border-t border-gray-100 bg-slate-50 flex justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedMyLogDetail(null)}
+                                                            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl text-xs transition"
+                                                        >
+                                                            Close
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {activeProfileSection !== "activity-log" && (
+                                    <div className="w-full mt-3 mb-6 border-gray-200 pb-4">
+                                        <button
+                                            type="submit"
+                                            className="px-3 py-1.5 bg-gradient-to-r gap-1 from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-sm shadow-md transition-all duration-200 transform hover:-translate-y-1 hover:shadow-lg flex items-center float-right"
+                                            disabled={isUpdating}
+                                        >
+                                            {isUpdating ? 'Updating...' : <>
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                                                    <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+                                                </svg>
+                                                Update
+                                            </>}
+                                        </button>
+                                    </div>
+                                )}
 
                             </div>
                         </div>

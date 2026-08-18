@@ -700,7 +700,7 @@ const ProductDetails = ({ productDetails }) => {
         }
     };
 
-    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
+    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.com';
 
     const getYouTubeVideoId = (url = "") => {
         const rawUrl = String(url || "").trim();
@@ -1278,7 +1278,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8809638660077";
+        const phoneNumber = user?.phone || "+8801969944400";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1481,7 +1481,7 @@ const ProductDetails = ({ productDetails }) => {
                             <div className="flex justify-between">
                                 <div className="space-y-2">
                                     <div>
-                                        <div className="font-bold text-gray-600 text-md md:text-xl flex flex-col">
+                                        <div className="font-bold text-gray-600 text-md md:text-xl flex flex-wrap items-center gap-2">
                                             <TypewriterPrice
                                                 text={
                                                     [
@@ -1495,7 +1495,26 @@ const ProductDetails = ({ productDetails }) => {
                                                 }
                                                 className="font-bold text-gray-600 text-md md:text-xl"
                                             />
+
+                                            {productDetails?.vehicle_price?.price_drop_type === 'drop' && productDetails?.vehicle_price?.price_drop_percentage > 0 && (
+                                                <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                    Drop {productDetails?.vehicle_price?.price_drop_percentage}%
+                                                </span>
+                                            )}
+                                            {productDetails?.vehicle_price?.price_drop_type === 'increase' && productDetails?.vehicle_price?.price_drop_percentage > 0 && (
+                                                <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                                                    +{productDetails?.vehicle_price?.price_drop_percentage}%
+                                                </span>
+                                            )}
                                         </div>
+
+                                        {productDetails?.vehicle_price?.is_price_validity_expired && (
+                                            <div className="mt-1">
+                                                <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                                                    Price Validity Time Expired
+                                                </span>
+                                            </div>
+                                        )}
 
                                         {
                                             basePath == '/product' ? (

@@ -113,15 +113,18 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
 
     const updateVehiclePrice = async (priceData) => {
         try {
-            // Assuming you have a service to update vehicle prices
-            const response = await VehicleService.Commands.individualVehicleUpdate(product?.v_id, {
+            const payload = {
                 vp_user_asking_price: priceData.type === 'asking' ? priceData.value : askingPrice,
                 vp_user_fixed_price: priceData.type === 'fixed' ? priceData.value : fixedPrice,
                 vp_variable_price: priceData.type === 'variable' ? priceData.value : variablePrice,
-                vp_urgent_sale: priceData.urgentSale ? 1 : 0,
-                vp_show_price: priceData.type,
+                v_urgent_sale: priceData.urgentSale ? 1 : 0,
+                vp_show_price: priceData.urgentSale ? 'fixed' : priceData.type,
                 _method: 'PUT'
-            });
+            };
+            if (priceData.urgentSale && (priceData.type === 'fixed' ? priceData.value : fixedPrice)) {
+                payload.vp_user_to_pbl_price = priceData.type === 'fixed' ? priceData.value : fixedPrice;
+            }
+            const response = await VehicleService.Commands.individualVehicleUpdate(product?.v_id, payload);
             return response;
         } catch (error) {
             console.error('Error updating vehicle price:', error);
@@ -163,10 +166,15 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
         //         (permission.action === priceAction || permission.action === "*")
         // );
 
+        if (urgentSale && (!fixedPrice || Number(String(fixedPrice).replace(/,/g, "")) <= 0)) {
+            toast.error("Fixed Price is mandatory to select Urgent Sale.");
+            return;
+        }
+
         // Prepare price data to send
         const priceData = {
-            type: priceType,
-            value: priceType === 'asking' ? askingPrice : priceType === 'fixed' ? fixedPrice : variablePrice,
+            type: urgentSale ? 'fixed' : priceType,
+            value: (urgentSale || priceType === 'fixed') ? fixedPrice : (priceType === 'asking' ? askingPrice : variablePrice),
             urgentSale
         };
 
@@ -174,8 +182,7 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
         setOpen(false);
 
         if (hasPermission || isMyShop) {
-              console.log("price select modal.jsx 176");
-            const response = updateVehiclePrice(priceData);
+            updateVehiclePrice(priceData);
         }
     };
 
@@ -475,7 +482,13 @@ const PriceSelectModal = ({ open, setOpen, product, onShare, selectedCompanyShop
                     {/* Urgent Sale Checkbox */}
                     <div
                         className="flex items-center gap-3 p-3 cursor-pointer"
-                        onClick={() => setUrgentSale(!urgentSale)}
+                        onClick={() => {
+                            const nextVal = !urgentSale;
+                            setUrgentSale(nextVal);
+                            if (nextVal) {
+                                setPriceType('fixed');
+                            }
+                        }}
                     >
                         <div className={`w-5 h-5 border-2 rounded flex items-center justify-center ${urgentSale ? 'bg-blue-500 border-blue-500' : 'border-gray-400'
                             }`}>
