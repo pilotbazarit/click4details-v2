@@ -2138,7 +2138,7 @@ const UpdateProductForm = ({ productId }) => {
                                                     {...register("v_pbl_gift")}
                                                     disabled={isGiftLoading}
                                                 >
-                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select click4details gift'}</option>
                                                     {
                                                         giftData.map((gift) => (
                                                             <option key={gift.value} value={gift.value}>
@@ -3342,7 +3342,7 @@ const UpdateProductForm = ({ productId }) => {
                                                         {...register("v_pbl_gift")}
                                                         disabled={isGiftLoading}
                                                     >
-                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select click4details gift'}</option>
                                                         {
                                                             giftData.map((gift) => (
                                                                 <option key={gift.value} value={gift.value}>
@@ -3376,7 +3376,7 @@ const UpdateProductForm = ({ productId }) => {
                                                         {...register("v_pbl_gift")}
                                                         disabled={isGiftLoading}
                                                     >
-                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select click4details gift'}</option>
                                                         {
                                                             giftData.map((gift) => (
                                                                 <option key={gift.value} value={gift.value}>
@@ -3832,9 +3832,9 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("v_is_saleBy_pbl")}
                                             />
                                             <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                {/* আমার এই প্রোডাক্ট টি pilotbazar.com এ বিক্রয় এর জন্য অনুমতি দেওয়া হলো এবং আমি pilotbazar.com এর সকল শর্ত মানতে রাজি আছি। &nbsp; */}
-                                                আমি আমার এই প্রোডাক্টটি pilotbazar.com এ বিক্রয়ের জন্য অনুমতি প্রদান করছি
-                                                এবং pilotbazar.com এর সকল
+                                                {/* আমার এই প্রোডাক্ট টি click4details.com এ বিক্রয় এর জন্য অনুমতি দেওয়া হলো এবং আমি click4details.com এর সকল শর্ত মানতে রাজি আছি। &nbsp; */}
+                                                আমি আমার এই প্রোডাক্টটি click4details.com এ বিক্রয়ের জন্য অনুমতি প্রদান করছি
+                                                এবং click4details.com এর সকল
                                                 <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                     {/* Terms and Conditions */} শর্তাবলী
                                                 </Link> মেনে নিতে সম্মত আছি।
@@ -3856,7 +3856,7 @@ const UpdateProductForm = ({ productId }) => {
                                                 {...register("v_to_be_partner")}
                                             />
                                             <label htmlFor="partnership" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                                                I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                                             </label>
                                         </div> */}
 

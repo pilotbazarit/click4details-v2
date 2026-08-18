@@ -35,7 +35,7 @@ import GiftBadge from "@/components/GiftBadge";
 
 dayjs.extend(relativeTime);
 
-const DEFAULT_PHONE = "+8801969944400";
+const DEFAULT_PHONE = "+8809638660077";
 
 const formatLocalMobile = (value) => {
   const trimmed = String(value || "").trim();

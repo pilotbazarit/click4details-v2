@@ -95,7 +95,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     phone = selectedCompanyShop?.shop?.user?.phone; // fallback number
   } else {
-    phone = "+8801969944400";
+    phone = "+8809638660077";
   }
 
   // ---------- Email ----------
@@ -105,7 +105,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     email = selectedCompanyShop?.shop?.user?.email;
   } else {
-    email = "pilotbazar.com@gmail.com";
+    email = "click4details@gmail.com";
   }
 
   // ---------- Address ----------
@@ -168,7 +168,7 @@ const Footer = () => {
         </div>
       </div>
       <p className="py-4 text-center text-xs md:text-sm">
-        Copyright 2025 © pilotbazar.com All Right Reserved.
+        Copyright 2025 © click4details.com All Right Reserved.
       </p>
     </footer>
   );

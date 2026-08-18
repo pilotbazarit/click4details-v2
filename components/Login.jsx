@@ -99,7 +99,7 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
             <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
               <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Sign in to Our Pilot Bazar
+                  Sign in to Our Click4Details Account
                 </h3>
                 <button
                   type="button"
@@ -315,10 +315,10 @@ export default function Login({ isOpen, onClose, openForgotPasswordModal }) {
                     </p>
 
                     <a
-                      href="tel:+8801969944400"
+                      href="tel:+8809638660077"
                       className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-base font-bold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                     >
-                      <span>+8801969944400</span>
+                      <span>+8809638660077</span>
                     </a>
 
                     <p className="mt-3 text-[11px] font-medium text-gray-600 dark:text-gray-300">

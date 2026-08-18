@@ -518,7 +518,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
 
                 <p className="text-center text-sm text-gray-600 dark:text-gray-300">
                   রেজিস্ট্রেশন করতে কোনো সমস্যা হলে, অনুগ্রহ করে আমাদের এই নম্বরে কল করুন
-                  <span className="ml-1 font-semibold text-blue-600">+8801969944400</span>
+                  <span className="ml-1 font-semibold text-blue-600">+8809638660077</span>
                 </p>
               </form>
             ) : (
