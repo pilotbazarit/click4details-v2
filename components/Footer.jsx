@@ -43,7 +43,7 @@ const Footer = () => {
     const src = getValidImage(assets.pilotBazarLogo);
     logo = (
       <div className="w-28 md:w-32 h-28 md:h-32 relative">
-        <Image src={src} alt="pilotbazar logo" fill className="object-contain" />
+        <Image src={src} alt="click4details logo" fill className="object-contain" />
       </div>
     );
   }

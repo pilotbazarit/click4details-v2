@@ -32,6 +32,14 @@ const Queries = {
 
     getAllOutlets: (params) => commandApi.get(`/api/user-outlet`, { params }),
 
+    getDistricts: (params) => commandApi.get(`/api/address/dropdown-data`, {
+        params: {
+            _entity: 'district',
+            _page: 1,
+            _perPage: 1000,
+            ...params
+        }
+    }),
 };
 
 export default {
