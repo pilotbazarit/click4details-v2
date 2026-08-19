@@ -1,5 +1,5 @@
 'use client'
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { Noto_Sans_Bengali } from "next/font/google";
 import { ProductContextProvider } from "@/context/ProductContext";
 import Login from "@/components/Login";
@@ -29,9 +29,20 @@ const HomeContent = () => {
   const [fieldError, setFieldError] = useState(null);
   const [error, setError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   const { setUser } = useAppContext();
   const router = useRouter();
+
+  // Immediately redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      router.replace("/pb-home");
+    } else {
+      setAuthChecked(true);
+    }
+  }, [router]);
 
   const handleChange = (e) => {
     setPassword(e.target.value);
@@ -73,6 +84,11 @@ const HomeContent = () => {
       setLoading(false);
     }
   };
+
+  // Show full-screen loader while checking auth or redirecting
+  if (!authChecked) {
+    return <Loading />;
+  }
 
   return (
     <ProductContextProvider>
