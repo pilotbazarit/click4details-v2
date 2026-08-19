@@ -804,6 +804,22 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       "Vehicle",
       "ClientPaymentView"
     );
+  const hasCostingPermission =
+    !isCompanyShop ||
+    hasPermission(
+      permissionList,
+      Number(selectedCompanyShop?.shop?.s_id),
+      "Vehicle",
+      "CostingButtonShow"
+    );
+  const hasPaymentPermission =
+    !isCompanyShop ||
+    hasPermission(
+      permissionList,
+      Number(selectedCompanyShop?.shop?.s_id),
+      "Vehicle",
+      "PaymentButtonShow"
+    );
   const hasDeleteProductPermission =
     !isCompanyShop ||
     hasPermission(
@@ -2777,30 +2793,36 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditModalOpen(false);
-                  router.push(
-                    `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=costing`
-                  );
-                }}
-                className="h-11 w-full rounded-xl border border-blue-300 bg-blue-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-blue-100"
-              >
-                Costing
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditModalOpen(false);
-                  router.push(
-                    `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=payment`
-                  );
-                }}
-                className="h-11 w-full rounded-xl border border-orange-300 bg-orange-50 px-3 text-base font-semibold text-orange-700 transition hover:bg-orange-100"
-              >
-                Payment
-              </button>
+              <div title={!hasCostingPermission ? "You don't have permission" : ""}>
+                <button
+                  type="button"
+                  disabled={!hasCostingPermission}
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    router.push(
+                      `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=costing`
+                    );
+                  }}
+                  className="h-11 w-full rounded-xl border border-blue-300 bg-blue-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  Costing
+                </button>
+              </div>
+              <div title={!hasPaymentPermission ? "You don't have permission" : ""}>
+                <button
+                  type="button"
+                  disabled={!hasPaymentPermission}
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    router.push(
+                      `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=payment`
+                    );
+                  }}
+                  className="h-11 w-full rounded-xl border border-orange-300 bg-orange-50 px-3 text-base font-semibold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  Payment
+                </button>
+              </div>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
