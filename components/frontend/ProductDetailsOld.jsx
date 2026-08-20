@@ -762,7 +762,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8801969944400";
+        const phoneNumber = user?.phone || "+8809638660077";
         window.location.href = `tel:${phoneNumber}`;
     };
 

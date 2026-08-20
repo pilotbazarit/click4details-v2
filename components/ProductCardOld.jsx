@@ -2461,7 +2461,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    const phoneNumber = parsedUser?.phone || "+8801969944400";
+                    const phoneNumber = parsedUser?.phone || "+8809638660077";
                     window.location.href = `tel:${phoneNumber}`;
                   }}
                   title="Contact via phone"
