@@ -188,6 +188,8 @@ const UpdateProductForm = ({ productId }) => {
     const [loading, setLoading] = useState(false);
     const [frontImageFile, setFrontImageFile] = useState(null);
     const [preview, setPreview] = useState(null);
+    // true when a purchase calculation manages this vehicle's costing/pricing
+    const [pricingLocked, setPricingLocked] = useState(false);
     const [additionalImages, setAdditionalImages] = useState([]); // store File objects
     const [additionalPreviews, setAdditionalPreviews] = useState([]); // for UI previews
     const [additionalImagePublicIds, setAdditionalImagePublicIds] = useState([]); // public_id per preview, null for unsaved local files
@@ -1185,6 +1187,7 @@ const UpdateProductForm = ({ productId }) => {
                 setValue('v_edition_id', editionId);
                 setValue('v_user_gift', data.v_user_gift || '');
                 setValue('v_pbl_gift', data.v_pbl_gift || '');
+                setPricingLocked(!!data?.has_purchase_calculation);
 
                 // === Fetch Models ===
                 if (brandId) {
@@ -2860,6 +2863,7 @@ const UpdateProductForm = ({ productId }) => {
                                             purchasePriceField="vp_user_purchase_price"
                                             partnerPriceLabel="Partner Price"
                                             hotlineText="Call PBL Hotline to be Partner"
+                                            pricingLocked={pricingLocked}
                                         />
 
                                         <div className="grid grid-cols-4 gap-4 mb-4 mt-4">

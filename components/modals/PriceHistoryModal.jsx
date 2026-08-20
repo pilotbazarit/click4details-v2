@@ -22,6 +22,7 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
     // Format field names to readable text
     const formatFieldName = (key) => {
         const fieldNames = {
+            // Price fields
             'vp_pbl_hs_price_status': 'PBL HS Price Status',
             'vp_pbl_price_status': 'PBL Price Status',
             'vp_purchase_price': 'Purchase Price',
@@ -39,8 +40,61 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
             'vp_pbl_additional_amount': 'PBL Additional Amount',
             'vp_pbl_asking_price': 'PBL Asking Price',
             'vp_user_to_pbl_price': 'User to PBL Price',
+            'vp_currency': 'Currency',
+            'vp_user_price_status': 'User Price Status',
+            'vp_user_hs_asking_price': 'User HS Asking Price',
+            'vp_user_hs_fixed_price': 'User HS Fixed Price',
+            'vp_hs_min_qty': 'HS Min Qty',
+            'vp_user_hs_price_status': 'User HS Price Status',
+            'vp_pbl_hs_additional_amount': 'PBL HS Additional Amount',
+            'vp_pbl_hs_asking_price': 'PBL HS Asking Price',
+            'vp_calculated_price': 'Calculated Price',
+
+            // Vehicle fields
+            'v_title': 'Title',
+            'v_code': 'Vehicle Code',
+            'v_brand_id': 'Brand',
+            'v_model_id': 'Model',
+            'v_edition_id': 'Edition',
+            'v_condition_id': 'Condition',
+            'v_transmission_id': 'Transmission',
+            'v_fuel_id': 'Fuel Type',
+            'v_skeleton_id': 'Body Type / Skeleton',
+            'v_grade_id': 'Grade',
+            'v_int_grade_id': 'Internal Grade',
+            'v_ext_grade_id': 'External Grade',
+            'v_color_id': 'Color',
+            'v_location_id': 'Location',
+            'v_availability_id': 'Availability',
+            'v_availability_status': 'Availability Status',
+            'v_capacity': 'Engine Capacity (cc)',
+            'v_mileage': 'Mileage (km)',
+            'v_registration': 'Registration Year',
+            'v_mod_year': 'Model Year',
+            'v_engine': 'Engine Number',
+            'v_chassis': 'Chassis Number',
+            'v_is_saleBy_pbl': 'Sale by PBL',
+            'v_pbl_partnership_expire_date': 'PBL Partnership Expire Date',
+            'v_user_gift': 'User Gift',
+            'v_pbl_gift': 'PBL Gift',
+            'v_show_seller_mobile': 'Show Seller Mobile',
+            'v_seller_info': 'Seller Info',
+            'v_tax_token_exp_date': 'Tax Token Expiry',
+            'v_fitness_exp_date': 'Fitness Expiry',
+            'v_arrival_date': 'Arrival Date',
+            'v_urgent_sale': 'Urgent Sale',
+            'v_seat_id': 'Seat Capacity',
+            'v_description': 'Description',
+            'v_status': 'Status',
+            'v_priority': 'Priority',
+            'v_staged': 'Approval Stage',
+            'v_sketch_id': 'Sketch',
+            'v_video': 'Video URL',
+            'v_vehicle_type_id': 'Vehicle Type',
+            'v_category_id': 'Category',
+            'v_auction_type': 'Auction Type',
         };
-        return fieldNames[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return fieldNames[key] || key.replace(/^(v_|vp_|ed_|p_|s_)/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
     // Format currency values
@@ -146,6 +200,42 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
         }
     }, [selectedProduct]);
 
+    // Helper to check if a value is null, undefined, empty, or string "null"
+    const isNullOrEmptyValue = (val) => {
+        if (val === null || val === undefined || val === '') return true;
+        const str = String(val).trim().toLowerCase();
+        return str === 'null' || str === 'undefined' || str === 'empty';
+    };
+
+    // Filter out null/empty transitions
+    const filterValidChanges = (hlValue) => {
+        if (!hlValue || typeof hlValue !== 'object') return {};
+        const filtered = {};
+        for (const [key, value] of Object.entries(hlValue)) {
+            if (!value || typeof value !== 'object') continue;
+            const oldVal = value.old;
+            const newVal = value.new;
+            if (isNullOrEmptyValue(oldVal) || isNullOrEmptyValue(newVal) || String(oldVal) === String(newVal)) {
+                continue;
+            }
+            filtered[key] = value;
+        }
+        return filtered;
+    };
+
+    // Derived filtered history data without null changes
+    const validPriceHistory = historyData
+        .map(item => ({ ...item, filteredChanges: filterValidChanges(item.hl_value) }))
+        .filter(item => Object.keys(item.filteredChanges).length > 0);
+
+    const validVehicleHistory = vehicleHistoryData
+        .map(item => ({ ...item, filteredChanges: filterValidChanges(item.hl_value) }))
+        .filter(item => Object.keys(item.filteredChanges).length > 0);
+
+    const validCostingPaymentHistory = costingPaymentHistoryData
+        .map(item => ({ ...item, filteredChanges: filterValidChanges(item.hl_value) }))
+        .filter(item => Object.keys(item.filteredChanges).length > 0);
+
     // hl_action arrives ucfirst()'d only on the leading char (e.g. "Costing_item_added") -
     // normalize underscores/casing into a readable label
     const formatActionLabel = (action) => (action || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
@@ -184,11 +274,11 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
                 </DialogTitle>
 
                 <div className="p-4">
-                    {historyData.length === 0 ? (
+                    {validPriceHistory.length === 0 ? (
                         <p className="text-center text-gray-500 py-8">No price history available.</p>
                     ) : (
                         <div className="space-y-4">
-                            {historyData.map((item, i) => (
+                            {validPriceHistory.map((item, i) => (
                                 <div key={i} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
                                     {/* Header */}
                                     <div className="flex items-start gap-4 mb-3 pb-3 border-b border-gray-100">
@@ -233,7 +323,7 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
 
                                     {/* Changes */}
                                     <div className="space-y-3">
-                                        {Object.entries(item.hl_value || {}).map(([key, value]) => (
+                                        {Object.entries(item.filteredChanges || {}).map(([key, value]) => (
                                             <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
                                                 <span className="font-medium text-gray-700 min-w-[200px]">
                                                     {formatFieldName(key)}:
@@ -252,16 +342,6 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
                                             </div>
                                         ))}
                                     </div>
-
-                                    {/* Footer */}
-                                    {/* <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                        <span className="text-xs text-gray-500">
-                                            Updated by: <span className="font-medium text-gray-700">{item.hl_created_by}</span>
-                                        </span>
-                                    </div> */}
                                 </div>
                             ))}
                         </div>
@@ -276,11 +356,11 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
                     </h3>
 
                     <div className="p-4">
-                        {vehicleHistoryData.length === 0 ? (
+                        {validVehicleHistory.length === 0 ? (
                             <p className="text-center text-gray-500 py-8">No vehicle history available.</p>
                         ) : (
                             <div className="space-y-4">
-                                {vehicleHistoryData.map((item, i) => (
+                                {validVehicleHistory.map((item, i) => (
                                     <div key={i} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
                                         {/* Header */}
                                         <div className="flex items-start gap-4 mb-3 pb-3 border-b border-gray-100">
@@ -325,7 +405,7 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
 
                                         {/* Changes */}
                                         <div className="space-y-3">
-                                            {Object.entries(item.hl_value || {}).map(([key, value]) => (
+                                            {Object.entries(item.filteredChanges || {}).map(([key, value]) => (
                                                 <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
                                                     <span className="font-medium text-gray-700 min-w-[200px]">
                                                         {formatFieldName(key)}:
@@ -359,11 +439,11 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
                     </h3>
 
                     <div className="p-4">
-                        {costingPaymentHistoryData.length === 0 ? (
+                        {validCostingPaymentHistory.length === 0 ? (
                             <p className="text-center text-gray-500 py-8">No costing/payment history available.</p>
                         ) : (
                             <div className="space-y-4">
-                                {costingPaymentHistoryData.map((item, i) => (
+                                {validCostingPaymentHistory.map((item, i) => (
                                     <div key={i} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
                                         {/* Header */}
                                         <div className="flex items-start gap-4 mb-3 pb-3 border-b border-gray-100">
@@ -407,7 +487,7 @@ const PriceHistoryModal = ({ open, setOpen, selectedProduct }) => {
 
                                         {/* Changes */}
                                         <div className="space-y-3">
-                                            {Object.entries(item.hl_value || {}).map(([key, value]) => (
+                                            {Object.entries(item.filteredChanges || {}).map(([key, value]) => (
                                                 <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
                                                     <span className="font-medium text-gray-700 min-w-[200px]">
                                                         {formatFieldName(key)}:

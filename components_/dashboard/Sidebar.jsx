@@ -73,11 +73,11 @@ const SideBar = () => {
   };
 
   if (loading) {
-    return <div className="w-64 border-r min-h-screen text-base border-gray-300 py-2 flex flex-col"></div>;
+    return <div className="w-64 border-r h-full text-base border-gray-300 py-2 flex flex-col overflow-y-auto"></div>;
   }
 
   return (
-    <div className="w-64 border-r min-h-screen text-base border-gray-300 py-2 flex flex-col">
+    <div className="w-64 border-r h-full text-base border-gray-300 py-2 flex flex-col overflow-y-auto sidebar-scroll">
       {visibleMenuItems.map((item) => {
         const isActive = isMenuActive(item);
 

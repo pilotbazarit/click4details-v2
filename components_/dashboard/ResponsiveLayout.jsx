@@ -12,7 +12,7 @@ const ResponsiveLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex flex-1 overflow-hidden bg-gray-50">
       {/* Mobile hamburger menu */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button

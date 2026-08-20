@@ -5,6 +5,21 @@ import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import ShopService from "@/services/ShopService";
 
+export const normalizeUrgentSaleFilter = (value) => {
+  if (value === null || value === undefined || value === "") return "";
+  const normalized = String(value).toLowerCase();
+  if (["yes", "1", "true"].includes(normalized)) return "yes";
+  if (["no", "0", "false"].includes(normalized)) return "no";
+  return "";
+};
+
+export const formatUrgentSaleLabel = (value) => {
+  const normalized = normalizeUrgentSaleFilter(value);
+  if (normalized === "yes") return "Yes";
+  if (normalized === "no") return "No";
+  return "";
+};
+
 // Session-scoped cache: key = "cat_root" | "cat_{parentId}"
 const _categoryCache = new Map();
 

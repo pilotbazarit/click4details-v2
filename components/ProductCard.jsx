@@ -2671,8 +2671,8 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   xl:px-2.5
                   3xl:px-3
                   bg-gradient-to-r 
-                  border
-                  border-orange-300
+                  border-2
+                  border-red-500
                   font-semibold 
                   px-4 py-1
                   rounded-lg 
@@ -2681,7 +2681,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   active:scale-95"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    <ShoppingCart className="h-4 w-4 text-orange-600" />
+                    <ShoppingCart className="h-4 w-4 text-red-600" />
                   </div>
                 </button>
               )
@@ -4349,7 +4349,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       <Dialog open={chatConfirmOpen} onOpenChange={setChatConfirmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — click4details এর মাধ্যমে</DialogTitle><hr />
+            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — Pilot Bazar এর মাধ্যমে</DialogTitle><hr />
           </DialogHeader>
           <div className="text-sm text-gray-600 space-y-4 leading-relaxed max-h-[60vh] overflow-y-auto pr-4">
 
@@ -4358,7 +4358,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </p>
 
             <p>
-              <strong>১।</strong> Wow! click4details নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
+              <strong>১।</strong> Wow! Pilot Bazar নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
               যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
               ঝামেলা ছাড়া, সময় নষ্ট না করে।
             </p>
@@ -4387,7 +4387,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>প্রতিদিন প্রতি গাড়িতে হাজারের বেশি অফার আসে</li>
                 <li>সাধারণত ৭২ ঘণ্টার মধ্যে উত্তর পাওয়া যায়</li>
-                <li>অথবা click4details এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
+                <li>অথবা Pilot Bazar এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
               </ul>
             </div>
 
@@ -4535,7 +4535,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <div>
-              <strong>১৪। কেন ইমপোর্টাররা click4details পছন্দ করে?</strong>
+              <strong>১৪। কেন ইমপোর্টাররা Pilot Bazar পছন্দ করে?</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>অযথা দরদাম, লম্বা কথা, হোয়াটসঅ্যাপ স্প্যাম বন্ধ</li>
                 <li>টু-দা-পয়েন্ট Fixed Price Deal</li>
@@ -4548,9 +4548,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div>
               <strong>১৫। ট্রান্সপারেন্সি ও কমিটমেন্ট</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>click4details কোনো পক্ষপাতমূলক দরদাম করে না</li>
+                <li>Pilot Bazar কোনো পক্ষপাতমূলক দরদাম করে না</li>
                 <li>
-                  ডিল সফল হলে click4details শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
+                  ডিল সফল হলে Pilot bazar শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
                 </li>
                 <li>
                   <strong>I Agree</strong> বাটনে ক্লিক মানে—
@@ -4562,7 +4562,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <p className="font-semibold text-gray-800">
-              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন click4details এর মাধ্যমে।”
+              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন Pilot Bazar এর মাধ্যমে।”
             </p>
 
           </div>

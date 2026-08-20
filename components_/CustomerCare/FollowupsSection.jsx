@@ -1,7 +1,34 @@
 import { useAppContext } from "@/context/AppContext";
 import { parseStoredUser } from "@/lib/parseStoredUser";
-import { Ban, CheckCircle, Eye, EyeOff, Plus, StopCircle } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle, Eye, EyeOff, Plus, StopCircle } from "lucide-react";
 import { useState } from "react";
+
+const getFollowupDetailStatus = (detail) => Number(detail?.status ?? 0);
+
+const isFollowupDatePast = (followupDate) => {
+  if (!followupDate) return false;
+  const date = new Date(followupDate);
+  if (Number.isNaN(date.getTime())) return false;
+  date.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
+};
+
+const getFollowupDetailTone = (detail) => {
+  const status = getFollowupDetailStatus(detail);
+  if (status === 1) return "completed";
+  if (status === 2) return "stopped";
+  if (isFollowupDatePast(detail?.followup_date) && status !== 1 && status !== 2) return "overdue";
+  return "pending";
+};
+
+const followupDetailCardClass = {
+  completed: "bg-green-50 p-3 rounded-md border border-green-300 shadow-sm",
+  stopped: "bg-red-50 p-3 rounded-md border border-red-300 shadow-sm",
+  overdue: "bg-amber-50 p-3 rounded-md border border-amber-400 shadow-sm",
+  pending: "bg-gray-100 p-3 rounded-md border border-gray-200 shadow-sm",
+};
 
 const Instruction = ({ text }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -157,17 +184,32 @@ const FollowupsSection = ({ followups, handleOpenFollowupModal, formatDate, open
                               <strong>Followup Details:</strong>
                             </p>
                             <div className="space-y-3">
-                              {followup.followup_details.map((detail, detailIndex) => (
-                                <div key={detail.id || detailIndex} className="bg-gray-100 p-3 rounded-md border border-gray-200 shadow-sm">
+                              {followup.followup_details.map((detail, detailIndex) => {
+                                const tone = getFollowupDetailTone(detail);
+                                const status = getFollowupDetailStatus(detail);
+                                return (
+                                <div key={detail.id || detailIndex} className={followupDetailCardClass[tone]}>
                                   <div className="flex justify-between items-center mb-1">
-                                    <div className="flex items-center">
+                                    <div className="flex items-center flex-wrap gap-2">
                                       <p className="font-medium text-gray-800">
                                         <span className="text-gray-500">Date:</span> {detail.followup_date ? formatDate(detail.followup_date) : "N/A"}
                                       </p>
-                                      {detail.status == 1 && (
-                                        <span className="ml-2 flex items-center text-xs font-semibold bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                                      {tone === "completed" && (
+                                        <span className="flex items-center text-xs font-semibold bg-green-200 text-green-800 px-2 py-1 rounded-full">
                                           <CheckCircle className="w-4 h-4 mr-1" />
                                           Completed
+                                        </span>
+                                      )}
+                                      {tone === "stopped" && (
+                                        <span className="flex items-center text-xs font-semibold bg-red-200 text-red-800 px-2 py-1 rounded-full">
+                                          <Ban className="w-4 h-4 mr-1" />
+                                          Stopped
+                                        </span>
+                                      )}
+                                      {tone === "overdue" && (
+                                        <span className="flex items-center text-xs font-semibold bg-amber-200 text-amber-800 px-2 py-1 rounded-full">
+                                          <AlertTriangle className="w-4 h-4 mr-1" />
+                                          Overdue
                                         </span>
                                       )}
                                     </div>
@@ -175,7 +217,7 @@ const FollowupsSection = ({ followups, handleOpenFollowupModal, formatDate, open
                                       {detail.stage_name && (
                                         <span className="text-xs font-semibold bg-blue-200 text-blue-800 px-2 py-1 rounded-full">{detail.stage_name}</span>
                                       )}
-                                      {detail.status === 0 && (
+                                      {status === 0 && (
                                         <button
                                           onClick={() => openConfirmationModal(detail.id)}
                                           className="flex items-center text-xs font-semibold bg-red-200 text-red-800 px-2 py-1 rounded-full hover:bg-red-300 transition-all"
@@ -219,7 +261,8 @@ const FollowupsSection = ({ followups, handleOpenFollowupModal, formatDate, open
                                     </div>
                                   )}
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}

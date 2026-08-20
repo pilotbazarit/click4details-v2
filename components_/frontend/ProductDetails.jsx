@@ -569,6 +569,12 @@ const ProductDetails = ({ productDetails }) => {
         );
 
 
+        // console.log("isMyShop", isMyShop); myshop false hote hobe 
+        // console.log("isCompanyShop", isCompanyShop); isCompanyShop false hote hobe
+        // console.log("userMode", userMode); userMode supreme 
+        // console.log("additionalSecretDocuments", additionalSecretDocuments); additionalSecretDocuments length 0 er basi hote hobe
+
+
     const canShowAdditionalSecretDocument =
         additionalSecretDocuments.length > 0 &&
         !isMyShop &&
@@ -694,7 +700,7 @@ const ProductDetails = ({ productDetails }) => {
         }
     };
 
-    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
+    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.com';
 
     const getYouTubeVideoId = (url = "") => {
         const rawUrl = String(url || "").trim();
@@ -916,15 +922,23 @@ const ProductDetails = ({ productDetails }) => {
         }
         // Tax Token
         if (productDetails?.v_tax_token_exp_date) {
-            detailsToCopy += `Tax Token : ${productDetails?.v_tax_token_exp_date}\n`;
+            detailsToCopy += `Tax Token : ${formatProductDetailsDate(productDetails?.v_tax_token_exp_date)}\n`;
         }
         // Fitness
         if (productDetails?.v_fitness_exp_date) {
-            detailsToCopy += `Fitness : ${productDetails?.v_fitness_exp_date}\n`;
+            detailsToCopy += `Fitness : ${formatProductDetailsDate(productDetails?.v_fitness_exp_date)}\n`;
+        }
+        // Arrival Date
+        if (productDetails?.v_arrival_date) {
+            detailsToCopy += `Arrival Date : ${formatProductDetailsDate(productDetails?.v_arrival_date)}\n`;
+        }
+        // Delivery Condition
+        if (productDetails?.v_delivery_condition) {
+            detailsToCopy += `Delivery Condition : ${productDetails?.v_delivery_condition}\n`;
         }
         // Auction type
         if (!isMyShop && !isCompanyShop && productDetails?.v_auction_type) {
-            detailsToCopy += `Auction Type : ${productDetails?.v_auction_type}\n`;
+            detailsToCopy += `Auction Type : ${String(productDetails.v_auction_type).toUpperCase()}\n`;
         }
 
         try {
@@ -1011,6 +1025,10 @@ const ProductDetails = ({ productDetails }) => {
         if (productDetails?.v_mileage) {
             allDetails += `Mileage: ${productDetails?.v_mileage}\n`;
         }
+        // Auction Type
+        if (productDetails?.v_auction_type) {
+            allDetails += `Auction Type : ${String(productDetails.v_auction_type).toUpperCase()}\n`;
+        }
         // Color
         if (productDetails?.v_color_name) {
             allDetails += `Color: ${productDetails?.v_color_name}\n`;
@@ -1045,11 +1063,19 @@ const ProductDetails = ({ productDetails }) => {
         }
         // Tax Token
         if (productDetails?.v_tax_token_exp_date) {
-            allDetails += `Tax Token : ${productDetails?.v_tax_token_exp_date}\n`;
+            allDetails += `Tax Token : ${formatProductDetailsDate(productDetails?.v_tax_token_exp_date)}\n`;
         }
         // Fitness
         if (productDetails?.v_fitness_exp_date) {
-            allDetails += `Fitness : ${productDetails?.v_fitness_exp_date}\n`;
+            allDetails += `Fitness : ${formatProductDetailsDate(productDetails?.v_fitness_exp_date)}\n`;
+        }
+        // Arrival Date
+        if (productDetails?.v_arrival_date) {
+            allDetails += `Arrival Date : ${formatProductDetailsDate(productDetails?.v_arrival_date)}\n`;
+        }
+        // Delivery Condition
+        if (productDetails?.v_delivery_condition) {
+            allDetails += `Delivery Condition : ${productDetails?.v_delivery_condition}\n`;
         }
 
         // Specific Features সেকশন
@@ -1252,7 +1278,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8809638660077";
+        const phoneNumber = user?.phone || "+8801969944400";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1455,7 +1481,7 @@ const ProductDetails = ({ productDetails }) => {
                             <div className="flex justify-between">
                                 <div className="space-y-2">
                                     <div>
-                                        <div className="font-bold text-gray-600 text-md md:text-xl flex flex-col">
+                                        <div className="font-bold text-gray-600 text-md md:text-xl flex flex-wrap items-center gap-2">
                                             <TypewriterPrice
                                                 text={
                                                     [
@@ -1469,7 +1495,26 @@ const ProductDetails = ({ productDetails }) => {
                                                 }
                                                 className="font-bold text-gray-600 text-md md:text-xl"
                                             />
+
+                                            {productDetails?.vehicle_price?.price_drop_type === 'drop' && productDetails?.vehicle_price?.price_drop_percentage > 0 && (
+                                                <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                    Drop {productDetails?.vehicle_price?.price_drop_percentage}%
+                                                </span>
+                                            )}
+                                            {productDetails?.vehicle_price?.price_drop_type === 'increase' && productDetails?.vehicle_price?.price_drop_percentage > 0 && (
+                                                <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                                                    +{productDetails?.vehicle_price?.price_drop_percentage}%
+                                                </span>
+                                            )}
                                         </div>
+
+                                        {productDetails?.vehicle_price?.is_price_validity_expired && (
+                                            <div className="mt-1">
+                                                <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                                                    Price Validity Time Expired
+                                                </span>
+                                            </div>
+                                        )}
 
                                         {
                                             basePath == '/product' ? (

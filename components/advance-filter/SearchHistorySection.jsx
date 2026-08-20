@@ -1,3 +1,4 @@
+import { normalizeUrgentSaleFilter } from "@/services/FilterProductService";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 
@@ -67,6 +68,7 @@ const SearchHistorySection = ({
 
                 const formattedSearchParams = {
                   ...searchParams,
+                  v_urgent_sale: normalizeUrgentSaleFilter(searchParams.v_urgent_sale),
                   v_tax_token_exp_date_from: searchParams.v_tax_token_exp_date_from ? dayjs(searchParams.v_tax_token_exp_date_from).toDate() : null,
                   v_tax_token_exp_date_to: searchParams.v_tax_token_exp_date_to ? dayjs(searchParams.v_tax_token_exp_date_to).toDate() : null,
                   v_fitness_exp_date_from: searchParams.v_fitness_exp_date_from ? dayjs(searchParams.v_fitness_exp_date_from).toDate() : null,

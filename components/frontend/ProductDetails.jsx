@@ -700,7 +700,7 @@ const ProductDetails = ({ productDetails }) => {
         }
     };
 
-    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.com';
+    // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://pilotbazar.com';
 
     const getYouTubeVideoId = (url = "") => {
         const rawUrl = String(url || "").trim();

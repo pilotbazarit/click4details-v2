@@ -469,6 +469,18 @@ export const dashboardMenuItems = [
     },
   },
   {
+    name: "User Activity Logs",
+    path: "/dashboard/user-activity-logs",
+    icon: History,
+    allowedModes: [ADMIN, SUPREME, PBL],
+    requiredPermission: {
+      section: "UserActivityLog",
+      action: "View",
+      appliesToModes: [ADMIN, PBL],
+      pblShopId: 0,
+    },
+  },
+  {
     name: "Shop List",
     path: "/dashboard/shop/",
     icon: Store,

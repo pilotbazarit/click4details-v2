@@ -804,6 +804,22 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       "Vehicle",
       "ClientPaymentView"
     );
+  const hasCostingPermission =
+    !isCompanyShop ||
+    hasPermission(
+      permissionList,
+      Number(selectedCompanyShop?.shop?.s_id),
+      "Vehicle",
+      "CostingButtonShow"
+    );
+  const hasPaymentPermission =
+    !isCompanyShop ||
+    hasPermission(
+      permissionList,
+      Number(selectedCompanyShop?.shop?.s_id),
+      "Vehicle",
+      "PaymentButtonShow"
+    );
   const hasDeleteProductPermission =
     !isCompanyShop ||
     hasPermission(
@@ -1335,8 +1351,6 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       setIsQuotationCustomersLoading(true);
       const response = await ContactCustomerService.Queries.getContactCustomers({
         _user_id: chalanContactUserId,
-        _page: 1,
-        _perPage: 5000,
       });
       const rows = getProductCardCustomerListFromResponse(response);
       const customers = rows
@@ -2415,14 +2429,34 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
           <div className="flex justify-between mb-2">
 
             <div>
-              <div className="font-extrabold text-gray-900 text-xl mb-1">
-                {/* {displayVehiclePrice?.user_price !== 'Call for Price' && ''} */}
-                {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. '}
-                {(pathname === '/my-shop/' || pathname === '/company-shop/')
-                  ? formatPrice(displayVehiclePrice?.user_price)
-                  : formatPrice(displayVehiclePrice?.pbl_price)
-                }
+              <div className="font-extrabold text-gray-900 text-xl mb-1 flex flex-wrap items-center gap-1.5">
+                <span>
+                  {displayVehiclePrice?.user_price !== 'Call for Price' && displayVehicleDbPrice?.vp_currency + '. '}
+                  {(pathname === '/my-shop/' || pathname === '/company-shop/')
+                    ? formatPrice(displayVehiclePrice?.user_price)
+                    : formatPrice(displayVehiclePrice?.pbl_price)
+                  }
+                </span>
+
+                {displayVehiclePrice?.price_drop_type === 'drop' && displayVehiclePrice?.price_drop_percentage > 0 && (
+                  <span className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                    Drop {displayVehiclePrice?.price_drop_percentage}%
+                  </span>
+                )}
+                {displayVehiclePrice?.price_drop_type === 'increase' && displayVehiclePrice?.price_drop_percentage > 0 && (
+                  <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                    +{displayVehiclePrice?.price_drop_percentage}%
+                  </span>
+                )}
               </div>
+
+              {displayVehiclePrice?.is_price_validity_expired && (
+                <div className="mb-1">
+                  <span className="inline-flex items-center rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                    Price Validity Time Expired
+                  </span>
+                </div>
+              )}
 
               {
                 pathname !== '/pb-home/' ? (
@@ -2555,7 +2589,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               (!isMyShop && !isCompanyShop) && (
                 <button
                   onClick={() => {
-                    const phoneNumber = parsedUser?.phone || '+8809638660077';
+                    const phoneNumber = parsedUser?.phone || '+8801969944400';
                     window.location.href = `tel:${phoneNumber}`;
                   }}
                   title="Contact Via Phone"
@@ -2756,6 +2790,39 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div title={!hasCostingPermission ? "You don't have permission" : ""}>
+                <button
+                  type="button"
+                  disabled={!hasCostingPermission}
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    router.push(
+                      `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=costing`
+                    );
+                  }}
+                  className="h-8 w-full rounded-xl border border-blue-300 bg-blue-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  Costing
+                </button>
+              </div>
+              <div title={!hasPaymentPermission ? "You don't have permission" : ""}>
+                <button
+                  type="button"
+                  disabled={!hasPaymentPermission}
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    router.push(
+                      `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=payment`
+                    );
+                  }}
+                  className="h-8 w-full rounded-xl border border-orange-300 bg-orange-50 px-3 text-base font-semibold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  Payment
+                </button>
+              </div>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -4282,7 +4349,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       <Dialog open={chatConfirmOpen} onOpenChange={setChatConfirmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — Click4Details এর মাধ্যমে</DialogTitle><hr />
+            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — click4details এর মাধ্যমে</DialogTitle><hr />
           </DialogHeader>
           <div className="text-sm text-gray-600 space-y-4 leading-relaxed max-h-[60vh] overflow-y-auto pr-4">
 
@@ -4291,7 +4358,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </p>
 
             <p>
-              <strong>১।</strong> Wow! Click4Details নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
+              <strong>১।</strong> Wow! click4details নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
               যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
               ঝামেলা ছাড়া, সময় নষ্ট না করে।
             </p>
@@ -4320,7 +4387,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>প্রতিদিন প্রতি গাড়িতে হাজারের বেশি অফার আসে</li>
                 <li>সাধারণত ৭২ ঘণ্টার মধ্যে উত্তর পাওয়া যায়</li>
-                <li>অথবা Click4Details এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
+                <li>অথবা click4details এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
               </ul>
             </div>
 
@@ -4468,7 +4535,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <div>
-              <strong>১৪। কেন ইমপোর্টাররা Click4Details পছন্দ করে?</strong>
+              <strong>১৪। কেন ইমপোর্টাররা click4details পছন্দ করে?</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>অযথা দরদাম, লম্বা কথা, হোয়াটসঅ্যাপ স্প্যাম বন্ধ</li>
                 <li>টু-দা-পয়েন্ট Fixed Price Deal</li>
@@ -4481,9 +4548,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div>
               <strong>১৫। ট্রান্সপারেন্সি ও কমিটমেন্ট</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Click4Details কোনো পক্ষপাতমূলক দরদাম করে না</li>
+                <li>click4details কোনো পক্ষপাতমূলক দরদাম করে না</li>
                 <li>
-                  ডিল সফল হলে Click4Details শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
+                  ডিল সফল হলে click4details শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
                 </li>
                 <li>
                   <strong>I Agree</strong> বাটনে ক্লিক মানে—
@@ -4495,7 +4562,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <p className="font-semibold text-gray-800">
-              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন Click4Details এর মাধ্যমে।”
+              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন click4details এর মাধ্যমে।”
             </p>
 
           </div>

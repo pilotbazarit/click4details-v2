@@ -10,13 +10,13 @@ const NOTIFICATION_TABS = [
   {
     key: "product",
     label: "Product",
-    type: "App\\Models\\Product\\Vehicle",
+    type: "App\\Models\\Product\\Product",
     icon: Package,
   },
   {
     key: "vehicle",
     label: "Vehicle",
-    type: "App\\Models\\Product\\Product",
+    type: "App\\Models\\Product\\Vehicle",
     icon: Car,
   },
   {

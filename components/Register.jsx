@@ -248,7 +248,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
         <div className="bg-white rounded-lg shadow-sm dark:bg-gray-700">
           <div className="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Register to click4details.com
+              Register to pilotbazar.com
             </h3>
             <button
               type="button"
@@ -518,7 +518,7 @@ export default function Register({ isOpen, onClose, onOpenLogin, onHideLogin }) 
 
                 <p className="text-center text-sm text-gray-600 dark:text-gray-300">
                   রেজিস্ট্রেশন করতে কোনো সমস্যা হলে, অনুগ্রহ করে আমাদের এই নম্বরে কল করুন
-                  <span className="ml-1 font-semibold text-blue-600">+8809638660077</span>
+                  <span className="ml-1 font-semibold text-blue-600">+8801969944400</span>
                 </p>
               </form>
             ) : (

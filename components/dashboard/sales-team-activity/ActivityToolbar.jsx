@@ -13,8 +13,8 @@ export const ActivityToolbar = ({
   activityTab,
   setActivityTab,
   canViewSummaryTabs,
-  userMode,
   pblTeamInfos,
+  showPblTeamScope = false,
   search,
   setSearch,
   perPage,
@@ -63,7 +63,7 @@ export const ActivityToolbar = ({
         })}
       </div>
 
-      {userMode === "pbl" && (
+      {showPblTeamScope && (
         <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-slate-700">
           {pblTeamInfos.length > 0 ? (
             <div className="space-y-1.5">

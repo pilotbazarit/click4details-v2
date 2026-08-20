@@ -1,3 +1,4 @@
+import { formatUrgentSaleLabel } from "@/services/FilterProductService";
 import { Edit, Eye, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -87,6 +88,11 @@ const SearchHistoryItem = ({
       addDisplayEntry("Availability", availabilityNames);
     }
 
+    const urgentSaleLabel = formatUrgentSaleLabel(parsed.v_urgent_sale);
+    if (urgentSaleLabel) {
+      addDisplayEntry("Urgent Sale", urgentSaleLabel);
+    }
+
     // Add this block for Location
     if (parsed.location && Array.isArray(parsed.location) && allLocations && allLocations.length > 0) {
       const locationNames = parsed.location
@@ -134,6 +140,7 @@ const SearchHistoryItem = ({
           "condition_names",
           "availability",
           "availability_names",
+          "v_urgent_sale",
           "grade",
           "grade_grades",
           "transmission",

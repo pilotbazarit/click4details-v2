@@ -1,3 +1,4 @@
+import { formatUrgentSaleLabel } from "@/services/FilterProductService";
 import dayjs from "dayjs";
 
 const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchParams, isEmptyValue, formatValue, allLocations, allShops }) => {
@@ -69,6 +70,11 @@ const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchPar
       addDisplayEntry("Availability", availabilityNames);
     }
 
+    const urgentSaleLabel = formatUrgentSaleLabel(parsed.v_urgent_sale);
+    if (urgentSaleLabel) {
+      addDisplayEntry("Urgent Sale", urgentSaleLabel);
+    }
+
     // Add this block for Location
     if (parsed.location && Array.isArray(parsed.location) && allLocations && allLocations.length > 0) {
       const locationNames = parsed.location
@@ -114,6 +120,7 @@ const SearchHistoryDetailModal = ({ isOpen, onClose, historyItem, parseSearchPar
           "condition_names",
           "availability",
           "availability_names",
+          "v_urgent_sale",
           "grade",
           "grade_grades",
           "transmission",

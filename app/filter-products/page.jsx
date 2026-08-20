@@ -24,7 +24,7 @@ import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import constData from "@/lib/constant";
 import CustomerService from "@/services/CustomerService";
-import FilterProductService from "@/services/FilterProductService";
+import FilterProductService, { normalizeUrgentSaleFilter } from "@/services/FilterProductService";
 import SearchHistoryService from "@/services/SearchHistoryService";
 import dayjs from "dayjs";
 import { Plus } from "lucide-react";
@@ -527,6 +527,7 @@ const FilterProducts = () => {
     v_insurance_exp_date_to: null,
     clientLastPurchaseDate: null,
     availability: [],
+    v_urgent_sale: "",
     transmission: [],
     registration_year: [],
     model_year: [],
@@ -712,6 +713,7 @@ const FilterProducts = () => {
         // Convert date strings back to Date objects for date pickers
         const formattedParsedData = {
           ...parsedData,
+          v_urgent_sale: normalizeUrgentSaleFilter(parsedData.v_urgent_sale),
           v_tax_token_exp_date_from: parsedData.v_tax_token_exp_date_from ? dayjs(parsedData.v_tax_token_exp_date_from).toDate() : null,
           v_tax_token_exp_date_to: parsedData.v_tax_token_exp_date_to ? dayjs(parsedData.v_tax_token_exp_date_to).toDate() : null,
           v_fitness_exp_date_from: parsedData.v_fitness_exp_date_from ? dayjs(parsedData.v_fitness_exp_date_from).toDate() : null,
@@ -1585,6 +1587,7 @@ const FilterProducts = () => {
                   subcategory: "",
                   child_category: "",
                   availability: [],
+                  v_urgent_sale: "",
                   transmission: [],
                   registration_year: [],
                   model_year: [],

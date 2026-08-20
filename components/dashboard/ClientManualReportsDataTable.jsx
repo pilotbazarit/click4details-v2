@@ -9,7 +9,7 @@ import UserService from "@/services/UserService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
-import { hasPermission } from "@/lib/utils";
+import { hasPermission, hasSalesTeamActivityMenuShow } from "@/lib/utils";
 
 // ── subcomponents ────────────────────────────────────────────────────────────
 import { ActivityToolbar } from "./sales-team-activity/ActivityToolbar";
@@ -70,19 +70,25 @@ const SalesTeamActivityDataTable = () => {
 
   const loggedInUserId = useMemo(() => parsedUser?.id != null ? String(parsedUser.id) : "", [parsedUser]);
   const userMode = useMemo(() => String(parsedUser?.user_mode ?? "").trim().toLowerCase(), [parsedUser]);
+  const hasMenuFullAccess = useMemo(
+    () => hasSalesTeamActivityMenuShow(permissionList),
+    [permissionList]
+  );
   const canViewSummaryTabs = useMemo(() => {
-    const mode = userMode;
-    return mode === "supreme" || mode === "admin";
-  }, [userMode]);
+    return userMode === "supreme" || userMode === "admin" || hasMenuFullAccess;
+  }, [userMode, hasMenuFullAccess]);
 
   // ── permissions ────────────────────────────────────────────────────────────
   const canShowAddSalesTeamButton =
+    hasMenuFullAccess ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "SalesTeamActivity", "ShowSalesTeamAddButton");
   const canShowOverviewSalesTeamButton =
+    hasMenuFullAccess ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "SalesTeamActivity", "ShowSalesTeamOverviewButton");
   const canShowFilterSalesTeamButton =
+    hasMenuFullAccess ||
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
     hasPermission(permissionList, 0, "SalesTeamActivity", "ShowSalesTeamFilterButton");
 
@@ -234,7 +240,7 @@ const SalesTeamActivityDataTable = () => {
   }, [userMode, pblTeamInfos]);
 
   const canManageActivityRow = useCallback((row) => {
-    if (userMode === "admin" || userMode === "supreme") return true;
+    if (hasMenuFullAccess || userMode === "admin" || userMode === "supreme") return true;
     if (userMode === "pbl") {
       const rowUserIds = [
         toUserId(row?.data_collect_by), toUserId(row?.first_visit_by),
@@ -243,7 +249,7 @@ const SalesTeamActivityDataTable = () => {
       return rowUserIds.some((id) => pblTeamMemberIds.includes(id));
     }
     return false;
-  }, [userMode, pblTeamMemberIds]);
+  }, [hasMenuFullAccess, userMode, pblTeamMemberIds]);
 
   // ── filter options ─────────────────────────────────────────────────────────
   const filterOptions = useMemo(() => {
@@ -786,7 +792,8 @@ const SalesTeamActivityDataTable = () => {
     <div className="w-full p-6 space-y-4">
       <ActivityToolbar
         activityTab={activityTab} setActivityTab={setActivityTab}
-        canViewSummaryTabs={canViewSummaryTabs} userMode={userMode} pblTeamInfos={pblTeamInfos}
+        canViewSummaryTabs={canViewSummaryTabs} pblTeamInfos={pblTeamInfos}
+        showPblTeamScope={userMode === "pbl" && !hasMenuFullAccess}
         search={search} setSearch={setSearch} perPage={perPage} setPerPage={setPerPage}
         canShowFilterSalesTeamButton={canShowFilterSalesTeamButton}
         canShowOverviewSalesTeamButton={canShowOverviewSalesTeamButton}

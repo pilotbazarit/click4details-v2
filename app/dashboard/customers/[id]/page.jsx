@@ -16,6 +16,7 @@ import CategoryService from "@/services/CategoryService";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import SearchHistoryService from "@/services/SearchHistoryService";
+import { normalizeUrgentSaleFilter } from "@/services/FilterProductService";
 import ShopService from "@/services/ShopService";
 import UserService from "@/services/UserService";
 import dayjs from "dayjs";
@@ -330,6 +331,7 @@ const SearchHistoryEditModal = ({ isOpen, onClose, onSave, historyItem, customer
     v_insurance_exp_date_to: null,
     clientLastPurchaseDate: null,
     availability: [],
+    v_urgent_sale: "",
     transmission: [],
     registration_year: [],
     model_year: [],
@@ -822,6 +824,7 @@ const SearchHistoryEditModal = ({ isOpen, onClose, onSave, historyItem, customer
         ext_grade: Array.isArray(parsedParams.ext_grade) ? parsedParams.ext_grade : parsedParams.ext_grade ? [parsedParams.ext_grade] : [],
         int_grade: Array.isArray(parsedParams.int_grade) ? parsedParams.int_grade : parsedParams.int_grade ? [parsedParams.int_grade] : [],
         location: Array.isArray(parsedParams.location) ? parsedParams.location : parsedParams.location ? [parsedParams.location] : [],
+        v_urgent_sale: normalizeUrgentSaleFilter(parsedParams.v_urgent_sale),
         v_tax_token_exp_date_from: parsedParams.v_tax_token_exp_date_from ? dayjs(parsedParams.v_tax_token_exp_date_from).toDate() : null,
         v_tax_token_exp_date_to: parsedParams.v_tax_token_exp_date_to ? dayjs(parsedParams.v_tax_token_exp_date_to).toDate() : null,
         v_fitness_exp_date_from: parsedParams.v_fitness_exp_date_from ? dayjs(parsedParams.v_fitness_exp_date_from).toDate() : null,

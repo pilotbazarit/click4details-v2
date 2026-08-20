@@ -456,6 +456,22 @@ const VehicleFiltersSection = ({
           />
         </div>
 
+        <div className="flex flex-col gap-1">
+          <label className="text-base font-medium" htmlFor="v_urgent_sale">
+            Urgent Sale
+          </label>
+          <select
+            id="v_urgent_sale"
+            value={filterFields?.v_urgent_sale ?? ""}
+            onChange={(e) => setFilterFields((prev) => ({ ...prev, v_urgent_sale: e.target.value }))}
+            className="outline-none py-2 px-3 rounded border border-gray-500/40 bg-white"
+          >
+            <option value="">-None-</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+
         {canAccessToChasisNo && (
           <div className="flex flex-col gap-1">
             <label className="text-base font-medium" htmlFor="chassis">

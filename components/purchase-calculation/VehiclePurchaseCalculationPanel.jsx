@@ -11,6 +11,7 @@ import {
   Save,
   Trash2,
   X,
+  Layers,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
@@ -18,9 +19,12 @@ import PurchasePaymentService from "@/services/PurchasePaymentService";
 import PresetSuggestionService from "@/services/PresetSuggestionService";
 import SystemDocumentService from "@/services/SystemDocumentService";
 import { formatPrice } from "@/helpers/functions";
+import { buildAmountOptions } from "@/helpers/amountSuggestions";
 
 const CALCULATION_TYPES = ["exporter", "importer", "dealer", "retailer", "seller"];
 const CURRENCIES = ["BDT", "USD", "YEN"];
+// mirrors the backend's FIXED_COST_REASONS constant in VehiclePurchaseCalculationService
+const FIXED_COST_REASONS = ["Purchase Price", "Tax", "Vat"];
 // same preset-suggestion buckets the vehicle form's costing rows use
 const PURCHASE_EXPENDITURE_SUGGESTION_TYPE_ID = 476;
 const OTHER_CHARGES_SUGGESTION_TYPE_ID = 477;
@@ -37,69 +41,6 @@ const getPresetSuggestionRows = (response) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
   return [];
-};
-
-// ---- amount-field magnitude suggestions (same idea as the vehicle pricing
-// form's Purchase Price / Tax / Other Charges inputs): typing "5" suggests
-// 5 / 50 / 500 / 5,000 / 50,000 so staff can quickly pick the right scale ----
-const formatIndianNumber = (value) => {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-  const digits = raw.replace(/\D+/g, "");
-  if (!digits) return "";
-  return new Intl.NumberFormat("en-IN").format(Number(digits));
-};
-
-const numberWordsUnderTwenty = [
-  "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen",
-];
-const numberWordsTens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-const numberToWordsBelowThousand = (num) => {
-  if (num < 20) return numberWordsUnderTwenty[num];
-  if (num < 100) {
-    const ten = Math.floor(num / 10);
-    const unit = num % 10;
-    return unit ? `${numberWordsTens[ten]} ${numberWordsUnderTwenty[unit]}` : numberWordsTens[ten];
-  }
-  const hundred = Math.floor(num / 100);
-  const remainder = num % 100;
-  return remainder
-    ? `${numberWordsUnderTwenty[hundred]} Hundred ${numberToWordsBelowThousand(remainder)}`
-    : `${numberWordsUnderTwenty[hundred]} Hundred`;
-};
-
-const numberToIndianWords = (value) => {
-  const numeric = Number(String(value).replace(/\D+/g, ""));
-  if (!numeric) return "";
-  if (numeric < 1000) return numberToWordsBelowThousand(numeric);
-  const parts = [];
-  const units = [
-    { value: 10000000, label: "Crore" },
-    { value: 100000, label: "Lakh" },
-    { value: 1000, label: "Thousand" },
-  ];
-  let remaining = numeric;
-  units.forEach((unit) => {
-    if (remaining >= unit.value) {
-      const count = Math.floor(remaining / unit.value);
-      parts.push(`${numberToIndianWords(count)} ${unit.label}`);
-      remaining %= unit.value;
-    }
-  });
-  if (remaining > 0) parts.push(numberToWordsBelowThousand(remaining));
-  return parts.join(" ").replace(/\s+/g, " ").trim();
-};
-
-const buildAmountOptions = (baseValue) => {
-  if (baseValue === null || baseValue === undefined) return [];
-  const normalized = String(baseValue).split(".")[0].replace(/\D+/g, "").trim();
-  if (normalized.length === 0 || normalized.startsWith("0") || !/^\d+$/.test(normalized)) return [];
-  return Array.from({ length: 5 }, (_, i) => {
-    const value = `${normalized}${"0".repeat(i)}`;
-    return { value, label: formatIndianNumber(value), words: numberToIndianWords(value) };
-  });
 };
 
 const getCurrentMonthDateRange = () => {
@@ -147,6 +88,39 @@ const applyRowFieldChange = (row, field, value) => {
   return next;
 };
 
+const SIZE_CONFIGS = {
+  normal: {
+    text: "text-xs",
+    headerText: "text-xs font-semibold",
+    inputClass: "w-full border rounded px-1.5 py-1 text-xs",
+    inputRightClass: "w-full border rounded px-1.5 py-1 text-xs text-right",
+    unitText: "text-xs text-gray-500",
+    btnSize: "px-2.5 py-1 text-xs",
+    iconSize: 13,
+    cellPadding: "px-2 py-1.5",
+  },
+  large: {
+    text: "text-sm",
+    headerText: "text-sm font-bold",
+    inputClass: "w-full border-2 border-gray-300 rounded-md px-2.5 py-1.5 text-sm font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500",
+    inputRightClass: "w-full border-2 border-gray-300 rounded-md px-2.5 py-1.5 text-sm font-medium text-right focus:border-blue-500 focus:ring-1 focus:ring-blue-500",
+    unitText: "text-xs text-gray-600 font-semibold",
+    btnSize: "px-3.5 py-1.5 text-sm font-semibold",
+    iconSize: 15,
+    cellPadding: "px-3 py-2",
+  },
+  xl: {
+    text: "text-base",
+    headerText: "text-base font-bold",
+    inputClass: "w-full border-2 border-gray-300 rounded-lg px-3.5 py-2 text-base font-semibold focus:border-blue-600 focus:ring-2 focus:ring-blue-500",
+    inputRightClass: "w-full border-2 border-gray-300 rounded-lg px-3.5 py-2 text-base font-semibold text-right focus:border-blue-600 focus:ring-2 focus:ring-blue-500",
+    unitText: "text-sm text-gray-700 font-bold",
+    btnSize: "px-4 py-2 text-base font-bold",
+    iconSize: 18,
+    cellPadding: "px-4 py-2.5",
+  },
+};
+
 const CostingSection = ({
   calculation,
   section,
@@ -157,7 +131,9 @@ const CostingSection = ({
   canDelete,
   onChanged,
   className = "mt-4",
+  sizeMode = "large",
 }) => {
+  const sz = SIZE_CONFIGS[sizeMode] || SIZE_CONFIGS.large;
   const [newRow, setNewRow] = useState(emptyNewRow);
   const [savingRow, setSavingRow] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
@@ -184,6 +160,28 @@ const CostingSection = ({
   const totalConv = section === "purchase_costing" ? summary.purchase_costing_total : summary.other_costing_total;
   const paid = section === "purchase_costing" ? summary.purchase_costing_paid : summary.other_costing_paid;
   const due = section === "purchase_costing" ? summary.purchase_costing_due : summary.other_costing_due;
+  const paidFrom = section === "purchase_costing" ? summary.purchase_costing_paid_amount : summary.other_costing_paid_amount;
+  const dueFrom = section === "purchase_costing" ? summary.purchase_costing_due_amount : summary.other_costing_due_amount;
+
+  // Fixed Cost reasons are constrained to these 3 values, each usable once
+  // per calculation; General Cost stays free text (unchanged)
+  const isFixedCost = section === "purchase_costing";
+  const usedFixedReasons = isFixedCost
+    ? items.map((item) => String(item.vpci_reason || "").trim().toLowerCase())
+    : [];
+  const availableFixedReasonsForNew = FIXED_COST_REASONS.filter(
+    (reason) => !usedFixedReasons.includes(reason.toLowerCase())
+  );
+  const availableFixedReasonsForEdit = (currentValue) => {
+    const options = FIXED_COST_REASONS.filter(
+      (reason) => reason.toLowerCase() === String(currentValue || "").trim().toLowerCase() || !usedFixedReasons.includes(reason.toLowerCase())
+    );
+    // keep a legacy off-list reason selectable so the row stays editable
+    if (currentValue && !FIXED_COST_REASONS.some((r) => r.toLowerCase() === String(currentValue).trim().toLowerCase())) {
+      return [currentValue, ...options];
+    }
+    return options;
+  };
 
   const fetchSuggestions = useCallback(
     (query, target) => {
@@ -201,128 +199,171 @@ const CostingSection = ({
         try {
           const response = await PresetSuggestionService.Queries.getPresetSuggestionList({
             _suggestion: trimmed,
-            _type_id: suggestionTypeId,
+            _type: suggestionTypeId,
+            _page: 1,
+            _perPage: 15,
           });
-          if (suggestionRequestRef.current !== requestId) return;
-          const rows = getPresetSuggestionRows(response);
-          const next = Array.from(
-            new Map(
-              rows
-                .map((item, index) => {
-                  const suggestion = String(item?.ps_suggestion || "").trim();
-                  if (!suggestion) return null;
-                  return [suggestion.toLowerCase(), { id: item?.ps_id || `${suggestion}-${index}`, label: suggestion }];
-                })
-                .filter(Boolean)
-            ).values()
-          );
-          setSuggestions(next);
+          if (suggestionRequestRef.current === requestId) {
+            setSuggestions(getPresetSuggestionRows(response));
+          }
         } catch {
           if (suggestionRequestRef.current === requestId) setSuggestions([]);
         }
-      }, 350);
+      }, 250);
     },
     [suggestionTypeId]
   );
 
-  const clearSuggestions = () => {
+  const openSuggestions = (inputEl, query, target) => {
+    if (inputEl) {
+      suggestionInputRef.current = inputEl;
+      setSuggestionAnchorRect(inputEl.getBoundingClientRect());
+    }
+    fetchSuggestions(query, target);
+  };
+
+  const closeSuggestions = () => {
     setSuggestions([]);
     setSuggestionTarget(null);
     setSuggestionAnchorRect(null);
     suggestionInputRef.current = null;
   };
 
-  // Reposition the reason suggestion dropdown on scroll/resize
+  const selectSuggestion = (label) => {
+    if (suggestionTarget === "new") {
+      setNewRow((r) => ({ ...r, reason: label }));
+    } else if (suggestionTarget) {
+      setEditRow((r) => ({ ...r, reason: label }));
+    }
+    closeSuggestions();
+  };
+
+  const openAmountDropdown = (inputEl, target) => {
+    if (inputEl) {
+      amountInputRef.current = inputEl;
+      setAmountAnchorRect(inputEl.getBoundingClientRect());
+    }
+    setAmountDropdownTarget(target);
+  };
+
+  const closeAmountDropdown = () => {
+    setAmountDropdownTarget(null);
+    setAmountAnchorRect(null);
+    amountInputRef.current = null;
+  };
+
+  const selectAmountOption = (value) => {
+    if (amountDropdownTarget === "new") {
+      setNewRow((r) => applyRowFieldChange(r, "amount", String(value)));
+    } else if (amountDropdownTarget) {
+      setEditRow((r) => applyRowFieldChange(r, "amount", String(value)));
+    }
+    closeAmountDropdown();
+  };
+
+  // close dropdowns if clicking anywhere outside or re-anchor on scroll
   useEffect(() => {
-    if (!suggestionTarget) return;
-    const updateRect = () => {
+    const handleWindowClick = (e) => {
+      if (!e.target.closest?.("[data-suggestion-popover]") && !e.target.closest?.("[data-suggestion-input]")) {
+        closeSuggestions();
+      }
+      if (!e.target.closest?.("[data-amount-popover]") && !e.target.closest?.("[data-amount-input]")) {
+        closeAmountDropdown();
+      }
+    };
+    const handleScrollOrResize = () => {
       if (suggestionInputRef.current) {
         setSuggestionAnchorRect(suggestionInputRef.current.getBoundingClientRect());
       }
-    };
-    window.addEventListener("scroll", updateRect, true);
-    window.addEventListener("resize", updateRect);
-    return () => {
-      window.removeEventListener("scroll", updateRect, true);
-      window.removeEventListener("resize", updateRect);
-    };
-  }, [suggestionTarget]);
-
-  // Reposition the amount suggestion dropdown on scroll/resize
-  useEffect(() => {
-    if (!amountDropdownTarget) return;
-    const updateRect = () => {
       if (amountInputRef.current) {
         setAmountAnchorRect(amountInputRef.current.getBoundingClientRect());
       }
     };
-    window.addEventListener("scroll", updateRect, true);
-    window.addEventListener("resize", updateRect);
+    window.addEventListener("click", handleWindowClick);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
     return () => {
-      window.removeEventListener("scroll", updateRect, true);
-      window.removeEventListener("resize", updateRect);
+      window.removeEventListener("click", handleWindowClick);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
     };
-  }, [amountDropdownTarget]);
+  }, []);
 
-  // downloads this month's reference BD tax document - same source as the
-  // vehicle pricing form's "Tax (BDT) / BD Tax Doc" button
-  const handleViewTaxDoc = async () => {
-    if (isTaxDocDownloading) return;
-    setIsTaxDocDownloading(true);
-    const toastId = "purchase-calc-tax-doc";
+  const handleDownloadTaxDoc = async () => {
     try {
-      toast.loading("Preparing tax document...", { id: toastId });
-      const { fromDate, toDate } = getCurrentMonthDateRange();
-      const response = await SystemDocumentService.Queries.getSystemDocuments({
+      setIsTaxDocDownloading(true);
+      const res = await SystemDocumentService.Queries.getSystemDocumentList({
+        _type: SYSTEM_DOC_TYPE_ID,
         _page: 1,
         _perPage: 1,
-        _type_id: SYSTEM_DOC_TYPE_ID,
-        _from_date: fromDate,
-        _to_date: toDate,
       });
-      const documentItem = response?.data?.data?.[0];
-      const documentFile = documentItem?.sd_docs?.[0];
-      const url = documentFile?.url || documentFile?.secure_url;
-      if (!url) {
-        throw new Error("No tax document found for this month.");
+      const docs = res?.data?.data || res?.data || [];
+      const fileUrl = docs[0]?.doc_file?.url || docs[0]?.doc_file_url || docs[0]?.file_url;
+      if (!fileUrl) {
+        toast.error("No tax document found.");
+        return;
       }
-      window.open(url, "_blank", "noopener,noreferrer");
-      toast.success("Tax document opened.", { id: toastId });
-    } catch (error) {
-      toast.error(error?.message || "Failed to load tax document.", { id: toastId });
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Failed to fetch tax document.");
     } finally {
       setIsTaxDocDownloading(false);
     }
   };
 
-  const buildFormData = (row, includeSection = true) => {
-    const formData = new FormData();
-    if (includeSection) formData.append("section", section);
-    if (row.date) formData.append("date", row.date);
-    formData.append("reason", row.reason || "");
-    formData.append("amount", row.amount || "");
-    if (!sameCurrency && row.conv_rate) formData.append("conv_rate", row.conv_rate);
-    (row.docs || []).forEach((file) => formData.append("docs[]", file));
-    return formData;
+  const handleStartEdit = (item) => {
+    setEditingItemId(item.vpci_id);
+    const amountVal = item.vpci_amount !== null && item.vpci_amount !== undefined ? String(item.vpci_amount) : "";
+    const toAmountVal = item.vpci_total_amount !== null && item.vpci_total_amount !== undefined ? String(item.vpci_total_amount) : "";
+    setEditRow({
+      date: item.vpci_date || "",
+      reason: item.vpci_reason || "",
+      amount: amountVal,
+      conv_rate: item.vpci_conversion_rate !== null && item.vpci_conversion_rate !== undefined ? String(item.vpci_conversion_rate) : "",
+      toAmount: toAmountVal,
+      lastEditedSide: "from",
+      docs: [],
+    });
+    closeSuggestions();
+    closeAmountDropdown();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItemId(null);
+    setEditRow(emptyNewRow);
+    closeSuggestions();
+    closeAmountDropdown();
+  };
+
+  const buildFormData = (row) => {
+    const fd = new FormData();
+    fd.append("section", section);
+    if (row.date) fd.append("date", row.date);
+    if (row.reason) fd.append("reason", row.reason);
+    if (row.amount !== "") fd.append("amount", row.amount);
+    if (row.conv_rate !== "") fd.append("conversion_rate", row.conv_rate);
+    if (row.toAmount !== "") fd.append("total_amount", row.toAmount);
+    (row.docs || []).forEach((file) => fd.append("docs[]", file));
+    return fd;
   };
 
   const handleAddRow = async () => {
-    if (!newRow.reason.trim() || !newRow.amount) {
-      toast.error("Reason and amount are required.");
+    if (!newRow.reason) {
+      toast.error(isFixedCost ? "Select a fixed cost reason." : "Reason is required.");
       return;
     }
-    if (!sameCurrency && !newRow.conv_rate) {
-      toast.error("Conversion rate is required.");
+    if (newRow.amount === "" && newRow.toAmount === "") {
+      toast.error("Amount is required.");
       return;
     }
-
     try {
       setSavingRow(true);
-      await PurchasePaymentService.Commands.addCostingItem(calculation.vpc_id, buildFormData(newRow));
+      await PurchasePaymentService.Commands.addItem(calculation.vpc_id, buildFormData(newRow));
       setNewRow(emptyNewRow);
+      closeSuggestions();
+      closeAmountDropdown();
       if (fileInputRef.current) fileInputRef.current.value = "";
-      clearSuggestions();
-      toast.success("Row added.");
+      toast.success("Costing row added.");
       onChanged?.();
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message || "Failed to add row");
@@ -331,31 +372,25 @@ const CostingSection = ({
     }
   };
 
-  const handleStartEdit = (item) => {
-    setEditingItemId(item.vpci_id);
-    setEditRow({
-      date: item.vpci_date ? String(item.vpci_date).slice(0, 10) : "",
-      reason: item.vpci_reason || "",
-      amount: item.vpci_amount || "",
-      conv_rate: item.vpci_conv_rate || "",
-      toAmount: item.vpci_conv_amount || "",
-      lastEditedSide: "from",
-      docs: [],
-    });
-  };
-
-  const handleSaveEdit = async () => {
-    if (!sameCurrency && !editRow.conv_rate) {
-      toast.error("Conversion rate is required.");
+  const handleSaveEdit = async (itemId) => {
+    if (!editRow.reason) {
+      toast.error(isFixedCost ? "Select a fixed cost reason." : "Reason is required.");
       return;
     }
-
+    if (editRow.amount === "" && editRow.toAmount === "") {
+      toast.error("Amount is required.");
+      return;
+    }
     try {
       setSavingRow(true);
-      await PurchasePaymentService.Commands.updateCostingItem(editingItemId, buildFormData(editRow, false));
+      const fd = buildFormData(editRow);
+      fd.append("_method", "PUT");
+      await PurchasePaymentService.Commands.updateItem(itemId, fd);
       setEditingItemId(null);
-      clearSuggestions();
-      toast.success("Row updated.");
+      setEditRow(emptyNewRow);
+      closeSuggestions();
+      closeAmountDropdown();
+      toast.success("Costing row updated.");
       onChanged?.();
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message || "Failed to update row");
@@ -366,8 +401,8 @@ const CostingSection = ({
 
   const handleDeleteRow = async (item) => {
     const result = await Swal.fire({
-      title: "Delete this row?",
-      text: `${item.vpci_reason} — ${formatAmount(item.vpci_conv_amount)} ${calculation.vpc_to_currency}`,
+      title: "Delete costing row?",
+      text: `${item.vpci_reason || "This row"} will be removed. Payments must be deleted first.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#0f766e",
@@ -377,418 +412,532 @@ const CostingSection = ({
     if (!result.isConfirmed) return;
 
     try {
-      await PurchasePaymentService.Commands.deleteCostingItem(item.vpci_id);
-      toast.success("Row deleted.");
+      await PurchasePaymentService.Commands.deleteItem(item.vpci_id);
+      toast.success("Costing row deleted.");
       onChanged?.();
     } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || "Failed to delete row");
+      toast.error(error?.response?.data?.message || "Failed to delete row");
     }
   };
 
-  const renderSuggestionList = (target, applyValue) =>
-    suggestionTarget === target &&
-    suggestions.length > 0 &&
-    suggestionAnchorRect && (
-      <div
-        style={{
-          position: "fixed",
-          top: suggestionAnchorRect.bottom + 2,
-          left: suggestionAnchorRect.left,
-          width: Math.max(suggestionAnchorRect.width, 200),
-          zIndex: 9999,
-        }}
-        className="bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-y-auto"
-      >
-        {suggestions.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className="w-full text-left px-3 py-1.5 text-sm hover:bg-teal-50"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              applyValue(s.label);
-              clearSuggestions();
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-    );
+  const popoverPositionStyle = (rect, width = 240) => {
+    if (!rect) return { display: "none" };
+    return {
+      position: "fixed",
+      top: `${rect.bottom + 4}px`,
+      left: `${rect.left}px`,
+      width: `${Math.max(rect.width, width)}px`,
+      zIndex: 9999,
+    };
+  };
 
-  const renderAmountSuggestionList = (target, currentValue, applyValue) =>
-    amountDropdownTarget === target &&
-    buildAmountOptions(currentValue).length > 0 &&
-    amountAnchorRect && (
-      <div
-        style={{
-          position: "fixed",
-          top: amountAnchorRect.bottom + 2,
-          left: amountAnchorRect.left,
-          width: Math.max(amountAnchorRect.width, 220),
-          zIndex: 9999,
-        }}
-        className="bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto"
-      >
-        {buildAmountOptions(currentValue).map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className="flex w-full flex-col items-start gap-0.5 border-b border-gray-100 px-3 py-1.5 text-left last:border-b-0 hover:bg-teal-50"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              applyValue(option.value);
-              setAmountDropdownTarget(null);
-              setAmountAnchorRect(null);
-              amountInputRef.current = null;
-            }}
-          >
-            <span className="text-xs font-semibold text-gray-900">{option.label}</span>
-            <span className="text-[11px] text-gray-500">{option.words}</span>
-          </button>
-        ))}
-      </div>
-    );
-
-  const sectionColor = section === "purchase_costing" ? "border-blue-200 bg-blue-50/30" : "border-amber-200 bg-amber-50/30";
-  const sectionTitleColor = section === "purchase_costing" ? "text-blue-700" : "text-amber-700";
+  const showReasonDropdown = Boolean(suggestionTarget && suggestionAnchorRect && suggestions.length > 0);
+  const activeAmountValue =
+    amountDropdownTarget === "new"
+      ? newRow.amount
+      : amountDropdownTarget
+      ? editRow.amount
+      : "";
+  const amountOptions = useMemo(() => buildAmountOptions(activeAmountValue), [activeAmountValue]);
+  const showAmountDropdown = Boolean(amountDropdownTarget && amountAnchorRect);
 
   return (
-    <div className={`${className} rounded-lg border ${sectionColor} p-4`}>
-      <div className="flex items-center justify-center gap-3 mb-3">
-        <h4 className={`text-sm font-bold uppercase tracking-wide ${sectionTitleColor}`}>{title}</h4>
-        {section === "purchase_costing" && (
+    <div className={className}>
+      {/* section header + optional Tax Doc action */}
+      <div className="flex items-center justify-between mb-2">
+        <h4 className={`${sz.headerText} font-bold uppercase tracking-wide text-gray-700`}>{title}</h4>
+        {isFixedCost && (
           <button
             type="button"
-            onClick={handleViewTaxDoc}
+            onClick={handleDownloadTaxDoc}
             disabled={isTaxDocDownloading}
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-            title="View this month's reference BD Tax document"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border border-blue-400 text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50"
+            title="Download Bangladesh Tax Reference Document"
           >
             {isTaxDocDownloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-            BD Tax Doc
+            <span>BD Tax Doc</span>
           </button>
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-gray-300 bg-white">
-        <table className="min-w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border border-gray-300 bg-white shadow-xs">
+        <table className={`min-w-full ${sz.text}`}>
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-300 text-left">
-              <th className="px-3 py-2 border-r border-gray-200 w-[110px]">Date</th>
-              <th className="px-3 py-2 border-r border-gray-200">Reason</th>
-              <th className="px-3 py-2 border-r border-gray-200 text-right">Amount</th>
-              {!sameCurrency && <th className="px-3 py-2 border-r border-gray-200 text-right">Conversion Rate</th>}
-              <th className="px-3 py-2 border-r border-gray-200 text-right">Conversion Amount</th>
-              <th className="px-3 py-2 border-r border-gray-200">Docs</th>
-              <th className="px-3 py-2 text-right w-[80px]"></th>
+            <tr className="bg-gray-100 border-b border-gray-300 text-gray-700 font-bold">
+              <th className={`${sz.cellPadding} text-left`}>Date</th>
+              <th className={`${sz.cellPadding} text-left`}>Reason</th>
+              {dualCurrency ? (
+                <>
+                  <th className={`${sz.cellPadding} text-right`}>
+                    Amount <span className={sz.unitText}>({calculation.vpc_from_currency})</span>
+                  </th>
+                  <th className={`${sz.cellPadding} text-right`}>
+                    Rate <span className={sz.unitText}>({calculation.vpc_from_currency}→{calculation.vpc_to_currency})</span>
+                  </th>
+                  <th className={`${sz.cellPadding} text-right`}>
+                    Total Amount <span className={sz.unitText}>({calculation.vpc_to_currency})</span>
+                  </th>
+                </>
+              ) : (
+                <th className={`${sz.cellPadding} text-right`}>
+                  Amount <span className={sz.unitText}>({calculation.vpc_to_currency})</span>
+                </th>
+              )}
+              <th className={`${sz.cellPadding} text-left`}>Attachment</th>
+              <th className={`${sz.cellPadding} text-center`}>Action</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item) =>
-              editingItemId === item.vpci_id ? (
-                <tr key={item.vpci_id} className="border-b border-gray-200 bg-amber-50/40">
-                  <td className="px-2 py-1.5 border-r border-gray-200">
-                    <input
-                      type="date"
-                      className="w-full border rounded px-1.5 py-1 text-xs"
-                      value={editRow.date}
-                      onChange={(e) => setEditRow({ ...editRow, date: e.target.value })}
-                    />
-                  </td>
-                  <td className="px-2 py-1.5 border-r border-gray-200 relative">
-                    <input
-                      ref={suggestionInputRef}
-                      type="text"
-                      className="w-full border rounded px-1.5 py-1 text-xs"
-                      value={editRow.reason}
-                      onChange={(e) => {
-                        suggestionInputRef.current = e.target;
-                        setSuggestionAnchorRect(e.target.getBoundingClientRect());
-                        setEditRow({ ...editRow, reason: e.target.value });
-                        fetchSuggestions(e.target.value, item.vpci_id);
-                      }}
-                      onBlur={() => setTimeout(clearSuggestions, 150)}
-                    />
-                    {renderSuggestionList(item.vpci_id, (label) => setEditRow((r) => ({ ...r, reason: label })))}
-                  </td>
-                  <td className="px-2 py-1.5 border-r border-gray-200 relative">
-                    <div className="flex items-center gap-1">
+            {items.map((item) => {
+              const isEditing = editingItemId === item.vpci_id;
+              const hasDocs = Array.isArray(item.docs) && item.docs.length > 0;
+
+              if (isEditing) {
+                return (
+                  <tr key={item.vpci_id} className="bg-yellow-50/70 border-b border-yellow-200">
+                    <td className={sz.cellPadding}>
                       <input
-                        ref={amountInputRef}
-                        type="number"
-                        step="0.01"
-                        className="w-full border rounded px-1.5 py-1 text-xs text-right"
-                        value={editRow.amount}
-                        onChange={(e) => {
-                          amountInputRef.current = e.target;
-                          setAmountAnchorRect(e.target.getBoundingClientRect());
-                          setEditRow((r) => applyRowFieldChange(r, "amount", e.target.value));
-                          setAmountDropdownTarget(item.vpci_id);
-                        }}
-                        onFocus={(e) => {
-                          amountInputRef.current = e.target;
-                          setAmountAnchorRect(e.target.getBoundingClientRect());
-                          setAmountDropdownTarget(item.vpci_id);
-                        }}
-                        onBlur={() => setTimeout(() => { setAmountDropdownTarget(null); setAmountAnchorRect(null); amountInputRef.current = null; }, 150)}
-                      />
-                      <span className="text-xs text-gray-500">{calculation.vpc_from_currency}</span>
-                    </div>
-                    {renderAmountSuggestionList(item.vpci_id, editRow.amount, (value) => setEditRow((r) => applyRowFieldChange(r, "amount", value)))}
-                  </td>
-                  {!sameCurrency && (
-                    <td className="px-2 py-1.5 border-r border-gray-200">
-                      <input
-                        type="number"
-                        step="0.000001"
-                        className="w-full border rounded px-1.5 py-1 text-xs text-right"
-                        value={editRow.conv_rate}
-                        onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
+                        type="date"
+                        className={sz.inputClass}
+                        value={editRow.date}
+                        onChange={(e) => setEditRow({ ...editRow, date: e.target.value })}
                       />
                     </td>
-                  )}
-                  <td className="px-2 py-1.5 border-r border-gray-200 text-right text-xs">
+                    <td className={sz.cellPadding}>
+                      {isFixedCost ? (
+                        <select
+                          className={sz.inputClass}
+                          value={editRow.reason}
+                          onChange={(e) => setEditRow({ ...editRow, reason: e.target.value })}
+                        >
+                          <option value="">Select reason</option>
+                          {availableFixedReasonsForEdit(editRow.reason).map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          data-suggestion-input="true"
+                          className={sz.inputClass}
+                          placeholder="Type or select reason..."
+                          value={editRow.reason}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditRow({ ...editRow, reason: val });
+                            openSuggestions(e.currentTarget, val, item.vpci_id);
+                          }}
+                          onFocus={(e) => openSuggestions(e.currentTarget, e.target.value, item.vpci_id)}
+                        />
+                      )}
+                    </td>
                     {dualCurrency ? (
-                      <div className="flex items-center justify-end gap-1">
+                      <>
+                        <td className={sz.cellPadding}>
+                          <input
+                            type="number"
+                            step="any"
+                            data-amount-input="true"
+                            className={sz.inputRightClass}
+                            placeholder="0.00"
+                            value={editRow.amount}
+                            onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
+                            onFocus={(e) => openAmountDropdown(e.currentTarget, item.vpci_id)}
+                          />
+                        </td>
+                        <td className={sz.cellPadding}>
+                          <input
+                            type="number"
+                            step="any"
+                            className={sz.inputRightClass}
+                            placeholder="1.00"
+                            value={editRow.conv_rate}
+                            onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
+                          />
+                        </td>
+                        <td className={sz.cellPadding}>
+                          <input
+                            type="number"
+                            step="any"
+                            className={sz.inputRightClass}
+                            placeholder="0.00"
+                            value={editRow.toAmount}
+                            onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      <td className={sz.cellPadding}>
                         <input
                           type="number"
-                          step="0.01"
-                          className="w-full border rounded px-1.5 py-1 text-xs text-right"
-                          value={editRow.toAmount}
-                          onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
+                          step="any"
+                          data-amount-input="true"
+                          className={sz.inputRightClass}
+                          placeholder="0.00"
+                          value={editRow.amount}
+                          onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
+                          onFocus={(e) => openAmountDropdown(e.currentTarget, item.vpci_id)}
                         />
-                        <span className="text-gray-500">{calculation.vpc_to_currency}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-end gap-1">
-                        {formatAmount(Number(editRow.amount || 0) * (sameCurrency ? 1 : Number(editRow.conv_rate || 0)))}
-                        <span className="text-gray-500">{calculation.vpc_to_currency}</span>
-                      </div>
+                      </td>
                     )}
-                  </td>
-                  <td className="px-2 py-1.5 border-r border-gray-200">
-                    <input
-                      type="file"
-                      multiple
-                      className="text-xs w-32"
-                      onChange={(e) => setEditRow({ ...editRow, docs: Array.from(e.target.files || []) })}
-                    />
-                  </td>
-                  <td className="px-2 py-1.5 text-right whitespace-nowrap">
-                    <button onClick={handleSaveEdit} disabled={savingRow} className="text-emerald-600 hover:text-emerald-800 mr-2" aria-label="Save row">
-                      {savingRow ? <Loader2 size={16} className="animate-spin inline" /> : "✓"}
-                    </button>
-                    <button onClick={() => setEditingItemId(null)} className="text-gray-500 hover:text-gray-700" aria-label="Cancel edit">
-                      <X size={16} className="inline" />
-                    </button>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={item.vpci_id} className="border-b border-gray-200">
-                  <td className="px-3 py-2 border-r border-gray-200 text-xs">
-                    {item.vpci_date ? String(item.vpci_date).slice(0, 10) : "-"}
-                  </td>
-                  <td className="px-3 py-2 border-r border-gray-200">{item.vpci_reason}</td>
-                  <td className="px-3 py-2 border-r border-gray-200 text-right">
-                    {formatAmount(item.vpci_amount)} <span className="text-xs text-gray-500">{calculation.vpc_from_currency}</span>
-                  </td>
-                  {!sameCurrency && (
-                    <td className="px-3 py-2 border-r border-gray-200 text-right text-xs">{item.vpci_conv_rate ?? "-"}</td>
+                    <td className={sz.cellPadding}>
+                      <input
+                        type="file"
+                        multiple
+                        className={`text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:${sz.text} file:bg-gray-100 file:text-gray-700`}
+                        onChange={(e) => setEditRow({ ...editRow, docs: Array.from(e.target.files || []) })}
+                      />
+                    </td>
+                    <td className={`${sz.cellPadding} text-center`}>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEdit(item.vpci_id)}
+                          disabled={savingRow}
+                          className="p-1 rounded text-emerald-600 hover:bg-emerald-50"
+                          title="Save"
+                        >
+                          {savingRow ? <Loader2 size={sz.iconSize} className="animate-spin" /> : <Save size={sz.iconSize} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="p-1 rounded text-gray-500 hover:bg-gray-100"
+                          title="Cancel"
+                        >
+                          <X size={sz.iconSize} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              return (
+                <tr key={item.vpci_id} className="border-b border-gray-200 hover:bg-gray-50/60">
+                  <td className={sz.cellPadding}>{item.vpci_date || "-"}</td>
+                  <td className={`${sz.cellPadding} font-medium text-gray-800`}>{item.vpci_reason || "-"}</td>
+                  {dualCurrency ? (
+                    <>
+                      <td className={`${sz.cellPadding} text-right font-medium`}>{formatAmount(item.vpci_amount)}</td>
+                      <td className={`${sz.cellPadding} text-right text-gray-500`}>
+                        {item.vpci_conversion_rate ? Number(item.vpci_conversion_rate).toFixed(4) : "-"}
+                      </td>
+                      <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
+                        {formatAmount(item.vpci_total_amount)}
+                      </td>
+                    </>
+                  ) : (
+                    <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
+                      {formatAmount(item.vpci_total_amount ?? item.vpci_amount)}
+                    </td>
                   )}
-                  <td className="px-3 py-2 border-r border-gray-200 text-right font-medium">
-                    {formatAmount(item.vpci_conv_amount)} <span className="text-xs text-gray-500">{calculation.vpc_to_currency}</span>
-                  </td>
-                  <td className="px-3 py-2 border-r border-gray-200">
-                    {(item.docs || []).length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {item.docs.map((doc, i) => (
+                  <td className={sz.cellPadding}>
+                    {hasDocs ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {item.docs.map((doc, idx) => (
                           <a
-                            key={i}
-                            href={doc?.url}
+                            key={doc.id || idx}
+                            href={doc.doc_file?.url || doc.url}
                             target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"
+                            title={doc.title || doc.name || `Document ${idx + 1}`}
                           >
-                            <FileText size={12} /> {i + 1}
+                            <FileText size={11} />
+                            <span>{doc.title || `Doc ${idx + 1}`}</span>
                           </a>
                         ))}
                       </div>
                     ) : (
-                      <span className="text-gray-400 text-xs">-</span>
+                      <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    {canUpdate && (
-                      <button onClick={() => handleStartEdit(item)} className="text-blue-600 hover:text-blue-800 mr-2" aria-label="Edit row">
-                        <Pencil size={15} className="inline" />
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button onClick={() => handleDeleteRow(item)} className="text-red-600 hover:text-red-800" aria-label="Delete row">
-                        <Trash2 size={15} className="inline" />
-                      </button>
-                    )}
+                  <td className={`${sz.cellPadding} text-center`}>
+                    <div className="inline-flex items-center gap-1">
+                      {canUpdate && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(item)}
+                          className="p-1 rounded text-blue-600 hover:bg-blue-50"
+                          title="Edit"
+                        >
+                          <Pencil size={sz.iconSize} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRow(item)}
+                          className="p-1 rounded text-red-600 hover:bg-red-50"
+                          title="Delete"
+                        >
+                          <Trash2 size={sz.iconSize} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              )
-            )}
+              );
+            })}
 
-            {items.length === 0 && (
-              <tr className="border-b border-gray-200">
-                <td colSpan={sameCurrency ? 6 : 7} className="px-3 py-3 text-center text-gray-400 text-sm">
-                  No rows yet.
-                </td>
-              </tr>
-            )}
-
-            {/* add row */}
-            {canCreate && (
-              <tr className="bg-teal-50/40">
-                <td className="px-2 py-1.5 border-r border-gray-200">
+            {/* inline append row for new items */}
+            {canCreate && (!isFixedCost || availableFixedReasonsForNew.length > 0) && (
+              <tr className="bg-emerald-50/40 border-t-2 border-emerald-300">
+                <td className={sz.cellPadding}>
                   <input
                     type="date"
-                    className="w-full border rounded px-1.5 py-1 text-xs"
+                    className={sz.inputClass}
                     value={newRow.date}
                     onChange={(e) => setNewRow({ ...newRow, date: e.target.value })}
                   />
                 </td>
-                <td className="px-2 py-1.5 border-r border-gray-200 relative">
-                  <input
-                    ref={suggestionInputRef}
-                    type="text"
-                    placeholder="Enter reason"
-                    className="w-full border rounded px-1.5 py-1 text-xs"
-                    value={newRow.reason}
-                    onChange={(e) => {
-                      suggestionInputRef.current = e.target;
-                      setSuggestionAnchorRect(e.target.getBoundingClientRect());
-                      setNewRow({ ...newRow, reason: e.target.value });
-                      fetchSuggestions(e.target.value, "new");
-                    }}
-                    onBlur={() => setTimeout(clearSuggestions, 150)}
-                  />
-                  {renderSuggestionList("new", (label) => setNewRow((r) => ({ ...r, reason: label })))}
-                </td>
-                <td className="px-2 py-1.5 border-r border-gray-200 relative">
-                  <div className="flex items-center gap-1">
+                <td className={sz.cellPadding}>
+                  {isFixedCost ? (
+                    <select
+                      className={sz.inputClass}
+                      value={newRow.reason}
+                      onChange={(e) => setNewRow({ ...newRow, reason: e.target.value })}
+                    >
+                      <option value="">Select reason</option>
+                      {availableFixedReasonsForNew.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  ) : (
                     <input
-                      ref={amountInputRef}
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="w-full border rounded px-1.5 py-1 text-xs text-right"
-                      value={newRow.amount}
+                      type="text"
+                      data-suggestion-input="true"
+                      className={sz.inputClass}
+                      placeholder="Type or select reason..."
+                      value={newRow.reason}
                       onChange={(e) => {
-                        amountInputRef.current = e.target;
-                        setAmountAnchorRect(e.target.getBoundingClientRect());
-                        setNewRow((r) => applyRowFieldChange(r, "amount", e.target.value));
-                        setAmountDropdownTarget("new");
+                        const val = e.target.value;
+                        setNewRow({ ...newRow, reason: val });
+                        openSuggestions(e.currentTarget, val, "new");
                       }}
-                      onFocus={(e) => {
-                        amountInputRef.current = e.target;
-                        setAmountAnchorRect(e.target.getBoundingClientRect());
-                        setAmountDropdownTarget("new");
-                      }}
-                      onBlur={() => setTimeout(() => { setAmountDropdownTarget(null); setAmountAnchorRect(null); amountInputRef.current = null; }, 150)}
+                      onFocus={(e) => openSuggestions(e.currentTarget, e.target.value, "new")}
                     />
-                    <span className="text-xs text-gray-500">{calculation.vpc_from_currency}</span>
-                  </div>
-                  {renderAmountSuggestionList("new", newRow.amount, (value) => setNewRow((r) => applyRowFieldChange(r, "amount", value)))}
+                  )}
                 </td>
-                {!sameCurrency && (
-                  <td className="px-2 py-1.5 border-r border-gray-200">
-                    <input
-                      type="number"
-                      step="0.000001"
-                      placeholder="0.00"
-                      className="w-full border rounded px-1.5 py-1 text-xs text-right"
-                      value={newRow.conv_rate}
-                      onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
-                    />
-                  </td>
-                )}
-                <td className="px-2 py-1.5 border-r border-gray-200 text-right text-xs">
-                  {dualCurrency ? (
-                    <div className="flex items-center justify-end gap-1">
+                {dualCurrency ? (
+                  <>
+                    <td className={sz.cellPadding}>
                       <input
                         type="number"
-                        step="0.01"
+                        step="any"
+                        data-amount-input="true"
+                        className={sz.inputRightClass}
                         placeholder="0.00"
-                        className="w-full border rounded px-1.5 py-1 text-xs text-right"
+                        value={newRow.amount}
+                        onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
+                        onFocus={(e) => openAmountDropdown(e.currentTarget, "new")}
+                      />
+                    </td>
+                    <td className={sz.cellPadding}>
+                      <input
+                        type="number"
+                        step="any"
+                        className={sz.inputRightClass}
+                        placeholder="1.00"
+                        value={newRow.conv_rate}
+                        onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
+                      />
+                    </td>
+                    <td className={sz.cellPadding}>
+                      <input
+                        type="number"
+                        step="any"
+                        className={sz.inputRightClass}
+                        placeholder="0.00"
                         value={newRow.toAmount}
                         onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
                       />
-                      <span className="text-gray-500">{calculation.vpc_to_currency}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-end gap-1">
-                      {formatAmount(Number(newRow.amount || 0) * (sameCurrency ? 1 : Number(newRow.conv_rate || 0)))}
-                      <span className="text-gray-500">{calculation.vpc_to_currency}</span>
-                    </div>
-                  )}
-                </td>
-                <td className="px-2 py-1.5 border-r border-gray-200">
+                    </td>
+                  </>
+                ) : (
+                  <td className={sz.cellPadding}>
+                    <input
+                      type="number"
+                      step="any"
+                      data-amount-input="true"
+                      className={sz.inputRightClass}
+                      placeholder="0.00"
+                      value={newRow.amount}
+                      onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
+                      onFocus={(e) => openAmountDropdown(e.currentTarget, "new")}
+                    />
+                  </td>
+                )}
+                <td className={sz.cellPadding}>
                   <input
-                    ref={fileInputRef}
                     type="file"
+                    ref={fileInputRef}
                     multiple
-                    className="text-xs w-32"
+                    className={`text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:${sz.text} file:bg-gray-100 file:text-gray-700`}
                     onChange={(e) => setNewRow({ ...newRow, docs: Array.from(e.target.files || []) })}
                   />
                 </td>
-                <td className="px-2 py-1.5 text-right">
+                <td className={`${sz.cellPadding} text-center`}>
                   <button
+                    type="button"
                     onClick={handleAddRow}
                     disabled={savingRow}
-                    className="inline-flex items-center justify-center bg-blue-600 text-white w-7 h-7 rounded-full text-xs hover:bg-blue-700 disabled:opacity-50"
-                    aria-label="Save row"
-                    title="Save row"
+                    className={`inline-flex items-center gap-1 ${sz.btnSize} rounded bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50`}
+                    title="Add row"
                   >
-                    {savingRow ? <Loader2 size={13} className="animate-spin" /> : <Save size={14} />}
+                    {savingRow ? <Loader2 size={sz.iconSize} className="animate-spin" /> : <Plus size={sz.iconSize} />}
+                    Add
                   </button>
                 </td>
               </tr>
             )}
+
+            {items.length === 0 && (!canCreate || (isFixedCost && availableFixedReasonsForNew.length === 0)) && (
+              <tr>
+                <td colSpan={dualCurrency ? 6 : 4} className="px-3 py-4 text-center text-gray-400">
+                  No {title.toLowerCase()} items added yet.
+                </td>
+              </tr>
+            )}
           </tbody>
+
+          {/* section totals summary */}
           <tfoot>
-            <tr className="bg-gray-100 border-t-2 border-gray-300 font-bold">
-              <td className="px-3 py-2 border-r border-gray-200"></td>
-              <td className="px-3 py-2 border-r border-gray-200">Total</td>
-              <td className="px-3 py-2 border-r border-gray-200 text-right">
-                {formatAmount(totalAmount)} <span className="text-xs font-normal text-gray-500">{calculation.vpc_from_currency}</span>
-              </td>
-              {!sameCurrency && <td className="px-3 py-2 border-r border-gray-200"></td>}
-              <td className="px-3 py-2 border-r border-gray-200 text-right">
-                {formatAmount(totalConv)} <span className="text-xs font-normal text-gray-500">{calculation.vpc_to_currency}</span>
-              </td>
-              <td className="px-3 py-2 border-r border-gray-200"></td>
-              <td className="px-3 py-2"></td>
+            <tr className="bg-gray-100 border-t border-gray-300 font-semibold text-gray-800">
+              <td colSpan={2} className={`${sz.cellPadding} text-right`}>Total {title}:</td>
+              {dualCurrency ? (
+                <>
+                  <td className={`${sz.cellPadding} text-right`}>
+                    {formatAmount(totalAmount)} {calculation.vpc_from_currency}
+                  </td>
+                  <td className={sz.cellPadding} />
+                  <td className={`${sz.cellPadding} text-right font-bold`}>
+                    {formatAmount(totalConv)} {calculation.vpc_to_currency}
+                  </td>
+                </>
+              ) : (
+                <td className={`${sz.cellPadding} text-right font-bold`}>
+                  {formatAmount(totalConv)} {calculation.vpc_to_currency}
+                </td>
+              )}
+              <td colSpan={2} className={sz.cellPadding} />
+            </tr>
+            <tr className="bg-emerald-50 border-t border-emerald-200 text-emerald-800 font-semibold">
+              <td colSpan={2} className={`${sz.cellPadding} text-right`}>Paid:</td>
+              {dualCurrency ? (
+                <>
+                  <td className={`${sz.cellPadding} text-right`}>
+                    {formatAmount(paidFrom)} {calculation.vpc_from_currency}
+                  </td>
+                  <td className={sz.cellPadding} />
+                  <td className={`${sz.cellPadding} text-right font-bold`}>
+                    {formatAmount(paid)} {calculation.vpc_to_currency}
+                  </td>
+                </>
+              ) : (
+                <td className={`${sz.cellPadding} text-right font-bold`}>
+                  {formatAmount(paid)} {calculation.vpc_to_currency}
+                </td>
+              )}
+              <td colSpan={2} className={sz.cellPadding} />
+            </tr>
+            <tr className="bg-rose-50 border-t border-rose-200 text-rose-800 font-semibold">
+              <td colSpan={2} className={`${sz.cellPadding} text-right`}>Due:</td>
+              {dualCurrency ? (
+                <>
+                  <td className={`${sz.cellPadding} text-right`}>
+                    {formatAmount(dueFrom)} {calculation.vpc_from_currency}
+                  </td>
+                  <td className={sz.cellPadding} />
+                  <td className={`${sz.cellPadding} text-right font-bold`}>
+                    {formatAmount(due)} {calculation.vpc_to_currency}
+                  </td>
+                </>
+              ) : (
+                <td className={`${sz.cellPadding} text-right font-bold`}>
+                  {formatAmount(due)} {calculation.vpc_to_currency}
+                </td>
+              )}
+              <td colSpan={2} className={sz.cellPadding} />
             </tr>
           </tfoot>
         </table>
       </div>
 
-      {/* paid/due chips */}
-      <div className="flex gap-2 mt-2">
-        <span className="px-2 py-1 rounded-full bg-gradient-to-r from-blue-50 to-slate-100 text-blue-800 border border-blue-200 text-xs font-semibold">
-          Paid: {formatAmount(paid)} {calculation.vpc_to_currency}
-        </span>
-        <span className="px-2 py-1 rounded-full bg-gradient-to-r from-slate-100 to-blue-50 text-slate-700 border border-slate-300 text-xs font-semibold">
-          Due: {formatAmount(due)} {calculation.vpc_to_currency}
-        </span>
+      {/* reason autocomplete popover */}
+      {showReasonDropdown && (
+        <div
+          data-suggestion-popover="true"
+          style={popoverPositionStyle(suggestionAnchorRect, 260)}
+          className="bg-white border border-gray-300 rounded-md shadow-lg max-h-56 overflow-y-auto"
+        >
+          {suggestions.map((sug) => {
+            const label = sug.ps_suggestion || sug.name || sug.title || "";
+            return (
+              <button
+                key={sug.ps_id || label}
+                type="button"
+                onClick={() => selectSuggestion(label)}
+                className="w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 hover:text-blue-700 text-gray-700 border-b border-gray-100 last:border-b-0"
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* amount preset suggestions popover */}
+      {showAmountDropdown && (
+        <div
+          data-amount-popover="true"
+          style={popoverPositionStyle(amountAnchorRect, 220)}
+          className="bg-white border border-blue-300 rounded-md shadow-xl max-h-60 overflow-y-auto"
+        >
+          <div className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border-b border-blue-200">
+            Suggested Amounts
+          </div>
+          {amountOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => selectAmountOption(opt.value)}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 hover:text-blue-700 text-gray-700 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
+            >
+              <span className="font-semibold text-gray-900">{opt.label}</span>
+              <span className="text-[11px] text-gray-400">{opt.value.toLocaleString()}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Bottom Save button */}
+      <div className="flex justify-end mt-2">
+        {canCreate && (!isFixedCost || availableFixedReasonsForNew.length > 0) && (
+          <button
+            type="button"
+            onClick={handleAddRow}
+            disabled={savingRow}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+          >
+            {savingRow ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            Save
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canDelete, onChanged }) => {
+const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canDelete, onChanged, refreshSignal }) => {
   const [calculations, setCalculations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedCalcId, setSelectedCalcId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ type: "", from_currency: "USD", to_currency: "BDT" });
   const [savingCalc, setSavingCalc] = useState(false);
+  const [sizeMode, setSizeMode] = useState("large"); // 'normal' | 'large' | 'xl'
 
   const fetchCalculations = useCallback(async () => {
     if (!vehicleId) return;
@@ -818,6 +967,14 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
     fetchCalculations();
   }, [fetchCalculations]);
 
+  // a payment made elsewhere (the Payment Section's modal) changes this
+  // panel's paid/due figures - re-fetch without resetting the current tab
+  useEffect(() => {
+    if (refreshSignal === undefined || refreshSignal === 0) return;
+    fetchCalculations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
+
   const handleCalcChanged = () => {
     fetchCalculations();
     onChanged?.();
@@ -828,18 +985,83 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
   const selectedCalc = calculations.find((c) => c.vpc_id === selectedCalcId) || null;
   const calcHasItems = (selectedCalc?.items || []).length > 0;
 
+  // Selected calculation single summary
   const grandTotal = useMemo(() => {
     if (!selectedCalc?.summary) return null;
     const s = selectedCalc.summary;
+    const isLocked = selectedCalc.general_cost_locked;
+    const fixedAmount = s.purchase_costing_amount || 0;
+    const fixedConv = s.purchase_costing_total || 0;
+    const otherAmount = isLocked ? 0 : (s.other_costing_amount || 0);
+    const otherConv = isLocked ? 0 : (s.other_costing_total || 0);
+    const grandAmount = fixedAmount + otherAmount;
+    const grandConv = fixedConv + otherConv;
+    const paidConv = (s.purchase_costing_paid || 0) + (isLocked ? 0 : (s.other_costing_paid || 0));
+    const dueConv = (s.purchase_costing_due || 0) + (isLocked ? 0 : (s.other_costing_due || 0));
+    const paidAmount = (s.purchase_costing_paid_amount || 0) + (isLocked ? 0 : (s.other_costing_paid_amount || 0));
+    const dueAmount = (s.purchase_costing_due_amount || 0) + (isLocked ? 0 : (s.other_costing_due_amount || 0));
+
     return {
-      fixedAmount: s.purchase_costing_amount,
-      fixedConv: s.purchase_costing_total,
-      otherAmount: s.other_costing_amount,
-      otherConv: s.other_costing_total,
-      grandAmount: (s.purchase_costing_amount || 0) + (s.other_costing_amount || 0),
-      grandConv: (s.purchase_costing_total || 0) + (s.other_costing_total || 0),
+      fixedAmount,
+      fixedConv,
+      otherAmount,
+      otherConv,
+      grandAmount,
+      grandConv,
+      paidConv,
+      dueConv,
+      paidAmount,
+      dueAmount,
     };
   }, [selectedCalc]);
+
+  // Organization type wise calculations summary
+  const allCalcsSummary = useMemo(() => {
+    return calculations.map((calc) => {
+      const s = calc.summary || {};
+      const isLocked = calc.general_cost_locked;
+      const fixedAmount = s.purchase_costing_amount || 0;
+      const fixedConv = s.purchase_costing_total || 0;
+      const otherAmount = isLocked ? 0 : (s.other_costing_amount || 0);
+      const otherConv = isLocked ? 0 : (s.other_costing_total || 0);
+      const totalAmount = fixedAmount + otherAmount;
+      const totalConv = fixedConv + otherConv;
+      const paidConv = (s.purchase_costing_paid || 0) + (isLocked ? 0 : (s.other_costing_paid || 0));
+      const dueConv = (s.purchase_costing_due || 0) + (isLocked ? 0 : (s.other_costing_due || 0));
+
+      return {
+        calcId: calc.vpc_id,
+        type: calc.vpc_type,
+        isActive: calc.vpc_is_active,
+        fromCurrency: calc.vpc_from_currency,
+        toCurrency: calc.vpc_to_currency,
+        locked: isLocked,
+        fixedAmount,
+        fixedConv,
+        otherAmount,
+        otherConv,
+        totalAmount,
+        totalConv,
+        paidConv,
+        dueConv,
+      };
+    });
+  }, [calculations]);
+
+  // Net Grand Total across all organization types
+  const netGrandTotals = useMemo(() => {
+    return allCalcsSummary.reduce(
+      (acc, curr) => {
+        acc.fixedConv += curr.fixedConv;
+        acc.otherConv += curr.otherConv;
+        acc.totalConv += curr.totalConv;
+        acc.paidConv += curr.paidConv;
+        acc.dueConv += curr.dueConv;
+        return acc;
+      },
+      { fixedConv: 0, otherConv: 0, totalConv: 0, paidConv: 0, dueConv: 0 }
+    );
+  }, [allCalcsSummary]);
 
   const handleAddCalculation = async () => {
     if (!addForm.type) {
@@ -901,78 +1123,113 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
   return (
     <div>
       {loading && (
-        <div className="flex items-center gap-2 text-emerald-600 mb-3">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+        <div className="flex items-center gap-2 text-emerald-600 mb-3 font-semibold">
+          <Loader2 className="w-5 h-5 animate-spin" /> Loading calculations...
         </div>
       )}
 
-      {/* type pills to switch between existing calculations for this vehicle */}
-      {calculations.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          {calculations.map((calc) => (
+      {/* Organization Type Navigation Pills & Adjustable font/field size bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-gray-50/90 p-3 rounded-xl border border-gray-200 shadow-xs">
+        {calculations.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            {calculations.map((calc) => {
+              const isSelected = selectedCalcId === calc.vpc_id;
+              return (
+                <button
+                  key={calc.vpc_id}
+                  onClick={() => setSelectedCalcId(calc.vpc_id)}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-base font-bold border-2 transition ${
+                    isSelected
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]"
+                      : "bg-white text-gray-800 border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50"
+                  }`}
+                >
+                  <span className="capitalize">{calc.vpc_type}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded font-bold ${isSelected ? "bg-emerald-700 text-white" : "bg-gray-100 text-gray-600"}`}>
+                    {calc.vpc_from_currency}→{calc.vpc_to_currency}
+                  </span>
+                  {calc.vpc_is_active && (
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded shadow-xs">
+                      Active
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {canCreate && availableTypes.length > 0 && !showAddForm && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm sm:text-base font-bold border-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 bg-white transition"
+              >
+                <Plus size={16} /> Add another
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Font & Field Size Selector */}
+        <div className="flex items-center gap-1.5 ml-auto text-xs font-semibold text-gray-700 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-xs">
+          <span className="text-gray-500 uppercase tracking-wider text-[11px] mr-1">Font &amp; Field Size:</span>
+          {[
+            ["normal", "Normal"],
+            ["large", "Large"],
+            ["xl", "Extra Large"],
+          ].map(([mode, label]) => (
             <button
-              key={calc.vpc_id}
-              onClick={() => setSelectedCalcId(calc.vpc_id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition ${selectedCalcId === calc.vpc_id
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-emerald-400"
-                }`}
+              key={mode}
+              type="button"
+              onClick={() => setSizeMode(mode)}
+              className={`px-2.5 py-1 rounded transition ${
+                sizeMode === mode
+                  ? "bg-teal-600 text-white font-bold"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
             >
-              {calc.vpc_type.charAt(0).toUpperCase() + calc.vpc_type.slice(1)}
-              <span className="text-xs opacity-75">
-                {calc.vpc_from_currency}→{calc.vpc_to_currency}
-              </span>
-              {calc.vpc_is_active && (
-                <span className={`text-[10px] font-bold uppercase tracking-wide ${selectedCalcId === calc.vpc_id ? "text-white/90" : "text-amber-600"}`}>
-                  Active
-                </span>
-              )}
+              {label}
             </button>
           ))}
-          {canCreate && availableTypes.length > 0 && !showAddForm && (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border border-dashed border-emerald-400 text-emerald-700 hover:bg-emerald-50"
-            >
-              <Plus size={14} /> Add another
-            </button>
-          )}
         </div>
-      )}
+      </div>
 
-      {/* Organization Type & Currency box - shown for creating the first/next calculation */}
+      {/* Organization Type & Currency box - Prominent & Bigger */}
       {(showAddForm || calculations.length === 0) && canCreate && availableTypes.length > 0 && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-4 mb-4">
-          <div className="text-center mb-3">
-            <h4 className="text-sm font-bold uppercase tracking-wide text-blue-700">Organization Type &amp; Currency</h4>
+        <div className="rounded-xl border-2 border-blue-300 bg-blue-50/70 p-5 mb-4 shadow-sm">
+          <div className="text-center mb-4 pb-2 border-b border-blue-200">
+            <h4 className="text-base font-extrabold uppercase tracking-wide text-blue-900">
+              Organization Type &amp; Currency
+            </h4>
           </div>
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Select Organization Type</label>
+          <div className="flex flex-wrap items-end gap-5">
+            <div className="flex-1 min-w-[220px]">
+              <label className="block text-base font-bold text-gray-800 mb-1.5">
+                Select Organization Type <span className="text-red-500 text-lg">*</span>
+              </label>
               <select
-                className="border rounded px-3 py-2 text-sm bg-white"
+                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
                 value={addForm.type}
                 onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}
               >
-                <option value="">Select type</option>
+                <option value="">Select Organization Type</option>
                 {availableTypes.map((t) => (
                   <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Select Currency Conversion for the Calculator</label>
+            <div className="flex-1 min-w-[280px]">
+              <label className="block text-base font-bold text-gray-800 mb-1.5">
+                Select Currency Conversion <span className="text-red-500 text-lg">*</span>
+              </label>
               <div className="flex items-center gap-2">
                 <select
-                  className="border rounded px-3 py-2 text-sm bg-white"
+                  className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
                   value={addForm.from_currency}
                   onChange={(e) => setAddForm({ ...addForm, from_currency: e.target.value })}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <span className="text-gray-500 text-sm">→</span>
+                <span className="text-gray-600 text-xl font-bold px-1">→</span>
                 <select
-                  className="border rounded px-3 py-2 text-sm bg-white"
+                  className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
                   value={addForm.to_currency}
                   onChange={(e) => setAddForm({ ...addForm, to_currency: e.target.value })}
                 >
@@ -980,14 +1237,25 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
                 </select>
               </div>
             </div>
-            <Button onClick={handleAddCalculation} disabled={savingCalc} className="bg-blue-600 text-white hover:bg-blue-700 h-10">
-              {savingCalc ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
-            </Button>
-            {calculations.length > 0 && (
-              <button onClick={() => setShowAddForm(false)} className="text-gray-500 hover:text-gray-700 h-10 px-2" aria-label="Cancel">
-                <X size={16} />
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleAddCalculation}
+                disabled={savingCalc}
+                className="bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 text-base font-bold rounded-lg shadow-sm"
+              >
+                {savingCalc ? <Loader2 className="w-5 h-5 animate-spin mr-1" /> : <Plus className="w-5 h-5 mr-1" />}
+                Create
+              </Button>
+              {calculations.length > 0 && (
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="text-gray-500 hover:text-gray-800 h-11 px-3 rounded-lg hover:bg-blue-100/50 transition"
+                  aria-label="Cancel"
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -995,28 +1263,36 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
       {/* selected calculation detail */}
       {selectedCalc && (
         <div>
-          {/* Organization Type & Currency - read only summary once created */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-4 mb-1">
-            <div className="text-center mb-3">
-              <h4 className="text-sm font-bold uppercase tracking-wide text-blue-700">Organization Type &amp; Currency</h4>
+          {/* Organization Type & Currency - Prominent read-only summary card */}
+          <div className="rounded-xl border-2 border-blue-300 bg-blue-50/70 p-4 sm:p-5 mb-4 shadow-sm">
+            <div className="text-center mb-3 pb-2 border-b border-blue-200">
+              <h4 className="text-base font-extrabold uppercase tracking-wide text-blue-900">
+                Organization Type &amp; Currency
+              </h4>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div className="flex flex-wrap items-center gap-6">
-                <div>
-                  <span className="text-gray-500">Organization Type: </span>
-                  <span className="font-semibold capitalize">{selectedCalc.vpc_type}</span>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm sm:text-base font-semibold text-gray-600">Organization Type:</span>
+                  <span className="text-base sm:text-lg font-extrabold capitalize text-blue-950 bg-white px-3.5 py-1 rounded-lg border-2 border-blue-200 shadow-xs">
+                    {selectedCalc.vpc_type}
+                  </span>
                   {selectedCalc.vpc_is_active && (
-                    <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide text-amber-600">Active</span>
+                    <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider bg-amber-500 text-white px-2.5 py-0.5 rounded-md shadow-xs">
+                      Active
+                    </span>
                   )}
                 </div>
-                <div>
-                  <span className="text-gray-500">Currency Conversion: </span>
-                  <span className="font-semibold">{selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm sm:text-base font-semibold text-gray-600">Currency Conversion:</span>
+                  <span className="text-base sm:text-lg font-extrabold text-blue-950 bg-white px-3.5 py-1 rounded-lg border-2 border-blue-200 shadow-xs">
+                    {selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency}
+                  </span>
                 </div>
                 {calcHasItems && (
-                  <span className="inline-flex items-center justify-between gap-1.5 text-xs text-gray-500">
-                    <span>currency locked</span>
-                    <Lock size={12} />
+                  <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-500 bg-gray-200/80 px-2.5 py-1 rounded-md">
+                    <span>Currency locked</span>
+                    <Lock size={14} />
                   </span>
                 )}
               </div>
@@ -1024,7 +1300,7 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
                 {canUpdate && !selectedCalc.vpc_is_active && (
                   <button
                     onClick={() => handleActivate(selectedCalc)}
-                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded border border-amber-400 text-amber-700 hover:bg-amber-50"
+                    className="inline-flex items-center gap-1.5 text-sm font-bold px-3.5 py-1.5 rounded-lg border-2 border-amber-500 text-amber-800 bg-amber-50 hover:bg-amber-100 transition shadow-xs"
                   >
                     Set Active
                   </button>
@@ -1032,11 +1308,11 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
                 {canDelete && (
                   <button
                     onClick={() => handleDeleteCalc(selectedCalc)}
-                    className="inline-flex items-center justify-center p-1.5 rounded border border-red-300 text-red-600 hover:bg-red-50"
+                    className="inline-flex items-center justify-center p-2 rounded-lg border-2 border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400 transition"
                     aria-label="Delete calculation"
                     title="Delete calculation"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={16} />
                   </button>
                 )}
               </div>
@@ -1053,64 +1329,209 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
             canUpdate={canUpdate}
             canDelete={canDelete}
             onChanged={handleCalcChanged}
+            sizeMode={sizeMode}
           />
 
-          <CostingSection
-            className="mt-8"
-            calculation={selectedCalc}
-            section="other_costing"
-            title="General Cost"
-            suggestionTypeId={OTHER_CHARGES_SUGGESTION_TYPE_ID}
-            canCreate={canCreate}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            onChanged={handleCalcChanged}
-          />
+          {!selectedCalc.general_cost_locked && (
+            <CostingSection
+              className="mt-8"
+              calculation={selectedCalc}
+              section="other_costing"
+              title="General Cost"
+              suggestionTypeId={OTHER_CHARGES_SUGGESTION_TYPE_ID}
+              canCreate={canCreate}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              onChanged={handleCalcChanged}
+              sizeMode={sizeMode}
+            />
+          )}
 
-          {/* Grand Total Costing */}
+          {/* 1. Grand Total Costing for Selected Organization Type */}
           {grandTotal && (
-            <div className="mt-8 rounded-lg border border-indigo-200 overflow-hidden">
-              <div className="text-center py-2 bg-indigo-100">
-                <h4 className="text-sm font-bold uppercase tracking-wide text-indigo-800">Grand Total Costing</h4>
+            <div className="mt-8 rounded-xl border-2 border-indigo-300 overflow-hidden shadow-sm bg-white">
+              <div className="text-center py-2.5 bg-indigo-600 text-white flex items-center justify-center gap-2">
+                <Layers className="w-5 h-5" />
+                <h4 className="text-base font-extrabold uppercase tracking-wide">
+                  Grand Total Costing — {selectedCalc.vpc_type.toUpperCase()} ({selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency})
+                </h4>
               </div>
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="bg-indigo-50 border-b border-indigo-200">
-                    <th className="px-3 py-2 text-left">Section</th>
-                    <th className="px-3 py-2 text-right">Total Amount</th>
-                    <th className="px-3 py-2 text-right">Total Conversion Amount</th>
+                  <tr className="bg-indigo-50/80 border-b border-indigo-200 text-indigo-950 font-bold">
+                    <th className="px-4 py-2.5 text-left">Costing Section</th>
+                    <th className="px-4 py-2.5 text-right">Amount ({selectedCalc.vpc_from_currency})</th>
+                    <th className="px-4 py-2.5 text-right">Conversion Amount ({selectedCalc.vpc_to_currency})</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr className="border-b border-indigo-100 bg-white">
-                    <td className="px-3 py-2">Total Fixed Cost</td>
-                    <td className="px-3 py-2 text-right font-medium">
+                <tbody className="divide-y divide-indigo-100">
+                  <tr className="bg-white hover:bg-indigo-50/30 transition">
+                    <td className="px-4 py-2.5 font-medium text-gray-800">Total Fixed Cost</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
                       {formatAmount(grandTotal.fixedAmount)} {selectedCalc.vpc_from_currency}
                     </td>
-                    <td className="px-3 py-2 text-right font-medium">
+                    <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                       {formatAmount(grandTotal.fixedConv)} {selectedCalc.vpc_to_currency}
                     </td>
                   </tr>
-                  <tr className="border-b border-indigo-100 bg-white">
-                    <td className="px-3 py-2">Total General Cost</td>
-                    <td className="px-3 py-2 text-right font-medium">
-                      {formatAmount(grandTotal.otherAmount)} {selectedCalc.vpc_from_currency}
+                  {!selectedCalc.general_cost_locked && (
+                    <tr className="bg-white hover:bg-indigo-50/30 transition">
+                      <td className="px-4 py-2.5 font-medium text-gray-800">Total General Cost</td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
+                        {formatAmount(grandTotal.otherAmount)} {selectedCalc.vpc_from_currency}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-bold text-gray-900">
+                        {formatAmount(grandTotal.otherConv)} {selectedCalc.vpc_to_currency}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="bg-emerald-50/80 text-emerald-900 font-semibold">
+                    <td className="px-4 py-2.5">Total Paid</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {formatAmount(grandTotal.paidAmount)} {selectedCalc.vpc_from_currency}
                     </td>
-                    <td className="px-3 py-2 text-right font-medium">
-                      {formatAmount(grandTotal.otherConv)} {selectedCalc.vpc_to_currency}
+                    <td className="px-4 py-2.5 text-right font-bold text-emerald-700">
+                      {formatAmount(grandTotal.paidConv)} {selectedCalc.vpc_to_currency}
                     </td>
                   </tr>
-                  <tr className="bg-indigo-600 text-white font-bold">
-                    <td className="px-3 py-2.5">Grand Total</td>
-                    <td className="px-3 py-2.5 text-right">
+                  <tr className="bg-rose-50/80 text-rose-900 font-semibold">
+                    <td className="px-4 py-2.5">Total Due</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {formatAmount(grandTotal.dueAmount)} {selectedCalc.vpc_from_currency}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-bold text-rose-700">
+                      {formatAmount(grandTotal.dueConv)} {selectedCalc.vpc_to_currency}
+                    </td>
+                  </tr>
+                  <tr className="bg-indigo-900 text-white font-extrabold text-base">
+                    <td className="px-4 py-3">
+                      Total Costing ({selectedCalc.vpc_type.toUpperCase()}){selectedCalc.general_cost_locked ? " (Fixed only)" : ""}
+                    </td>
+                    <td className="px-4 py-3 text-right">
                       {formatAmount(grandTotal.grandAmount)} {selectedCalc.vpc_from_currency}
                     </td>
-                    <td className="px-3 py-2.5 text-right">
+                    <td className="px-4 py-3 text-right">
                       {formatAmount(grandTotal.grandConv)} {selectedCalc.vpc_to_currency}
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* 2. Organization Type Wise Grand Total Breakdown Table */}
+          {calculations.length > 0 && (
+            <div className="mt-8 rounded-xl border-2 border-purple-300 overflow-hidden shadow-sm bg-white">
+              <div className="text-center py-2.5 bg-gradient-to-r from-purple-700 to-indigo-800 text-white">
+                <h4 className="text-base font-extrabold uppercase tracking-wider">
+                  Organization Type Wise Grand Total Costing Summary
+                </h4>
+                <p className="text-xs text-purple-200 mt-0.5">
+                  Detailed costing, paid, and due summary categorized by each Organization Type
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-purple-100/90 border-b border-purple-200 text-purple-950 font-bold">
+                      <th className="px-4 py-2.5 text-left">Organization Type</th>
+                      <th className="px-4 py-2.5 text-left">Currency</th>
+                      <th className="px-4 py-2.5 text-right">Fixed Cost</th>
+                      <th className="px-4 py-2.5 text-right">General Cost</th>
+                      <th className="px-4 py-2.5 text-right">Total Costing</th>
+                      <th className="px-4 py-2.5 text-right">Total Paid</th>
+                      <th className="px-4 py-2.5 text-right">Total Due</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-purple-100">
+                    {allCalcsSummary.map((item) => {
+                      const isCurrent = selectedCalcId === item.calcId;
+                      return (
+                        <tr
+                          key={item.calcId}
+                          onClick={() => setSelectedCalcId(item.calcId)}
+                          className={`cursor-pointer transition ${
+                            isCurrent
+                              ? "bg-purple-50/90 font-medium"
+                              : "hover:bg-gray-50/80 bg-white"
+                          }`}
+                          title="Click to view this organization type"
+                        >
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold capitalize text-gray-900 text-base">
+                                {item.type}
+                              </span>
+                              {item.isActive && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide bg-amber-400 text-amber-950 px-2 py-0.5 rounded shadow-xs">
+                                  Active
+                                </span>
+                              )}
+                              {isCurrent && (
+                                <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded border border-purple-300">
+                                  Viewing
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-semibold text-xs">
+                            {item.fromCurrency} → {item.toCurrency}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-800">
+                            <div>{formatAmount(item.fixedConv)} {item.toCurrency}</div>
+                            {item.fromCurrency !== item.toCurrency && (
+                              <div className="text-[11px] text-gray-400">
+                                ({formatAmount(item.fixedAmount)} {item.fromCurrency})
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-800">
+                            {item.locked ? (
+                              <span className="text-gray-400 text-xs italic">Locked</span>
+                            ) : (
+                              <>
+                                <div>{formatAmount(item.otherConv)} {item.toCurrency}</div>
+                                {item.fromCurrency !== item.toCurrency && (
+                                  <div className="text-[11px] text-gray-400">
+                                    ({formatAmount(item.otherAmount)} {item.fromCurrency})
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-indigo-950">
+                            {formatAmount(item.totalConv)} {item.toCurrency}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-emerald-700">
+                            {formatAmount(item.paidConv)} {item.toCurrency}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-rose-700">
+                            {formatAmount(item.dueConv)} {item.toCurrency}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {calculations.length > 1 && (
+                    <tfoot>
+                      <tr className="bg-gradient-to-r from-purple-900 to-indigo-950 text-white font-extrabold text-sm">
+                        <td colSpan={4} className="px-4 py-3 text-right uppercase tracking-wider">
+                          Net Grand Total (All Organization Types):
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {formatAmount(netGrandTotals.totalConv)} BDT
+                        </td>
+                        <td className="px-4 py-3 text-right text-emerald-300">
+                          {formatAmount(netGrandTotals.paidConv)} BDT
+                        </td>
+                        <td className="px-4 py-3 text-right text-rose-300">
+                          {formatAmount(netGrandTotals.dueConv)} BDT
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
             </div>
           )}
         </div>

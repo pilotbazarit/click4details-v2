@@ -11,6 +11,7 @@ import { createApiRequest } from "@/helpers/axios";
 import constData from "@/lib/constant";
 import MasterDataService from "@/services/MasterDataService";
 import SearchHistoryService from "@/services/SearchHistoryService";
+import { normalizeUrgentSaleFilter } from "@/services/FilterProductService";
 import dayjs from "dayjs";
 import { Plus, User, Users, Star } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -385,6 +386,7 @@ const CustomerInfoSection = ({
 
                       const formattedSearchParams = {
                         ...searchParams,
+                        v_urgent_sale: normalizeUrgentSaleFilter(searchParams.v_urgent_sale),
                         v_tax_token_exp_date_from: searchParams.v_tax_token_exp_date_from ? dayjs(searchParams.v_tax_token_exp_date_from).toDate() : null,
                         v_tax_token_exp_date_to: searchParams.v_tax_token_exp_date_to ? dayjs(searchParams.v_tax_token_exp_date_to).toDate() : null,
                         v_fitness_exp_date_from: searchParams.v_fitness_exp_date_from ? dayjs(searchParams.v_fitness_exp_date_from).toDate() : null,
