@@ -6,6 +6,7 @@ import SystemSettingService from "@/services/SystemSettingService";
 import { useAppContext } from "@/context/AppContext";
 import toast from "react-hot-toast";
 import {
+  Bot,
   CreditCard,
   Eye,
   EyeOff,
@@ -20,17 +21,70 @@ import {
 
 const TABS = [
   { key: "general", label: "General", icon: SlidersHorizontal },
+  { key: "ai", label: "AI / Messenger", icon: Bot },
   { key: "sms", label: "SMS / OTP", icon: MessageSquareText },
   { key: "shipping", label: "Shipping & Delivery", icon: Truck },
   { key: "payment_gateway", label: "Payment Gateways", icon: CreditCard },
   { key: "courier", label: "Courier Services", icon: Package },
 ];
 
+const WIDE_SETTING_KEYS = ["ai_llm", "ai_system_prompt"];
+
 // Friendly labels/input types per known setting key - ss_value is a plain
 // JSON blob on the backend, this is what turns its raw keys into a form.
 const FIELD_DEFS = {
   gtm: [
     { name: "container_id", label: "GTM Container ID", placeholder: "GTM-XXXXXXX" },
+  ],
+  activity_log: [
+    { name: "retention_days", label: "Activity Log Retention (Days)", type: "number", placeholder: "e.g. 30 (Logs older than this will be deleted)" },
+    { name: "auto_cleanup", label: "Auto Cleanup Enabled", type: "boolean" },
+  ],
+  facebook_messenger: [
+    { name: "auto_reply", label: "Auto-reply to Messenger messages", type: "boolean" },
+    { name: "page_access_token", label: "Page Access Token", secret: true },
+    { name: "verify_token", label: "Webhook Verify Token", secret: true },
+  ],
+  ai_llm: [
+    {
+      name: "provider",
+      label: "Active AI provider",
+      type: "select",
+      options: [
+        { value: "groq", label: "Groq" },
+        { value: "gemini", label: "Google Gemini" },
+        { value: "openai", label: "OpenAI" },
+        { value: "claude", label: "Anthropic Claude" },
+      ],
+    },
+    { name: "cost_tracking", label: "Log token usage / cost", type: "boolean" },
+    { name: "temperature", label: "Temperature (capped 0.15–0.5 for accurate CS replies)", type: "number", placeholder: "0.35" },
+    { name: "max_tokens", label: "Max tokens", type: "number", placeholder: "768" },
+    { name: "groq_api_key", label: "Groq API Key", secret: true },
+    { name: "groq_model", label: "Groq model", placeholder: "llama-3.3-70b-versatile" },
+    { name: "groq_input_per_1k", label: "Groq input $ / 1k tokens", type: "number" },
+    { name: "groq_output_per_1k", label: "Groq output $ / 1k tokens", type: "number" },
+    { name: "gemini_api_key", label: "Gemini API Key", secret: true },
+    { name: "gemini_model", label: "Gemini model", placeholder: "gemini-2.0-flash" },
+    { name: "gemini_input_per_1k", label: "Gemini input $ / 1k tokens", type: "number" },
+    { name: "gemini_output_per_1k", label: "Gemini output $ / 1k tokens", type: "number" },
+    { name: "openai_api_key", label: "OpenAI API Key", secret: true },
+    { name: "openai_model", label: "OpenAI model", placeholder: "gpt-4o" },
+    { name: "openai_input_per_1k", label: "OpenAI input $ / 1k tokens", type: "number" },
+    { name: "openai_output_per_1k", label: "OpenAI output $ / 1k tokens", type: "number" },
+    { name: "claude_api_key", label: "Claude API Key", secret: true },
+    { name: "claude_model", label: "Claude model", placeholder: "claude-sonnet-4-6" },
+    { name: "claude_input_per_1k", label: "Claude input $ / 1k tokens", type: "number" },
+    { name: "claude_output_per_1k", label: "Claude output $ / 1k tokens", type: "number" },
+  ],
+  ai_system_prompt: [
+    {
+      name: "prompt",
+      label: "System prompt (saved to chatbot_system.txt)",
+      type: "textarea",
+      fullWidth: true,
+      placeholder: "Instructions for Messenger and website chatbot replies",
+    },
   ],
   sms: [
     { name: "user", label: "SMS Username" },
@@ -153,11 +207,13 @@ const SettingCard = ({ setting, onSaved }) => {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {fields.map((field) => {
+          const fieldWrapClass = field.fullWidth ? "sm:col-span-2" : "";
+
           if (field.type === "boolean") {
             return (
               <label
                 key={field.name}
-                className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                className={`flex items-center gap-2 text-sm font-medium text-gray-700 ${fieldWrapClass}`}
               >
                 <input
                   type="checkbox"
@@ -172,8 +228,46 @@ const SettingCard = ({ setting, onSaved }) => {
 
           const isSecretVisible = Boolean(visibleSecrets[field.name]);
 
+          if (field.type === "select") {
+            return (
+              <div key={field.name} className={fieldWrapClass}>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {field.label}
+                </label>
+                <select
+                  value={values[field.name] ?? ""}
+                  onChange={(event) => handleChange(field.name, event.target.value)}
+                  className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {(field.options || []).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+
+          if (field.type === "textarea") {
+            return (
+              <div key={field.name} className={fieldWrapClass}>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {field.label}
+                </label>
+                <textarea
+                  value={values[field.name] ?? ""}
+                  placeholder={field.placeholder}
+                  rows={16}
+                  onChange={(event) => handleChange(field.name, event.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            );
+          }
+
           return (
-            <div key={field.name}>
+            <div key={field.name} className={fieldWrapClass}>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 {field.label}
               </label>
@@ -329,7 +423,7 @@ const SystemSetupPage = () => {
           <div>
             <h2 className="text-xl font-semibold text-gray-800">System Setup</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Platform-wide configuration: analytics, SMS, shipping, payment gateways &amp; courier services.
+              Platform-wide configuration: AI/Messenger, analytics, SMS, shipping, payment gateways &amp; courier services.
             </p>
           </div>
         </div>
@@ -366,7 +460,12 @@ const SystemSetupPage = () => {
         ) : (
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             {activeSettings.map((setting) => (
-              <SettingCard key={setting.ss_key} setting={setting} onSaved={handleSettingSaved} />
+              <div
+                key={setting.ss_key}
+                className={WIDE_SETTING_KEYS.includes(setting.ss_key) ? "xl:col-span-2" : ""}
+              >
+                <SettingCard setting={setting} onSaved={handleSettingSaved} />
+              </div>
             ))}
           </div>
         )}

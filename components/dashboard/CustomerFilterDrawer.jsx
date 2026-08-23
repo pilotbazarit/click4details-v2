@@ -19,11 +19,30 @@ const Select = (props) => (
 export const DEFAULT_CUSTOMER_FILTERS = {
   name: "",
   mobile: "",
+  email: "",
+  address: "",
   hasFacebook: false,
   hasMessenger: false,
-  clientSeriousness: "",
+  clientSeriousnessFrom: "",
+  clientSeriousnessTo: "",
   clientAttitude: [],
+  clientLevel: [],
+  clientProfession: [],
+  clientIncome: [],
+  clientCompanyTransaction: "",
+  purchaseReason: [],
+  interestedForLoan: "",
+  bankLoanAmountFrom: "",
+  bankLoanAmountTo: "",
+  carAvailable: [],
+  carExchangeCategory: [],
   customerSearch: "",
+  dateOfBirthFrom: "",
+  dateOfBirthTo: "",
+  anniversaryDateFrom: "",
+  anniversaryDateTo: "",
+  lastPurchaseFrom: "",
+  lastPurchaseTo: "",
   createdBy: "",
   createdFrom: "",
   createdTo: "",
@@ -31,8 +50,8 @@ export const DEFAULT_CUSTOMER_FILTERS = {
 };
 
 const fieldClass = "w-full min-w-0 border border-gray-300 rounded-sm px-2 py-1 text-sm bg-white focus:outline-none focus:border-blue-500";
-const labelClass = "w-[110px] shrink-0 text-right text-[13px] text-gray-600 pr-2";
-const rowClass = "flex items-center gap-2";
+const labelClass = "w-full sm:w-[145px] shrink-0 text-left sm:text-right text-[13px] text-gray-600 sm:pr-2";
+const rowClass = "flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2";
 
 const compactSelectStyles = {
   ...sharedSelectStyles,
@@ -51,6 +70,42 @@ const compactSelectStyles = {
   }),
 };
 
+const withoutEmptyOption = (options = []) => (options || []).filter((opt) => opt.value !== "" && opt.value != null);
+
+const seriousnessRank = (label) => {
+  const text = String(label || "").trim().toLowerCase();
+  if (text.includes("emergency")) return 5;
+  if (text.includes("critical")) return 4;
+  if (text.includes("high")) return 3;
+  if (text.includes("medium")) return 2;
+  if (text.includes("low")) return 1;
+  return 0;
+};
+
+const sortSeriousnessOptions = (options = []) =>
+  [...options].sort((a, b) => {
+    const rankDiff = seriousnessRank(a.label) - seriousnessRank(b.label);
+    if (rankDiff !== 0) return rankDiff;
+    return String(a.label).localeCompare(String(b.label));
+  });
+
+const bankLoanAmountRank = (label) => {
+  const match = String(label || "").match(/(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+};
+
+const sortBankLoanOptions = (options = []) =>
+  [...options].sort((a, b) => {
+    const rankDiff = bankLoanAmountRank(a.label) - bankLoanAmountRank(b.label);
+    if (rankDiff !== 0) return rankDiff;
+    return String(a.label).localeCompare(String(b.label));
+  });
+
+const loanInterestOptions = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
+
 const CustomerFilterDrawer = ({
   isOpen,
   onClose,
@@ -62,6 +117,14 @@ const CustomerFilterDrawer = ({
 }) => {
   const [seriousnessOptions, setSeriousnessOptions] = useState([]);
   const [attitudeOptions, setAttitudeOptions] = useState([]);
+  const [levelOptions, setLevelOptions] = useState([]);
+  const [professionOptions, setProfessionOptions] = useState([]);
+  const [incomeOptions, setIncomeOptions] = useState([]);
+  const [companyTxnOptions, setCompanyTxnOptions] = useState([]);
+  const [purchaseReasonOptions, setPurchaseReasonOptions] = useState([]);
+  const [bankLoanOptions, setBankLoanOptions] = useState([]);
+  const [carAvailableOptions, setCarAvailableOptions] = useState([]);
+  const [carExchangeOptions, setCarExchangeOptions] = useState([]);
   const [userOptions, setUserOptions] = useState([]);
 
   useEffect(() => {
@@ -69,14 +132,42 @@ const CustomerFilterDrawer = ({
 
     const loadOptions = async () => {
       try {
-        const [seriousness, attitude, usersResponse] = await Promise.all([
+        const [
+          seriousness,
+          attitude,
+          level,
+          profession,
+          income,
+          companyTxn,
+          purchaseReason,
+          bankLoan,
+          carAvailable,
+          carExchange,
+          usersResponse,
+        ] = await Promise.all([
           FilterProductService.Queries.getClientSeriousnessOptions(),
           FilterProductService.Queries.getClientAttitudeOptions(),
+          FilterProductService.Queries.getClientLevelOptions(),
+          FilterProductService.Queries.getClientProfessionOptions(),
+          FilterProductService.Queries.getClientIncomeOptions(),
+          FilterProductService.Queries.getClientCompanyTransactionOptions(),
+          FilterProductService.Queries.getPurchaseReasonOptions(),
+          FilterProductService.Queries.getBankLoanAmountOptions(),
+          FilterProductService.Queries.getCarAvailableOptions(),
+          FilterProductService.Queries.getCarExchangeCategoryOptions(),
           UserService.Queries.getUserList({ user_mode: "pbl" }),
         ]);
 
-        setSeriousnessOptions((seriousness || []).filter((opt) => opt.value !== ""));
-        setAttitudeOptions((attitude || []).filter((opt) => opt.value !== ""));
+        setSeriousnessOptions(sortSeriousnessOptions(withoutEmptyOption(seriousness)));
+        setAttitudeOptions(withoutEmptyOption(attitude));
+        setLevelOptions(withoutEmptyOption(level));
+        setProfessionOptions(withoutEmptyOption(profession));
+        setIncomeOptions(withoutEmptyOption(income));
+        setCompanyTxnOptions(withoutEmptyOption(companyTxn));
+        setPurchaseReasonOptions(withoutEmptyOption(purchaseReason));
+        setBankLoanOptions(sortBankLoanOptions(withoutEmptyOption(bankLoan)));
+        setCarAvailableOptions(withoutEmptyOption(carAvailable));
+        setCarExchangeOptions(withoutEmptyOption(carExchange));
 
         const users = Array.isArray(usersResponse?.data) ? usersResponse.data : [];
         setUserOptions(
@@ -90,6 +181,14 @@ const CustomerFilterDrawer = ({
       } catch {
         setSeriousnessOptions([]);
         setAttitudeOptions([]);
+        setLevelOptions([]);
+        setProfessionOptions([]);
+        setIncomeOptions([]);
+        setCompanyTxnOptions([]);
+        setPurchaseReasonOptions([]);
+        setBankLoanOptions([]);
+        setCarAvailableOptions([]);
+        setCarExchangeOptions([]);
         setUserOptions([]);
       }
     };
@@ -100,6 +199,54 @@ const CustomerFilterDrawer = ({
   const selectedAttitudeOptions = useMemo(
     () => attitudeOptions.filter((opt) => draftFilters.clientAttitude.map(String).includes(String(opt.value))),
     [attitudeOptions, draftFilters.clientAttitude]
+  );
+
+  const selectedLevelOptions = useMemo(
+    () =>
+      levelOptions.filter((opt) =>
+        (Array.isArray(draftFilters.clientLevel) ? draftFilters.clientLevel : []).map(String).includes(String(opt.value))
+      ),
+    [levelOptions, draftFilters.clientLevel]
+  );
+
+  const selectedProfessionOptions = useMemo(
+    () =>
+      professionOptions.filter((opt) =>
+        (Array.isArray(draftFilters.clientProfession) ? draftFilters.clientProfession : []).map(String).includes(String(opt.value))
+      ),
+    [professionOptions, draftFilters.clientProfession]
+  );
+
+  const selectedIncomeOptions = useMemo(
+    () =>
+      incomeOptions.filter((opt) =>
+        (Array.isArray(draftFilters.clientIncome) ? draftFilters.clientIncome : []).map(String).includes(String(opt.value))
+      ),
+    [incomeOptions, draftFilters.clientIncome]
+  );
+
+  const selectedPurchaseReasonOptions = useMemo(
+    () =>
+      purchaseReasonOptions.filter((opt) =>
+        (Array.isArray(draftFilters.purchaseReason) ? draftFilters.purchaseReason : []).map(String).includes(String(opt.value))
+      ),
+    [purchaseReasonOptions, draftFilters.purchaseReason]
+  );
+
+  const selectedCarAvailableOptions = useMemo(
+    () =>
+      carAvailableOptions.filter((opt) =>
+        (Array.isArray(draftFilters.carAvailable) ? draftFilters.carAvailable : []).map(String).includes(String(opt.value))
+      ),
+    [carAvailableOptions, draftFilters.carAvailable]
+  );
+
+  const selectedCarExchangeOptions = useMemo(
+    () =>
+      carExchangeOptions.filter((opt) =>
+        (Array.isArray(draftFilters.carExchangeCategory) ? draftFilters.carExchangeCategory : []).map(String).includes(String(opt.value))
+      ),
+    [carExchangeOptions, draftFilters.carExchangeCategory]
   );
 
   const selectedCreatedByOption = useMemo(
@@ -113,10 +260,12 @@ const CustomerFilterDrawer = ({
     setDraftFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const selectValue = (options, value) => options.find((opt) => String(opt.value) === String(value)) || null;
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl border-l border-gray-200 flex flex-col">
+      <div className="absolute right-0 top-0 h-full w-full max-w-full sm:max-w-xl bg-white shadow-2xl border-l border-gray-200 flex flex-col">
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-800">Filters</h2>
           <button
@@ -153,6 +302,28 @@ const CustomerFilterDrawer = ({
               />
             </label>
 
+            <label className={rowClass}>
+              <span className={labelClass}>Email</span>
+              <input
+                type="text"
+                value={draftFilters.email}
+                onChange={(e) => updateFilter("email", e.target.value)}
+                className={fieldClass}
+                placeholder="-None-"
+              />
+            </label>
+
+            <label className={rowClass}>
+              <span className={labelClass}>Address</span>
+              <input
+                type="text"
+                value={draftFilters.address}
+                onChange={(e) => updateFilter("address", e.target.value)}
+                className={fieldClass}
+                placeholder="-None-"
+              />
+            </label>
+
             <div className={rowClass}>
               <span className={labelClass}>Facebook</span>
               <input
@@ -173,21 +344,34 @@ const CustomerFilterDrawer = ({
               />
             </div>
 
-            <label className={rowClass}>
+            <div className={rowClass}>
               <span className={labelClass}>Seriousness</span>
-              <select
-                value={draftFilters.clientSeriousness}
-                onChange={(e) => updateFilter("clientSeriousness", e.target.value)}
-                className={fieldClass}
-              >
-                <option value="">-None-</option>
-                {seriousnessOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <Select
+                    isClearable
+                    options={seriousnessOptions}
+                    value={selectValue(seriousnessOptions, draftFilters.clientSeriousnessFrom)}
+                    onChange={(option) => updateFilter("clientSeriousnessFrom", option?.value || "")}
+                    placeholder="From"
+                    className="text-sm"
+                    classNamePrefix="react-select"
+                  />
+                </div>
+                <span className="text-gray-400 text-sm shrink-0">-</span>
+                <div className="flex-1 min-w-0">
+                  <Select
+                    isClearable
+                    options={seriousnessOptions}
+                    value={selectValue(seriousnessOptions, draftFilters.clientSeriousnessTo)}
+                    onChange={(option) => updateFilter("clientSeriousnessTo", option?.value || "")}
+                    placeholder="To"
+                    className="text-sm"
+                    classNamePrefix="react-select"
+                  />
+                </div>
+              </div>
+            </div>
 
             <div className={rowClass}>
               <span className={labelClass}>Attitude</span>
@@ -204,8 +388,157 @@ const CustomerFilterDrawer = ({
               </div>
             </div>
 
+            <div className={rowClass}>
+              <span className={labelClass}>Level</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isMulti
+                  options={levelOptions}
+                  value={selectedLevelOptions}
+                  onChange={(selected) => updateFilter("clientLevel", (selected || []).map((opt) => opt.value))}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Profession</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isMulti
+                  options={professionOptions}
+                  value={selectedProfessionOptions}
+                  onChange={(selected) => updateFilter("clientProfession", (selected || []).map((opt) => opt.value))}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Income / Month</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isMulti
+                  options={incomeOptions}
+                  value={selectedIncomeOptions}
+                  onChange={(selected) => updateFilter("clientIncome", (selected || []).map((opt) => opt.value))}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Company Txn</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isClearable
+                  options={companyTxnOptions}
+                  value={selectValue(companyTxnOptions, draftFilters.clientCompanyTransaction)}
+                  onChange={(option) => updateFilter("clientCompanyTransaction", option?.value || "")}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Purchase Reason</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isMulti
+                  options={purchaseReasonOptions}
+                  value={selectedPurchaseReasonOptions}
+                  onChange={(selected) => updateFilter("purchaseReason", (selected || []).map((opt) => opt.value))}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Interested Loan</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isClearable
+                  options={loanInterestOptions}
+                  value={selectValue(loanInterestOptions, draftFilters.interestedForLoan)}
+                  onChange={(option) => updateFilter("interestedForLoan", option?.value || "")}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Bank Loan Amount</span>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <Select
+                    isClearable
+                    options={bankLoanOptions}
+                    value={selectValue(bankLoanOptions, draftFilters.bankLoanAmountFrom)}
+                    onChange={(option) => updateFilter("bankLoanAmountFrom", option?.value || "")}
+                    placeholder="From"
+                    className="text-sm"
+                    classNamePrefix="react-select"
+                  />
+                </div>
+                <span className="text-gray-400 text-sm shrink-0">-</span>
+                <div className="flex-1 min-w-0">
+                  <Select
+                    isClearable
+                    options={bankLoanOptions}
+                    value={selectValue(bankLoanOptions, draftFilters.bankLoanAmountTo)}
+                    onChange={(option) => updateFilter("bankLoanAmountTo", option?.value || "")}
+                    placeholder="To"
+                    className="text-sm"
+                    classNamePrefix="react-select"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Car Available</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isMulti
+                  options={carAvailableOptions}
+                  value={selectedCarAvailableOptions}
+                  onChange={(selected) => updateFilter("carAvailable", (selected || []).map((opt) => opt.value))}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Car Exchange</span>
+              <div className="flex-1 min-w-0">
+                <Select
+                  isMulti
+                  options={carExchangeOptions}
+                  value={selectedCarExchangeOptions}
+                  onChange={(selected) => updateFilter("carExchangeCategory", (selected || []).map((opt) => opt.value))}
+                  placeholder="-None-"
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                />
+              </div>
+            </div>
+
             <label className={rowClass}>
-              <span className={labelClass}>Search</span>
+              <span className={labelClass}>Search Data</span>
               <input
                 type="text"
                 value={draftFilters.customerSearch}
@@ -214,6 +547,69 @@ const CustomerFilterDrawer = ({
                 placeholder="-None-"
               />
             </label>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Date of Birth</span>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={draftFilters.dateOfBirthFrom}
+                  onChange={(e) => updateFilter("dateOfBirthFrom", e.target.value)}
+                  className={fieldClass}
+                  aria-label="Date of birth from"
+                />
+                <span className="text-gray-400 text-sm shrink-0">-</span>
+                <input
+                  type="date"
+                  value={draftFilters.dateOfBirthTo}
+                  onChange={(e) => updateFilter("dateOfBirthTo", e.target.value)}
+                  className={fieldClass}
+                  aria-label="Date of birth to"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Anniversary</span>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={draftFilters.anniversaryDateFrom}
+                  onChange={(e) => updateFilter("anniversaryDateFrom", e.target.value)}
+                  className={fieldClass}
+                  aria-label="Anniversary from"
+                />
+                <span className="text-gray-400 text-sm shrink-0">-</span>
+                <input
+                  type="date"
+                  value={draftFilters.anniversaryDateTo}
+                  onChange={(e) => updateFilter("anniversaryDateTo", e.target.value)}
+                  className={fieldClass}
+                  aria-label="Anniversary to"
+                />
+              </div>
+            </div>
+
+            <div className={rowClass}>
+              <span className={labelClass}>Last Purchase</span>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={draftFilters.lastPurchaseFrom}
+                  onChange={(e) => updateFilter("lastPurchaseFrom", e.target.value)}
+                  className={fieldClass}
+                  aria-label="Last purchase from"
+                />
+                <span className="text-gray-400 text-sm shrink-0">-</span>
+                <input
+                  type="date"
+                  value={draftFilters.lastPurchaseTo}
+                  onChange={(e) => updateFilter("lastPurchaseTo", e.target.value)}
+                  className={fieldClass}
+                  aria-label="Last purchase to"
+                />
+              </div>
+            </div>
 
             {showCreatedByFilter && (
               <div className={rowClass}>
@@ -267,7 +663,7 @@ const CustomerFilterDrawer = ({
           </div>
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+        <div className="px-4 py-3 border-t border-gray-200 flex justify-start gap-2">
           <button
             type="button"
             onClick={onReset}

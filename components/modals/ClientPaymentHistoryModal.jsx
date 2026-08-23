@@ -543,6 +543,7 @@ const buildPaymentHistoryQueryParams = ({
 
 const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }) => {
   const [clientPaymentHistoryItems, setClientPaymentHistoryItems] = useState([]);
+  const [availablePaymentCustomerIds, setAvailablePaymentCustomerIds] = useState([]);
   const [isClientPaymentHistoryLoading, setIsClientPaymentHistoryLoading] = useState(false);
   const [clientPaymentHistoryError, setClientPaymentHistoryError] = useState("");
 
@@ -623,6 +624,11 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       })),
     [createPaymentCustomers]
   );
+  const historyCustomerOptions = useMemo(() => {
+    return createPaymentCustomerOptions.filter((option) =>
+      availablePaymentCustomerIds.includes(String(option.value))
+    );
+  }, [createPaymentCustomerOptions, availablePaymentCustomerIds]);
   const selectedCreatePaymentCustomerOption = useMemo(
     () =>
       createPaymentCustomerOptions.find(
@@ -657,6 +663,20 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       const response = await VehicleService.Queries.getPaymentHistory(params);
       const responseList = getPaymentHistoryListFromResponse(response);
       setClientPaymentHistoryItems(responseList);
+
+      if (!selectedPaymentCustomerId) {
+        const ids = new Set();
+        responseList.forEach((entry) => {
+          const cid =
+            entry?.p_cci_id ||
+            entry?.cci_id ||
+            entry?.contact_info_id ||
+            entry?.customer_contact_info_id ||
+            entry?.customer_contact?.cci_id;
+          if (cid) ids.add(String(cid));
+        });
+        setAvailablePaymentCustomerIds(Array.from(ids));
+      }
     } catch (error) {
       setClientPaymentHistoryItems([]);
       setClientPaymentHistoryError(
@@ -1552,7 +1572,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                       onChange={(option) =>
                         handlePaymentCustomerSelectionChange(option?.value || "")
                       }
-                      options={createPaymentCustomerOptions}
+                      options={historyCustomerOptions}
                       isClearable
                       isSearchable
                       isDisabled={isCreatePaymentCustomersLoading}

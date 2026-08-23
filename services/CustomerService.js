@@ -19,6 +19,14 @@ const Commands = {
       },
     }),
 
+  updateCustomerInline: (id, data) =>
+    commandApi.patch(`/api/customers/${id}/inline`, data, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    }),
+
   deleteCustomer: (id) =>
     commandApi.delete(`/api/customers/${id}`, {
       headers: {

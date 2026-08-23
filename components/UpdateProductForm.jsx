@@ -2141,7 +2141,7 @@ const UpdateProductForm = ({ productId }) => {
                                                     {...register("v_pbl_gift")}
                                                     disabled={isGiftLoading}
                                                 >
-                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select click4details gift'}</option>
                                                     {
                                                         giftData.map((gift) => (
                                                             <option key={gift.value} value={gift.value}>
@@ -3346,7 +3346,7 @@ const UpdateProductForm = ({ productId }) => {
                                                         {...register("v_pbl_gift")}
                                                         disabled={isGiftLoading}
                                                     >
-                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select click4details gift'}</option>
                                                         {
                                                             giftData.map((gift) => (
                                                                 <option key={gift.value} value={gift.value}>

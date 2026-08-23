@@ -105,7 +105,7 @@ const Footer = () => {
   } else if (isCompanyShop) {
     email = selectedCompanyShop?.shop?.user?.email;
   } else {
-    email = "click4details@gmail.com";
+    email = "click4details.com@gmail.com";
   }
 
   // ---------- Address ----------

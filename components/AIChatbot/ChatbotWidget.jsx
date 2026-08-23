@@ -11,7 +11,7 @@ const STORAGE_WELCOMED_KEY = "pilot_bazar_chat_welcomed";
 const WELCOME_MESSAGE = {
   id: "welcome",
   role: "bot",
-  text: "আস্সালামু আলাইকুম! আমি Sidratul Muntaha, Pilot Bazar-এর কাস্টমার সার্ভিস থেকে বলছি। 😊\n\nআপনি কি গাড়ি কিনতে আগ্রহী?",
+  text: "আস্সালামু আলাইকুম! আমি Sidratul Muntaha, Pilot Bazar-এর কাস্টমার সার্ভিস থেকে বলছি। 😊\n\nআপনি কি গাড়ি কিনতে আগ্রহী?",
   options: ["হ্যাঁ, কিনতে চাই", "না, শুধু দেখছি"],
   timestamp: new Date().toISOString(),
 };
@@ -172,7 +172,7 @@ export default function ChatbotWidget() {
       }
     } catch (_) {
       await new Promise((r) => setTimeout(r, 1500));
-      await handleBotReply("দুঃখিত, এখন সংযোগ সমস্যা হচ্ছে। একটু পরে আবার চেষ্টা করুন।", [], updated);
+      await handleBotReply("ইন্টারনেট একটু সমস্যা করছে মনে হচ্ছে। এক মিনিট পর আবার লিখবেন?", [], updated);
     } finally {
       setIsLoading(false);
     }

@@ -5,16 +5,115 @@ import { parseStoredUser } from "@/lib/parseStoredUser";
 import { API_URL } from "@/helpers/apiUrl";
 import { createApiRequest } from "@/helpers/axios";
 import CustomerService from "@/services/CustomerService";
-import { ExternalLink, Filter, Pencil, Search, Trash2, X } from "lucide-react";
+import { AlignJustify, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink, Filter, Pencil, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import EditCustomerModal from "../modals/EditCustomerModal";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { hasPermission } from "@/lib/utils";
 import { FacebookIcon, MessengerIcon } from "./sales-team-activity/ActivityIcons";
 import CustomerFilterDrawer, { DEFAULT_CUSTOMER_FILTERS } from "./CustomerFilterDrawer";
+import {
+  InlineAttitudeCell,
+  InlineNoteCell,
+  InlineSeriousnessCell,
+} from "./CustomerInlineEditableCells";
+import FilterProductService from "@/services/FilterProductService";
+
+const CUSTOMER_COLUMN_STORAGE_KEY = "customers_list_visible_columns_v1";
+
+const CUSTOMER_TABLE_COLUMNS = [
+  { key: "customer", label: "Customer", defaultVisible: true, sortable: "name", minWidth: 220 },
+  { key: "email", label: "Email", defaultVisible: false, sortable: "email", minWidth: 180 },
+  { key: "address", label: "Address", defaultVisible: false, sortable: "address", minWidth: 200 },
+  { key: "seriousness", label: "Seriousness", defaultVisible: true, sortable: "client_seriousness", minWidth: 160 },
+  { key: "attitude", label: "Attitude", defaultVisible: true, sortable: "client_attitude", minWidth: 180 },
+  { key: "level", label: "Level", defaultVisible: false, sortable: "client_level", minWidth: 120 },
+  { key: "profession", label: "Profession", defaultVisible: false, sortable: "client_profession", minWidth: 140 },
+  { key: "income", label: "Income / Month", defaultVisible: false, sortable: "client_income_per_month", minWidth: 150 },
+  { key: "companyTxn", label: "Company Txn", defaultVisible: false, sortable: "client_company_transaction", minWidth: 140 },
+  { key: "purchaseReason", label: "Purchase Reason", defaultVisible: false, sortable: "purchase_reason", minWidth: 160 },
+  { key: "interestedLoan", label: "Interested Loan", defaultVisible: false, sortable: "interested_for_loan", minWidth: 140 },
+  { key: "bankLoan", label: "Bank Loan Amount", defaultVisible: false, sortable: "bank_loan_amount", minWidth: 160 },
+  { key: "carAvailable", label: "Car Available", defaultVisible: false, sortable: "car_available", minWidth: 140 },
+  { key: "carExchange", label: "Car Exchange", defaultVisible: false, sortable: "car_exchange_category_per_year", minWidth: 140 },
+  { key: "dob", label: "Date of Birth", defaultVisible: false, sortable: "date_of_birth", minWidth: 130 },
+  { key: "anniversary", label: "Anniversary", defaultVisible: false, sortable: "anniversary_date", minWidth: 130 },
+  { key: "lastPurchase", label: "Last Purchase", defaultVisible: false, sortable: "client_last_purchase_date", minWidth: 130 },
+  { key: "search", label: "Search Data", defaultVisible: true, sortable: "search", minWidth: 220 },
+  { key: "created", label: "Created", defaultVisible: true, sortable: "created_at", minWidth: 160 },
+  { key: "note", label: "Note", defaultVisible: true, sortable: "description", minWidth: 240 },
+];
+
+const ACTIONS_COLUMN_WIDTH = 112;
+const LOCKED_VISIBLE_COLUMNS = ["customer"];
+
+const stickyCustomerThClass =
+  "sticky left-0 z-20 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.35)]";
+const stickyCustomerTdClass =
+  "sticky left-0 z-10 bg-white group-hover:bg-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]";
+const stickyActionsThClass =
+  "sticky right-0 z-20 bg-slate-800 shadow-[-6px_0_12px_-8px_rgba(15,23,42,0.35)]";
+const stickyActionsTdClass =
+  "sticky right-0 z-10 bg-white group-hover:bg-slate-50/80 shadow-[-6px_0_12px_-8px_rgba(15,23,42,0.18)]";
+
+const DEFAULT_VISIBLE_COLUMNS = CUSTOMER_TABLE_COLUMNS.filter((col) => col.defaultVisible).map((col) => col.key);
+
+const loadVisibleCustomerColumns = () => {
+  if (typeof window === "undefined") return DEFAULT_VISIBLE_COLUMNS;
+  try {
+    const raw = window.localStorage.getItem(CUSTOMER_COLUMN_STORAGE_KEY);
+    if (!raw) return DEFAULT_VISIBLE_COLUMNS;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_VISIBLE_COLUMNS;
+    const validKeys = new Set(CUSTOMER_TABLE_COLUMNS.map((col) => col.key));
+    const filtered = parsed.filter((key) => validKeys.has(key));
+    const withLocked = Array.from(new Set([...LOCKED_VISIBLE_COLUMNS, ...filtered]));
+    return withLocked.length ? withLocked : DEFAULT_VISIBLE_COLUMNS;
+  } catch {
+    return DEFAULT_VISIBLE_COLUMNS;
+  }
+};
+
+const formatCustomerDateTime = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const formatCustomerDate = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const masterTitle = (value) => {
+  if (value == null || value === "") return "-";
+  if (typeof value === "object") {
+    const title = value.md_title ?? value.label ?? null;
+    return title != null && String(title).trim() !== "" ? String(title) : "-";
+  }
+  return String(value);
+};
+
+const displayMasterField = (customer, displayKey, valueKey) => {
+  const display = customer?.[displayKey];
+  if (display != null && String(display).trim() !== "") {
+    return String(display).trim();
+  }
+  return masterTitle(customer?.[valueKey]);
+};
 
 const getPaginationNumbers = (currentPage, lastPage) => {
   const delta = 2;
@@ -51,6 +150,19 @@ const countActiveCustomerFilters = (filters) =>
     if (key === "hasFacebook" || key === "hasMessenger") {
       return value ? count + 1 : count;
     }
+    if (key === "clientSeriousnessTo" && (filters.clientSeriousnessFrom || filters.clientSeriousnessTo)) {
+      // Count from/to seriousness as a single active filter.
+      return filters.clientSeriousnessFrom ? count : count + 1;
+    }
+    if (key === "clientSeriousnessFrom") {
+      return value ? count + 1 : count;
+    }
+    if (key === "bankLoanAmountTo" && (filters.bankLoanAmountFrom || filters.bankLoanAmountTo)) {
+      return filters.bankLoanAmountFrom ? count : count + 1;
+    }
+    if (key === "bankLoanAmountFrom") {
+      return value ? count + 1 : count;
+    }
     if (Array.isArray(value)) {
       return value.length > 0 ? count + 1 : count;
     }
@@ -80,8 +192,106 @@ const CustomersDataTable = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(DEFAULT_CUSTOMER_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(DEFAULT_CUSTOMER_FILTERS);
+  const [visibleColumns, setVisibleColumns] = useState(() => loadVisibleCustomerColumns());
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+  const [seriousnessOptions, setSeriousnessOptions] = useState([]);
+  const [attitudeOptions, setAttitudeOptions] = useState([]);
+  const [inlineSavingKey, setInlineSavingKey] = useState(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const columnMenuRef = useRef(null);
 
   const commandApi = useMemo(() => createApiRequest(API_URL), []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobileViewport(media.matches);
+    syncViewport();
+    media.addEventListener("change", syncViewport);
+    return () => media.removeEventListener("change", syncViewport);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(CUSTOMER_COLUMN_STORAGE_KEY, JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
+
+  useEffect(() => {
+    const loadInlineOptions = async () => {
+      try {
+        const [seriousness, attitude] = await Promise.all([
+          FilterProductService.Queries.getClientSeriousnessOptions(),
+          FilterProductService.Queries.getClientAttitudeOptions(),
+        ]);
+        setSeriousnessOptions((seriousness || []).filter((opt) => opt.value !== "" && opt.value != null));
+        setAttitudeOptions((attitude || []).filter((opt) => opt.value !== "" && opt.value != null));
+      } catch {
+        setSeriousnessOptions([]);
+        setAttitudeOptions([]);
+      }
+    };
+    loadInlineOptions();
+  }, []);
+
+  useEffect(() => {
+    if (!isColumnMenuOpen) return;
+    const handleOutsideClick = (event) => {
+      if (columnMenuRef.current && !columnMenuRef.current.contains(event.target)) {
+        setIsColumnMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isColumnMenuOpen]);
+
+  const isColumnVisible = useCallback((key) => visibleColumns.includes(key), [visibleColumns]);
+
+  const visibleDataColumns = useMemo(
+    () => CUSTOMER_TABLE_COLUMNS.filter((col) => isColumnVisible(col.key)),
+    [isColumnVisible]
+  );
+
+  const tableMinWidth = useMemo(() => {
+    const customerWidth = isMobileViewport ? 168 : null;
+    const actionsWidth = isMobileViewport ? 96 : ACTIONS_COLUMN_WIDTH;
+    const columnsWidth = visibleDataColumns.reduce((sum, col) => {
+      if (col.key === "customer" && customerWidth != null) return sum + customerWidth;
+      return sum + col.minWidth;
+    }, 0);
+    return columnsWidth + actionsWidth;
+  }, [visibleDataColumns, isMobileViewport]);
+
+  const customerColumnWidth = isMobileViewport ? 168 : 220;
+  const actionsColumnWidth = isMobileViewport ? 96 : ACTIONS_COLUMN_WIDTH;
+  const stickyCustomerTh = isMobileViewport ? "bg-slate-800" : stickyCustomerThClass;
+  const stickyCustomerTd = isMobileViewport ? "bg-white group-hover:bg-gray-50" : stickyCustomerTdClass;
+  const stickyActionsTh = isMobileViewport ? "bg-slate-800" : stickyActionsThClass;
+  const stickyActionsTd = isMobileViewport ? "bg-white group-hover:bg-slate-50/80" : stickyActionsTdClass;
+
+  const tableColSpan = visibleDataColumns.length + 1;
+
+  const toggleColumnVisibility = (columnKey) => {
+    if (LOCKED_VISIBLE_COLUMNS.includes(columnKey)) return;
+
+    setVisibleColumns((prev) => {
+      if (prev.includes(columnKey)) {
+        if (prev.length <= 1) {
+          toast.error("Keep at least one column visible");
+          return prev;
+        }
+        return prev.filter((key) => key !== columnKey);
+      }
+      return [...prev, columnKey];
+    });
+  };
+
+  const toggleAllColumns = () => {
+    if (visibleColumns.length === CUSTOMER_TABLE_COLUMNS.length) {
+      setVisibleColumns([...LOCKED_VISIBLE_COLUMNS]);
+      return;
+    }
+    setVisibleColumns(CUSTOMER_TABLE_COLUMNS.map((col) => col.key));
+  };
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,9 +312,15 @@ const CustomersDataTable = () => {
   const userMode = parsedUser?.user_mode || user?.user_mode;
   const isPrivilegedUser = ["supreme", "admin", "pbl"].includes(userMode);
 
+  /** Same gate for Actions Edit/Delete and inline edit (Seriousness / Attitude / Note). */
+  const canModifyCustomer = (customer) =>
+    isPrivilegedUser ||
+    Number(parsedUser?.id) === Number(customer?.created_user?.id) ||
+    parsedUser?.role_name === "Admin";
+
   const canShowAddCategoryButton =
     (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
-    hasPermission(permissionList, 0, "Customer", "ShowCustomerAddButton")
+    hasPermission(permissionList, 0, "Customer", "ShowCustomerAddButton");
 
 
   const fetchData = useCallback(async () => {
@@ -125,11 +341,54 @@ const CustomersDataTable = () => {
 
       if (appliedFilters.name.trim()) params.append("name", appliedFilters.name.trim());
       if (appliedFilters.mobile.trim()) params.append("mobile", appliedFilters.mobile.trim());
+      if (appliedFilters.email.trim()) params.append("email", appliedFilters.email.trim());
+      if (appliedFilters.address.trim()) params.append("address", appliedFilters.address.trim());
       if (appliedFilters.hasFacebook) params.append("has_facebook", "yes");
       if (appliedFilters.hasMessenger) params.append("has_messenger", "yes");
-      if (appliedFilters.clientSeriousness) params.append("client_seriousness", appliedFilters.clientSeriousness);
+      if (appliedFilters.clientSeriousnessFrom) {
+        params.append("client_seriousness_from", appliedFilters.clientSeriousnessFrom);
+      }
+      if (appliedFilters.clientSeriousnessTo) {
+        params.append("client_seriousness_to", appliedFilters.clientSeriousnessTo);
+      }
       if (appliedFilters.clientAttitude.length) params.append("client_attitude", appliedFilters.clientAttitude.join(","));
+      if (appliedFilters.clientLevel.length) params.append("client_level", appliedFilters.clientLevel.join(","));
+      if (appliedFilters.clientProfession.length) {
+        params.append("client_profession", appliedFilters.clientProfession.join(","));
+      }
+      if (appliedFilters.clientIncome.length) {
+        params.append("client_income_per_month", appliedFilters.clientIncome.join(","));
+      }
+      if (appliedFilters.clientCompanyTransaction) {
+        params.append("client_company_transaction", appliedFilters.clientCompanyTransaction);
+      }
+      if (appliedFilters.purchaseReason.length) {
+        params.append("purchase_reason", appliedFilters.purchaseReason.join(","));
+      }
+      if (appliedFilters.interestedForLoan) params.append("interested_for_loan", appliedFilters.interestedForLoan);
+      if (appliedFilters.bankLoanAmountFrom) {
+        params.append("bank_loan_amount_from", appliedFilters.bankLoanAmountFrom);
+      }
+      if (appliedFilters.bankLoanAmountTo) {
+        params.append("bank_loan_amount_to", appliedFilters.bankLoanAmountTo);
+      }
+      if (appliedFilters.carAvailable.length) {
+        params.append("car_available", appliedFilters.carAvailable.join(","));
+      }
+      if (appliedFilters.carExchangeCategory.length) {
+        params.append("car_exchange_category_per_year", appliedFilters.carExchangeCategory.join(","));
+      }
       if (appliedFilters.customerSearch.trim()) params.append("customer_search", appliedFilters.customerSearch.trim());
+      if (appliedFilters.dateOfBirthFrom) params.append("date_of_birth_from", appliedFilters.dateOfBirthFrom);
+      if (appliedFilters.dateOfBirthTo) params.append("date_of_birth_to", appliedFilters.dateOfBirthTo);
+      if (appliedFilters.anniversaryDateFrom) {
+        params.append("anniversary_date_from", appliedFilters.anniversaryDateFrom);
+      }
+      if (appliedFilters.anniversaryDateTo) {
+        params.append("anniversary_date_to", appliedFilters.anniversaryDateTo);
+      }
+      if (appliedFilters.lastPurchaseFrom) params.append("last_purchase_from", appliedFilters.lastPurchaseFrom);
+      if (appliedFilters.lastPurchaseTo) params.append("last_purchase_to", appliedFilters.lastPurchaseTo);
       if (appliedFilters.createdBy) params.append("created_by", appliedFilters.createdBy);
       if (appliedFilters.createdFrom) params.append("created_from", appliedFilters.createdFrom);
       if (appliedFilters.createdTo) params.append("created_to", appliedFilters.createdTo);
@@ -217,6 +476,59 @@ const CustomersDataTable = () => {
     setCurrentCustomer(null);
   };
 
+  const handleInlineSave = async (customerId, field, value, onDone) => {
+    const savingKey = `${customerId}:${field}`;
+    setInlineSavingKey(savingKey);
+    try {
+      const response = await CustomerService.Commands.updateCustomerInline(customerId, {
+        [field]: value,
+      });
+      if (response?.status !== "success") {
+        toast.error(response?.message || "Failed to update");
+        return;
+      }
+
+      const updated = response.data || {};
+      setData((prev) =>
+        prev.map((row) => {
+          if (Number(row.id) !== Number(customerId)) return row;
+          const next = { ...row, ...updated };
+          if (field === "description") {
+            next.description = value;
+          }
+          if (field === "client_seriousness") {
+            next.client_seriousness = updated.client_seriousness ?? value;
+            next.client_seriousness_display =
+              updated.client_seriousness_display ||
+              seriousnessOptions.find((opt) => String(opt.value) === String(value))?.label ||
+              row.client_seriousness_display;
+          }
+          if (field === "client_attitude") {
+            next.client_attitude = value;
+            next.client_attitude_display =
+              updated.client_attitude_display ||
+              attitudeOptions
+                .filter((opt) =>
+                  String(value)
+                    .split(",")
+                    .map((id) => id.trim())
+                    .includes(String(opt.value))
+                )
+                .map((opt) => opt.label)
+                .join(", ");
+          }
+          return next;
+        })
+      );
+      toast.success("Updated");
+      onDone?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to update");
+    } finally {
+      setInlineSavingKey(null);
+    }
+  };
+
   const handleSort = (column) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -263,20 +575,23 @@ const CustomersDataTable = () => {
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="w-full p-6 space-y-3 bg-gray-50">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Customers</h1>
+    <div className="w-full p-3 sm:p-4 md:p-6 space-y-3 bg-gray-50 min-w-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Customers</h1>
         
         {canShowAddCategoryButton && (
-          <button className="bg-blue-500 text-white px-2.5 py-1 rounded-md hover:bg-blue-600 text-sm" onClick={openAddModal}>
+          <button
+            className="self-start sm:self-auto bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 text-sm whitespace-nowrap"
+            onClick={openAddModal}
+          >
             Add New Customer
           </button>
         )}
       </div>
 
       {/* Search and Controls */}
-      <div className="relative flex justify-center">
-        <div className="w-1/2">
+      <div className="flex flex-col gap-2 sm:relative sm:flex-row sm:items-center sm:justify-center">
+        <div className="w-full sm:w-1/2 sm:max-w-xl min-w-0">
           <div className="relative group">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
             <input
@@ -304,7 +619,7 @@ const CustomersDataTable = () => {
         <button
           type="button"
           onClick={openFilterDrawer}
-          className="absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 text-sm"
+          className="inline-flex items-center justify-center gap-1.5 self-stretch sm:self-auto sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2 px-2.5 py-2 sm:py-1 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 text-sm"
         >
           <Filter className="w-3.5 h-3.5" />
           Filter
@@ -317,195 +632,318 @@ const CustomersDataTable = () => {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      <div className="bg-white rounded-lg shadow overflow-hidden min-w-0">
+        {isMobileViewport ? (
+          <p className="px-3 py-1.5 text-[11px] text-slate-500 bg-slate-50 border-b border-slate-100">
+            Swipe sideways to see more columns
+          </p>
+        ) : null}
+        <div className="overflow-x-auto overscroll-x-contain" style={{ WebkitOverflowScrolling: "touch" }}>
+          <table className="table-fixed" style={{ width: tableMinWidth, minWidth: tableMinWidth }}>
+            <colgroup>
+              {visibleDataColumns.map((column) => (
+                <col
+                  key={column.key}
+                  style={{ width: column.key === "customer" ? customerColumnWidth : column.minWidth }}
+                />
+              ))}
+              <col style={{ width: actionsColumnWidth }} />
+            </colgroup>
             <thead className="bg-slate-800">
               <tr>
+                {visibleDataColumns.map((column) => {
+                  const isSortable = !!column.sortable;
+                  const isActiveSort = sortBy === column.sortable;
+                  const isCustomerColumn = column.key === "customer";
+                  return (
+                    <th
+                      key={column.key}
+                      className={`px-3 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider whitespace-nowrap ${
+                        isSortable ? "cursor-pointer hover:bg-slate-700" : ""
+                      } ${isCustomerColumn ? stickyCustomerTh : ""}`}
+                      style={{ width: isCustomerColumn ? customerColumnWidth : column.minWidth }}
+                      onClick={() => {
+                        if (isSortable) handleSort(column.sortable);
+                      }}
+                    >
+                      <span className="inline-flex items-center gap-1 max-w-full">
+                        <span className="truncate">{column.label}</span>
+                        {isSortable ? (
+                          <span
+                            className={`inline-block w-3 text-center shrink-0 ${isActiveSort ? "text-white" : "text-transparent"}`}
+                            aria-hidden={!isActiveSort}
+                          >
+                            {isActiveSort && sortOrder === "desc" ? "↓" : "↑"}
+                          </span>
+                        ) : null}
+                      </span>
+                    </th>
+                  );
+                })}
                 <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider cursor-pointer hover:bg-slate-700 w-40 max-w-[160px]"
-                  onClick={() => handleSort("name")}
+                  className={`px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-[0.08em] whitespace-nowrap relative ${stickyActionsTh}`}
+                  style={{ width: actionsColumnWidth }}
                 >
-                  Name {sortBy === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                  <div className="flex w-full items-center justify-between gap-2" ref={columnMenuRef}>
+                    <span className="leading-none">Actions</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsColumnMenuOpen((open) => !open);
+                      }}
+                      className="inline-flex items-center justify-center shrink-0 text-slate-300 hover:text-white transition-colors duration-150"
+                      title="Show / hide columns"
+                      aria-label="Show or hide columns"
+                      aria-expanded={isColumnMenuOpen}
+                    >
+                      <AlignJustify className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                    {isColumnMenuOpen && (
+                      <div className="absolute right-2 top-full mt-1 z-30 w-56 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg text-left normal-case tracking-normal font-normal">
+                        <label className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 text-sm text-gray-800 hover:bg-gray-50 cursor-pointer sticky top-0 bg-white">
+                          <input
+                            type="checkbox"
+                            checked={visibleColumns.length === CUSTOMER_TABLE_COLUMNS.length}
+                            onChange={toggleAllColumns}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="font-medium">Select All</span>
+                        </label>
+                        {CUSTOMER_TABLE_COLUMNS.map((column) => {
+                          const isLocked = LOCKED_VISIBLE_COLUMNS.includes(column.key);
+                          return (
+                            <label
+                              key={column.key}
+                              className={`flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 ${
+                                isLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isColumnVisible(column.key)}
+                                disabled={isLocked}
+                                onChange={() => toggleColumnVisibility(column.key)}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                              />
+                              <span>
+                                {column.label}
+                                {isLocked ? " (fixed)" : ""}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider cursor-pointer hover:bg-slate-700 w-32"
-                  onClick={() => handleSort("mobile")}
-                >
-                  Mobile {sortBy === "mobile" && (sortOrder === "asc" ? "↑" : "↓")}
-                </th>
-                <th className="px-2 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider whitespace-nowrap w-px">
-                  Facebook
-                </th>
-                <th className="px-2 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider whitespace-nowrap w-px">
-                  Messenger
-                </th>
-                <th
-                  className="px-3 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider cursor-pointer hover:bg-slate-700 w-24"
-                  onClick={() => handleSort("client_seriousness")}
-                >
-                  Seriousness {sortBy === "client_seriousness" && (sortOrder === "asc" ? "↑" : "↓")}
-                </th>
-                <th
-                  className="px-3 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider cursor-pointer hover:bg-slate-700 w-20"
-                  onClick={() => handleSort("client_attitude")}
-                >
-                  Attitude {sortBy === "client_attitude" && (sortOrder === "asc" ? "↑" : "↓")}
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider cursor-pointer hover:bg-slate-700 w-48"
-                  onClick={() => handleSort("search")}
-                >
-                  Search {sortBy === "search" && (sortOrder === "asc" ? "↑" : "↓")}
-                </th>
-                <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider cursor-pointer hover:bg-slate-700 w-36"
-                  onClick={() => handleSort("created_at")}
-                >
-                  Created {sortBy === "created_at" && (sortOrder === "asc" ? "↑" : "↓")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider w-48">Note</th>
-                <th className="px-2 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider whitespace-nowrap w-px">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading && (
                 <tr>
-                  <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={tableColSpan} className="px-6 py-8 text-center text-gray-500">
                     <LoadingSpinner message="Loading customers..." />
                   </td>
                 </tr>
               )}
               {data.length === 0 && !loading && (
                 <tr>
-                  <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={tableColSpan} className="px-6 py-8 text-center text-gray-500">
                     No customers found
                   </td>
                 </tr>
               )}
               {data.length > 0 &&
                 !loading &&
-                data.map((customer, index) => {
-                  const canModify =
-                    isPrivilegedUser ||
-                    Number(parsedUser?.id) === Number(customer.created_user?.id) ||
-                    parsedUser?.role_name === "Admin";
-                  return (
-                    <tr key={customer.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm text-gray-900 w-40 max-w-[160px]">
-                        <Link
-                          href={`/dashboard/customers/${customer.id}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer flex items-center gap-1"
-                        >
-                          <span className="truncate">{customer.name}</span>
-                          <ExternalLink className="w-3 h-3 shrink-0" />
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.mobile}</td>
-                      <td className="px-2 py-4 whitespace-nowrap w-px">
-                        {toExternalHref(customer.facebook_id_link) ? (
-                          <a
-                            href={toExternalHref(customer.facebook_id_link)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex hover:opacity-80"
-                            title="Open Facebook"
-                            aria-label="Open Facebook"
+                data.map((customer) => {
+                  const canModify = canModifyCustomer(customer);
+                  const facebookHref = toExternalHref(customer.facebook_id_link);
+                  const messengerHref = toExternalHref(customer.facebook_messenger_link);
+
+                  const cellByKey = {
+                    customer: (
+                      <td key="customer" className={`px-4 py-4 text-sm text-gray-900 overflow-hidden ${stickyCustomerTd}`}>
+                        <div className="space-y-1.5 min-w-0">
+                          <Link
+                            href={`/dashboard/customers/${customer.id}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer flex items-center gap-1 min-w-0"
                           >
-                            <FacebookIcon />
-                          </a>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-4 whitespace-nowrap w-px">
-                        {toExternalHref(customer.facebook_messenger_link) ? (
-                          <a
-                            href={toExternalHref(customer.facebook_messenger_link)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex hover:opacity-80"
-                            title="Open Messenger"
-                            aria-label="Open Messenger"
-                          >
-                            <MessengerIcon />
-                          </a>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">{customer.client_seriousness?.md_title || "-"}</td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {customer.client_attitude_display || customer.client_attitude?.md_title || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{customer?.search || "-"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>{customer.created_user?.name || "-"}</div>
-                        <div className="text-xs text-gray-400">
-                          {customer.created_at
-                            ? new Date(customer.created_at).toLocaleString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })
-                            : "-"}
+                            <span className="truncate">{customer.name || "-"}</span>
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </Link>
+                          <div className="text-gray-700 whitespace-nowrap">{customer.mobile || "-"}</div>
+                          <div className="flex items-center gap-2">
+                            {facebookHref ? (
+                              <a
+                                href={facebookHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex hover:opacity-80"
+                                title="Open Facebook"
+                                aria-label="Open Facebook"
+                              >
+                                <FacebookIcon />
+                              </a>
+                            ) : null}
+                            {messengerHref ? (
+                              <a
+                                href={messengerHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex hover:opacity-80"
+                                title="Open Messenger"
+                                aria-label="Open Messenger"
+                              >
+                                <MessengerIcon />
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900 w-48">
-                        {(() => {
-                          const desc = customer.description;
-                          const note = customer.latest_activity?.note;
-                          const hasContent = desc || note;
-                          const isExpanded = expandedNotes.has(customer.id);
-                          const needsToggle = (desc?.length ?? 0) + (note?.length ?? 0) > 80;
-                          if (!hasContent) return <span className="text-gray-400">-</span>;
-                          return (
-                            <div>
-                              {desc && (
-                                <div className={`text-gray-700 ${!isExpanded && needsToggle ? "line-clamp-2" : ""}`}>
-                                  <span className="font-medium">Description:</span> {desc}
-                                </div>
-                              )}
-                              {note && (
-                                <div className={`text-gray-500 ${!isExpanded && needsToggle ? "line-clamp-2" : ""} ${desc ? "mt-1" : ""}`}>
-                                  <span className="font-medium">Note:</span> {note}
-                                </div>
-                              )}
-                              {needsToggle && (
-                                <button
-                                  onClick={() => toggleNote(customer.id)}
-                                  className="text-blue-500 text-xs mt-1 hover:underline"
-                                >
-                                  {isExpanded ? "less" : "more"}
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })()}
+                    ),
+                    email: (
+                      <td key="email" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.email || "-"}
                       </td>
-                      <td className="px-2 py-4 whitespace-nowrap w-px">
+                    ),
+                    address: (
+                      <td key="address" className="px-3 py-4 text-sm text-gray-900 overflow-hidden">
+                        <span className="line-clamp-2 break-words">{customer.address || "-"}</span>
+                      </td>
+                    ),
+                    seriousness: (
+                      <td key="seriousness" className="px-3 py-4 text-sm text-gray-900">
+                        <InlineSeriousnessCell
+                          customer={customer}
+                          canEdit={canModify}
+                          options={seriousnessOptions}
+                          displayValue={displayMasterField(customer, "client_seriousness_display", "client_seriousness")}
+                          saving={inlineSavingKey === `${customer.id}:client_seriousness`}
+                          onSave={(value, done) => handleInlineSave(customer.id, "client_seriousness", value, done)}
+                        />
+                      </td>
+                    ),
+                    attitude: (
+                      <td key="attitude" className="px-3 py-4 text-sm text-gray-900">
+                        <InlineAttitudeCell
+                          customer={customer}
+                          canEdit={canModify}
+                          options={attitudeOptions}
+                          displayValue={customer.client_attitude_display || masterTitle(customer.client_attitude)}
+                          saving={inlineSavingKey === `${customer.id}:client_attitude`}
+                          onSave={(value, done) => handleInlineSave(customer.id, "client_attitude", value, done)}
+                        />
+                      </td>
+                    ),
+                    level: (
+                      <td key="level" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "client_level_display", "client_level")}
+                      </td>
+                    ),
+                    profession: (
+                      <td key="profession" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "client_profession_display", "client_profession")}
+                      </td>
+                    ),
+                    income: (
+                      <td key="income" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "client_income_per_month_display", "client_income_per_month")}
+                      </td>
+                    ),
+                    companyTxn: (
+                      <td key="companyTxn" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "client_company_transaction_display", "client_company_transaction")}
+                      </td>
+                    ),
+                    purchaseReason: (
+                      <td key="purchaseReason" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "purchase_reason_display", "purchase_reason")}
+                      </td>
+                    ),
+                    interestedLoan: (
+                      <td key="interestedLoan" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                        {customer.interested_for_loan || "-"}
+                      </td>
+                    ),
+                    bankLoan: (
+                      <td key="bankLoan" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "bank_loan_amount_display", "bank_loan_amount")}
+                      </td>
+                    ),
+                    carAvailable: (
+                      <td key="carAvailable" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "car_available_display", "car_available")}
+                      </td>
+                    ),
+                    carExchange: (
+                      <td key="carExchange" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {displayMasterField(customer, "car_exchange_category_per_year_display", "car_exchange_category_per_year")}
+                      </td>
+                    ),
+                    dob: (
+                      <td key="dob" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCustomerDate(customer.date_of_birth)}
+                      </td>
+                    ),
+                    anniversary: (
+                      <td key="anniversary" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.anniversary_date || "-"}
+                      </td>
+                    ),
+                    lastPurchase: (
+                      <td key="lastPurchase" className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCustomerDate(customer.client_last_purchase_date)}
+                      </td>
+                    ),
+                    search: (
+                      <td key="search" className="px-4 py-4 text-sm text-gray-900 overflow-hidden">
+                        <span className="line-clamp-3 break-words">{customer?.search || "-"}</span>
+                      </td>
+                    ),
+                    created: (
+                      <td key="created" className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div>{customer.created_user?.name || "-"}</div>
+                        <div className="text-xs text-gray-400">{formatCustomerDateTime(customer.created_at)}</div>
+                      </td>
+                    ),
+                    note: (
+                      <td key="note" className="px-4 py-4 text-sm text-gray-900 overflow-hidden">
+                        <InlineNoteCell
+                          customer={customer}
+                          canEdit={canModify}
+                          saving={inlineSavingKey === `${customer.id}:description`}
+                          isExpanded={expandedNotes.has(customer.id)}
+                          onToggleExpand={() => toggleNote(customer.id)}
+                          onSave={(value, done) => handleInlineSave(customer.id, "description", value, done)}
+                        />
+                      </td>
+                    ),
+                  };
+
+                  return (
+                    <tr key={customer.id} className="group hover:bg-gray-50">
+                      {visibleDataColumns.map((column) => cellByKey[column.key])}
+                      <td className={`px-4 py-3.5 whitespace-nowrap overflow-hidden ${stickyActionsTd}`}>
                         {canModify && (
-                          <div className="inline-flex items-center gap-1.5">
+                          <div className="inline-flex items-center gap-3">
                             <button
                               type="button"
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-yellow-500 text-white hover:bg-yellow-600"
+                              className="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors duration-150"
                               onClick={() => openEditModal(customer)}
                               title="Edit"
                               aria-label="Edit customer"
                             >
-                              <Pencil className="w-3 h-3" />
+                              <Pencil className="w-4 h-4" strokeWidth={1.5} />
                             </button>
                             <button
                               type="button"
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-500 text-white hover:bg-red-600"
+                              className="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors duration-150"
                               onClick={() => handleDelete(customer.id)}
                               title="Delete"
                               aria-label="Delete customer"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                             </button>
                           </div>
                         )}
@@ -518,85 +956,109 @@ const CustomersDataTable = () => {
         </div>
 
         {/* Pagination */}
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === lastPage}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <label className="text-sm text-gray-600 whitespace-nowrap">Show:</label>
-              <select value={perPage} onChange={(e) => handlePerPageChange(Number(e.target.value))} className="px-2 py-1 border border-gray-300 rounded text-sm">
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span className="text-gray-300">|</span>
-              <p>
-                Showing page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{lastPage}</span>
-              </p>
-              <span className="text-gray-300">|</span>
-              <p>
-                Showing {(currentPage - 1) * perPage + 1} to {Math.min(currentPage * perPage, total)} of {total} entries
+        <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3 sm:px-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
+              <label className="inline-flex items-center gap-2">
+                <span className="text-slate-500">Rows</span>
+                <select
+                  value={perPage}
+                  onChange={(e) => handlePerPageChange(Number(e.target.value))}
+                  className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+              <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
+              <p className="text-slate-500">
+                {total === 0 ? (
+                  "No results"
+                ) : (
+                  <>
+                    <span className="font-medium text-slate-700">
+                      {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, total)}
+                    </span>
+                    {" of "}
+                    <span className="font-medium text-slate-700">{total}</span>
+                  </>
+                )}
               </p>
             </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+
+            <nav className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-end sm:gap-2" aria-label="Pagination">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
+                  type="button"
                   onClick={() => handlePageChange(1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  disabled={currentPage <= 1}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="First page"
+                  aria-label="First page"
                 >
-                  First
+                  <ChevronsLeft className="h-4 w-4" strokeWidth={1.75} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  disabled={currentPage <= 1}
+                  className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-sm text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous page"
                 >
-                  Previous
+                  <ChevronLeft className="h-4 w-4" strokeWidth={1.75} />
+                  <span className="hidden sm:inline">Prev</span>
                 </button>
-                {getPaginationNumbers(currentPage, lastPage).map((page, index) => (
-                  <button
-                    key={index}
-                    onClick={() => typeof page === "number" && handlePageChange(page)}
-                    disabled={typeof page !== "number" || page === currentPage}
-                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                      page === currentPage ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600" : "text-gray-700 hover:bg-gray-50"
-                    } ${typeof page !== "number" ? "cursor-default" : ""}`}
-                  >
-                    {page}
-                  </button>
-                ))}
+              </div>
+
+              <div className="flex max-w-[45vw] items-center gap-1 overflow-x-auto px-0.5 sm:max-w-none">
+                {getPaginationNumbers(currentPage, lastPage).map((page, index) =>
+                  typeof page !== "number" ? (
+                    <span key={`ellipsis-${index}`} className="px-1.5 text-sm text-slate-400 select-none">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => handlePageChange(page)}
+                      aria-current={page === currentPage ? "page" : undefined}
+                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2.5 text-sm font-medium transition ${
+                        page === currentPage
+                          ? "bg-slate-800 text-white shadow-sm"
+                          : "border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-slate-300 hover:text-slate-900"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
                 <button
+                  type="button"
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === lastPage}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  disabled={currentPage >= lastPage || lastPage === 0}
+                  className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-sm text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next page"
                 >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4" strokeWidth={1.75} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => handlePageChange(lastPage)}
-                  disabled={currentPage === lastPage}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  disabled={currentPage >= lastPage || lastPage === 0}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Last page"
+                  aria-label="Last page"
                 >
-                  Last
+                  <ChevronsRight className="h-4 w-4" strokeWidth={1.75} />
                 </button>
-              </nav>
-            </div>
+              </div>
+            </nav>
           </div>
         </div>
       </div>
