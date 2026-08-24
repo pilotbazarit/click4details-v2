@@ -567,6 +567,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const [createPaymentCustomerPaidAmount, setCreatePaymentCustomerPaidAmount] = useState(0);
   const [isCreatePaymentSoldPriceLocked, setIsCreatePaymentSoldPriceLocked] = useState(false);
   const [selectedPaymentCustomerId, setSelectedPaymentCustomerId] = useState("");
+  const initialCustomerSelectedRef = React.useRef(false);
   const [createPaymentForm, setCreatePaymentForm] = useState(() =>
     buildInitialCreatePaymentForm("", "")
   );
@@ -675,7 +676,13 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
             entry?.customer_contact?.cci_id;
           if (cid) ids.add(String(cid));
         });
-        setAvailablePaymentCustomerIds(Array.from(ids));
+        const idArray = Array.from(ids);
+        setAvailablePaymentCustomerIds(idArray);
+        
+        if (!initialCustomerSelectedRef.current && idArray.length > 0) {
+          initialCustomerSelectedRef.current = true;
+          setSelectedPaymentCustomerId(idArray[0]);
+        }
       }
     } catch (error) {
       setClientPaymentHistoryItems([]);
@@ -765,7 +772,11 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initialCustomerSelectedRef.current = false;
+      setSelectedPaymentCustomerId("");
+      return;
+    }
     fetchClientPaymentHistory();
   }, [open, fetchClientPaymentHistory]);
 

@@ -743,6 +743,7 @@ const ViewProductForm = ({ productId }) => {
 
                 // Populate form fields
                 setValue('v_title', data.v_title);
+                setValue('user_name', data?.user?.name || "");
                 setValue('v_brand_id', brandId);
 
                 // Populate fields instantly
@@ -1103,7 +1104,7 @@ const ViewProductForm = ({ productId }) => {
                                         </div>
 
                                         {/* Product Info section */}
-                                        <div className="mb-2">
+                                        <div className="mb-2 flex gap-4">
                                             <div className="w-[50%]">
                                                 <label className="text-base font-medium" htmlFor="customer-name">
                                                     Title <span className="text-red-500">*</span>
@@ -1117,6 +1118,19 @@ const ViewProductForm = ({ productId }) => {
                                                 {errors.v_title && (
                                                     <p className="text-red-500 text-sm">{errors.v_title.message}</p>
                                                 )}
+                                            </div>
+                                            <div className="w-[50%]">
+                                                <label className="text-base font-medium" htmlFor="user_name">
+                                                    User Name
+                                                </label>
+                                                <Input
+                                                    {...register("user_name")}
+                                                    id="user_name"
+                                                    name="user_name"
+                                                    placeholder="User Name"
+                                                    readOnly
+                                                    className="bg-gray-100 cursor-not-allowed text-gray-500"
+                                                />
                                             </div>
                                         </div>
 
@@ -2459,7 +2473,7 @@ const ViewProductForm = ({ productId }) => {
                                                     {...register("v_is_saleBy_pbl")}
                                                 />
                                                 <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                    I am pilotbazar.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
                                                     <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                                                         Terms and Conditions
                                                     </Link>. Please Sale My Product and Increase My Profit.
@@ -2478,7 +2492,7 @@ const ViewProductForm = ({ productId }) => {
                                                     {...register("want_to_be_partner")}
                                                 />
                                                 <label htmlFor="want_to_be_partner" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                                                    I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
                                                 </label>
                                             </div>
 
