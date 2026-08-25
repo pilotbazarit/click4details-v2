@@ -2803,7 +2803,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                       `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=costing`
                     );
                   }}
-                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Costing
                 </button>

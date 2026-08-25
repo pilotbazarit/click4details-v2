@@ -1586,15 +1586,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
                   <button
                     type="button"
-                    onClick={() => setContactCustomerModalOpen(true)}
-                    className="inline-flex h-9 items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Customer
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={fetchClientPaymentHistory}
                     disabled={isClientPaymentHistoryLoading}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -2104,30 +2095,40 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
                     Select Customer
                   </label>
-                  <div className="relative">
-                    <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-gray-500" />
-                    <Select
-                      value={selectedCreatePaymentCustomerOption}
-                      onChange={(option) =>
-                        handleCreatePaymentCustomerChange(option?.value || "")
-                      }
-                      options={createPaymentCustomerOptions}
-                      isClearable
-                      isSearchable
-                      isDisabled={
-                        isCreatePaymentSubmitting || isCreatePaymentCustomersLoading
-                      }
-                      isLoading={isCreatePaymentCustomersLoading}
-                      placeholder={
-                        isCreatePaymentCustomersLoading
-                          ? "Loading customers..."
-                          : "Select Customer"
-                      }
-                      noOptionsMessage={() => "No customers found"}
-                      className="text-sm"
-                      classNamePrefix="react-select"
-                      styles={clientPaymentCustomerSelectStyles}
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                      <Select
+                        value={selectedCreatePaymentCustomerOption}
+                        onChange={(option) =>
+                          handleCreatePaymentCustomerChange(option?.value || "")
+                        }
+                        options={createPaymentCustomerOptions}
+                        isClearable
+                        isSearchable
+                        isDisabled={
+                          isCreatePaymentSubmitting || isCreatePaymentCustomersLoading
+                        }
+                        isLoading={isCreatePaymentCustomersLoading}
+                        placeholder={
+                          isCreatePaymentCustomersLoading
+                            ? "Loading customers..."
+                            : "Select Customer"
+                        }
+                        noOptionsMessage={() => "No customers found"}
+                        className="text-sm"
+                        classNamePrefix="react-select"
+                        styles={clientPaymentCustomerSelectStyles}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setContactCustomerModalOpen(true)}
+                      className="inline-flex h-12 items-center gap-1 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </button>
                   </div>
                 </div>
 
