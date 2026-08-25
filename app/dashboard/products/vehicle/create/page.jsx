@@ -1083,7 +1083,7 @@ const Vehicle = () => {
     try {
       const activeUser = user || getStoredUser();
 
-      
+
 
       // Build request params conditionally
       const params = {
@@ -2148,7 +2148,7 @@ const Vehicle = () => {
 
                         <hr />
 
-                        <VehiclePricingSection
+                        {/* <VehiclePricingSection
                           register={register}
                           watch={watch}
                           setValue={setValue}
@@ -2156,7 +2156,7 @@ const Vehicle = () => {
                           purchasePriceField="vp_user_purchase_price"
                           partnerPriceLabel="Partner B2B Price"
                           hotlineText="Call Our Hotline to be Partner"
-                        />
+                        /> */}
 
                         {/* Front Image section */}
                         <div className="mb-3 mt-4">
@@ -2827,7 +2827,7 @@ const Vehicle = () => {
 
                               <div className="mb-2">
                                 <label className="text-base font-medium" htmlFor="v_pbl_partnership_expire_date">
-                                  Partnership Expire Date
+                                  Product Expire Date
                                 </label>
                                 <Input
                                   id="v_pbl_partnership_expire_date"
@@ -3608,11 +3608,11 @@ const Vehicle = () => {
                           />
                           <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
                             {/* আমার এই প্রোডাক্ট টি click4details.com এ বিক্রয় এর জন্য অনুমতি দেওয়া হলো এবং আমি click4details.com এর সকল শর্ত মানতে রাজি আছি। &nbsp; */}
-                            আমি আমার এই প্রোডাক্টটি click4details.com এ বিক্রয়ের জন্য অনুমতি প্রদান করছি 
-                            এবং click4details.com এর সকল 
+                            আমি আমার এই প্রোডাক্টটি click4details.com এ বিক্রয়ের জন্য অনুমতি প্রদান করছি
+                            এবং click4details.com এর সকল
                             <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
                               {/* Terms and Conditions */} শর্তাবলী
-                            </Link> মেনে নিতে সম্মত আছি।  
+                            </Link> মেনে নিতে সম্মত আছি।
                             {/* অনুগ্রহ করে আমার প্রোডাক্টটি বিক্রয়ে সহায়তা করুন এবং আমার ব্যবসার মুনাফা বৃদ্ধিতে সহায়তা করুন। */}
                             {/* Please Sale My Product and Increase My Profit. */}
                           </label>

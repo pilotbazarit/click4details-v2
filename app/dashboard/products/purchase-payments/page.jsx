@@ -15,7 +15,6 @@ import {
   Package as PackageIcon,
   ChevronDown,
   ChevronUp,
-  Youtube,
 } from "lucide-react";
 import AsyncSelect from "react-select/async";
 
@@ -82,9 +81,10 @@ const PurchasePaymentsContent = () => {
 
   const [showReportFilter, setShowReportFilter] = useState(false);
   const [pendingReportKind, setPendingReportKind] = useState(null); // 'payment' | 'money-receipt'
+  const [calcRefreshSignal, setCalcRefreshSignal] = useState(0);
 
   const entitySearchDebounceRef = useRef(null);
-  const { permissionList, user } = useAppContext();
+  const { permissionList, user, selectedShop } = useAppContext();
   const searchParams = useSearchParams();
 
   const isSupreme = user?.user_mode === "supreme";
@@ -244,6 +244,10 @@ const PurchasePaymentsContent = () => {
   const handleAfterSave = () => {
     getPayments(currentPage, itemsPerPage, selectedEntityOption);
     if (selectedEntityOption) fetchPricing(selectedEntityOption);
+    // a payment can be made independently of the Costing Section (via the
+    // Payment Section's modal) - nudge the panel to re-fetch its own
+    // paid/due figures too, since it has no other way to know they changed
+    setCalcRefreshSignal((v) => v + 1);
   };
 
   const handleDelete = async (id) => {
@@ -294,6 +298,13 @@ const PurchasePaymentsContent = () => {
     setShowReportFilter(true);
   };
 
+  const getChassisPrefix = () => {
+    const chassis = pricing?.vehicle_info?.chassis_no;
+    if (!chassis) return null;
+    const clean = String(chassis).trim().replace(/[^a-zA-Z0-9_-]/g, "-");
+    return clean || null;
+  };
+
   const handleReportFilterConfirm = async (filters) => {
     if (!selectedEntityOption || !pendingReportKind) return;
     const baseParams = {
@@ -301,18 +312,25 @@ const PurchasePaymentsContent = () => {
       entity_id: selectedEntityOption.entity_id,
       ...filters,
     };
+    const chassis = getChassisPrefix();
 
     if (pendingReportKind === "payment") {
+      const fileName = chassis
+        ? `${chassis}-purchase-payment.pdf`
+        : `purchase-payment-${selectedEntityOption.entity_type}-${selectedEntityOption.entity_id}.pdf`;
       await downloadBlobPdf(
         PurchasePaymentService.Queries.downloadPurchasePaymentPdf,
         baseParams,
-        `purchase-payment-${selectedEntityOption.entity_type}-${selectedEntityOption.entity_id}.pdf`
+        fileName
       );
     } else if (pendingReportKind === "money-receipt") {
+      const fileName = chassis
+        ? `${chassis}-money-receipt.pdf`
+        : `money-receipt-${selectedEntityOption.entity_type}-${selectedEntityOption.entity_id}.pdf`;
       await downloadBlobPdf(
         PurchasePaymentService.Queries.downloadMoneyReceiptPdf,
         baseParams,
-        `money-receipt-${selectedEntityOption.entity_type}-${selectedEntityOption.entity_id}.pdf`
+        fileName
       );
     }
 
@@ -322,21 +340,34 @@ const PurchasePaymentsContent = () => {
 
   const handleDownloadCalculationReport = () => {
     if (!selectedEntityOption || selectedEntityOption.entity_type !== "vehicle") return;
+    const chassis = getChassisPrefix();
+    const fileName = chassis
+      ? `${chassis}-vehicle-purchase-calculation.pdf`
+      : `vehicle-purchase-calculation-${selectedEntityOption.entity_id}.pdf`;
     downloadBlobPdf(
       PurchasePaymentService.Queries.downloadVehicleReportPdf,
       { vehicle_id: selectedEntityOption.entity_id },
-      `vehicle-purchase-calculation-${selectedEntityOption.entity_id}.pdf`
+      fileName
     );
   };
 
   const handleDownloadReasonWiseReport = () => {
     const params = {};
     if (selectedEntityOption?.entity_type === "vehicle") params.vehicle_id = selectedEntityOption.entity_id;
-    downloadBlobPdf(PurchasePaymentService.Queries.downloadReasonWisePdf, params, "purchase-reason-wise-report.pdf");
+    const chassis = getChassisPrefix();
+    const fileName = chassis
+      ? `${chassis}-purchase-reason-wise-report.pdf`
+      : "purchase-reason-wise-report.pdf";
+    downloadBlobPdf(PurchasePaymentService.Queries.downloadReasonWisePdf, params, fileName);
   };
 
   const handleDownloadAllProductsReport = () => {
-    downloadBlobPdf(PurchasePaymentService.Queries.downloadAllProductsPdf, {}, "purchase-all-products-report.pdf");
+    const params = selectedShop?.s_id ? { _shop_id: selectedShop.s_id } : {};
+    const chassis = getChassisPrefix();
+    const fileName = chassis
+      ? `${chassis}-purchase-all-products-report.pdf`
+      : "purchase-all-products-report.pdf";
+    downloadBlobPdf(PurchasePaymentService.Queries.downloadAllProductsPdf, params, fileName);
   };
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -355,17 +386,16 @@ const PurchasePaymentsContent = () => {
               <p className="text-sm text-teal-100">Vehicle purchase calculation & payment tracking</p>
             </div>
           </div>
-
-          <a
-            href="https://www.youtube.com/watch?v=6YGR8r2VnOA"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open tutorial video"
-            className="inline-flex items-center gap-2 rounded-full border border-red-400 bg-red-600 px-4 py-2.5 text-white shadow-md transition hover:scale-105 hover:bg-red-500"
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDownloadAllProductsReport}
+            disabled={isPdfDownloading}
+            className="flex items-center gap-1.5 h-8 px-3 text-xs bg-white/15 border-white/30 text-white hover:bg-white/25 hover:text-white"
           >
-            <Youtube className="h-5 w-5" />
-            <span className="text-sm font-semibold">How to Use</span>
-          </a>
+            <FileDown className="w-3.5 h-3.5" />
+            All Product
+          </Button>
         </div>
 
         <div className="p-6">
@@ -420,16 +450,6 @@ const PurchasePaymentsContent = () => {
                   <FileDown className="w-3.5 h-3.5" />
                   Reason Wise
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDownloadAllProductsReport}
-                  disabled={isPdfDownloading}
-                  className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-purple-600 text-purple-700 hover:bg-purple-50 bg-white"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  All Product
-                </Button>
               </div>
             </div>
             <div className="p-4">
@@ -454,71 +474,40 @@ const PurchasePaymentsContent = () => {
                 />
               </div>
 
-              {/* Pricing info cards */}
-              {selectedEntityOption && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-                    <div className="text-xs font-semibold text-gray-500 uppercase">Grand Total Price</div>
-                    <div className="text-lg font-bold text-gray-800 mt-1">
-                      {isPricingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : formatAmount(pricing?.costing_price)}
-                    </div>
-                    {pricing && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-50 to-slate-100 text-blue-800 border border-blue-200 text-[11px] font-semibold">
-                          Paid: {formatAmount(Number(pricing?.purchase_price_paid || 0) + Number(pricing?.db_costing_price_paid || 0))}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-slate-100 to-blue-50 text-slate-700 border border-slate-300 text-[11px] font-semibold">
-                          Due:{" "}
-                          {formatAmount(
-                            Math.max(
-                              0,
-                              (Number(pricing?.purchase_price || 0) + Number(pricing?.other_charge_total || 0)) -
-                                (Number(pricing?.purchase_price_paid || 0) + Number(pricing?.db_costing_price_paid || 0))
-                            )
-                          )}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-                    <div className="text-xs font-semibold text-gray-500 uppercase">Fixed</div>
-                    <div className="text-lg font-bold text-gray-800 mt-1">
-                      {isPricingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : formatAmount(pricing?.purchase_price)}
-                    </div>
-                    {pricing && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-50 to-slate-100 text-blue-800 border border-blue-200 text-[11px] font-semibold">
-                          Paid: {formatAmount(pricing?.purchase_price_paid)}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-slate-100 to-blue-50 text-slate-700 border border-slate-300 text-[11px] font-semibold">
-                          Due:{" "}
-                          {formatAmount(
-                            pricing?.purchase_price !== null && pricing?.purchase_price !== undefined
-                              ? Math.max(0, Number(pricing.purchase_price) - Number(pricing.purchase_price_paid || 0))
-                              : null
-                          )}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-                    <div className="text-xs font-semibold text-gray-500 uppercase">General</div>
-                    <div className="text-lg font-bold text-gray-800 mt-1">
-                      {isPricingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : formatAmount(pricing?.other_charge_total)}
-                    </div>
-                    {pricing && pricing?.other_charge_total !== null && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-50 to-slate-100 text-blue-800 border border-blue-200 text-[11px] font-semibold">
-                          Paid: {formatAmount(pricing?.db_costing_price_paid)}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-slate-100 to-blue-50 text-slate-700 border border-slate-300 text-[11px] font-semibold">
-                          Due: {formatAmount(Math.max(0, Number(pricing.other_charge_total) - Number(pricing.db_costing_price_paid || 0)))}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+              {/* Vehicle info strip */}
+              {selectedEntityOption?.entity_type === "vehicle" && pricing?.vehicle_info && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-4 gap-y-1.5 mt-3 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+                  {[
+                    ["Brand", pricing.vehicle_info.brand],
+                    ["Model", pricing.vehicle_info.model],
+                    ["Package", pricing.vehicle_info.package],
+                    ["Condition", pricing.vehicle_info.condition],
+                    ["Model Yr", pricing.vehicle_info.model_year],
+                    ["Reg Yr", pricing.vehicle_info.reg_year],
+                    ["Grade", pricing.vehicle_info.grade],
+                    ["Exterior Grd", pricing.vehicle_info.exterior_grade],
+                    ["Interior Grd", pricing.vehicle_info.interior_grade],
+                    ["Mileage", pricing.vehicle_info.mileage],
+                    ["Auction Type", pricing.vehicle_info.auction_type],
+                    ["Color", pricing.vehicle_info.color],
+                    ["Fuel", pricing.vehicle_info.fuel],
+                    ["Option", pricing.vehicle_info.option],
+                    ["CC", pricing.vehicle_info.cc],
+                    ["Body", pricing.vehicle_info.body],
+                    ["Seat", pricing.vehicle_info.seat],
+                    ["Chassis No", pricing.vehicle_info.chassis_no],
+                    ["Engine No", pricing.vehicle_info.engine_no],
+                    ["Tax Token", pricing.vehicle_info.tax_token],
+                    ["Fitness", pricing.vehicle_info.fitness],
+                    ["Arrival Date", pricing.vehicle_info.arrival_date],
+                  ].map(([label, value]) => (
+                    <span key={label}>
+                      <span className="font-semibold text-gray-500">{label}:</span> {value || "-"}
+                    </span>
+                  ))}
                 </div>
               )}
+
             </div>
           </div>
 
@@ -538,6 +527,7 @@ const PurchasePaymentsContent = () => {
                     canUpdate={canUpdate}
                     canDelete={canDelete}
                     onChanged={handleAfterSave}
+                    refreshSignal={calcRefreshSignal}
                   />
                 </div>
               )}
@@ -555,7 +545,7 @@ const PurchasePaymentsContent = () => {
               {paymentSectionOpen && (
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wide">Payment List</h4>
+                    <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wide">Purchase Payment</h4>
                     {canCreate && (
                       <Button
                         onClick={() => {
@@ -594,9 +584,8 @@ const PurchasePaymentsContent = () => {
                               </TableCell>
                               <TableCell className="border-r border-gray-200">
                                 <span
-                                  className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                    BUCKET_LABELS[item.pp_payment_against]?.className || "bg-gray-100 text-gray-700"
-                                  }`}
+                                  className={`px-2.5 py-1 rounded-full text-xs font-semibold ${BUCKET_LABELS[item.pp_payment_against]?.className || "bg-gray-100 text-gray-700"
+                                    }`}
                                 >
                                   {BUCKET_LABELS[item.pp_payment_against]?.label || item.pp_payment_against}
                                 </span>

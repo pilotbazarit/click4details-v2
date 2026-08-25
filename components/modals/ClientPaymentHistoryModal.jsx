@@ -479,9 +479,10 @@ const currencyOptions = [
 ];
 
 const statusOptions = [
-  { value: "paid", label: "Paid" },
-  { value: "pending", label: "Pending" },
-  { value: "refunded", label: "Refunded" }
+  { value: "paid", label: "Paid (Duduct From Due)" },
+  { value: "pending", label: "Pending (No Change to Due)" },
+  { value: "fiiled", label: "Failed" },
+  { value: "refunded", label: "Refunded (Add to Due)" }
 ];
 
 const resolvePaymentMethodValue = (value) => {
@@ -678,7 +679,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
         });
         const idArray = Array.from(ids);
         setAvailablePaymentCustomerIds(idArray);
-        
+
         if (!initialCustomerSelectedRef.current && idArray.length > 0) {
           initialCustomerSelectedRef.current = true;
           setSelectedPaymentCustomerId(idArray[0]);
@@ -1557,25 +1558,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           <div className="p-4 sm:p-5">
             <DialogHeader className="text-left">
               <div className="flex items-start justify-between gap-3">
-                <DialogTitle className="text-2xl font-bold text-gray-800">Client Payment History/Money Receipt</DialogTitle>
+                <DialogTitle className="text-2xl font-bold text-gray-800">Client Payment History/Sell Receipt</DialogTitle>
                 <div className="flex items-center gap-2">
-
-                  <div>
-                    <button
-                      type="button"
-                      onClick={openPaymentHistoryDownloadModal}
-                      disabled={isPaymentHistoryDownloading || !productId}
-                      className="inline-flex h-9 items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isPaymentHistoryDownloading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
-                      Download Payment History
-                    </button>
-                  </div>
-
                   <div className="relative min-w-[250px]">
                     <Users className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <Select
@@ -1751,8 +1735,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                                 </td>
 
                                 <td className="border-r border-[#e4eaf2] px-5 py-5 text-md font-semibold text-slate-700">
-                                 
-                                  { historyItem?.customerName } - { historyItem?.customerPhone }
+
+                                  {historyItem?.customerName} - {historyItem?.customerPhone}
                                 </td>
 
                                 <td className="border-r border-[#e4eaf2] px-5 py-5">
@@ -1871,7 +1855,21 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end border-t border-[#d7dee8] bg-[#f8fafc] px-4 py-3">
+                  <div className="flex items-center justify-end gap-3 border-t border-[#d7dee8] bg-[#f8fafc] px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={openPaymentHistoryDownloadModal}
+                      disabled={isPaymentHistoryDownloading || !productId}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isPaymentHistoryDownloading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      Download Payment History
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setOpen(false)}
@@ -1968,7 +1966,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                       className="mb-1.5 block text-xs font-semibold normal-case tracking-wide text-gray-600"
                       htmlFor="payment-history-download-pa-reason"
                     >
-                     Additional Reason
+                      Additional Reason
                     </label>
                     <div className="relative">
                       <FileText className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
@@ -2372,7 +2370,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                        Reference Name
+                        Reference/ Name/ Bank Name/Bank Branch
                       </label>
                       <div className="relative">
                         <Ticket className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
@@ -2406,7 +2404,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                         value={createPaymentForm.transactionId}
                         onChange={(event) => handleCreatePaymentFieldChange("transactionId", event.target.value)}
                         className={formInputClass}
-                        placeholder="Transaction ID"
+                        placeholder="Transaction ID/ Ck No"
                       />
                     </div>
 
@@ -2416,7 +2414,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                         value={createPaymentForm.note}
                         onChange={(event) => handleCreatePaymentFieldChange("note", event.target.value)}
                         className="w-full rounded-2xl border border-gray-300 bg-white px-10 py-3 text-base font-medium text-gray-800 placeholder:text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                        placeholder="Note"
+                        placeholder="Any Note"
                         rows={3}
                       />
                     </div>
