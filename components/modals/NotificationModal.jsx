@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation";
 import NotificationService from "@/services/NotificationService";
 import { Bell, Calendar, Car, ExternalLink, MessageCircle, Package, Phone, Search, UserPlus, X } from "lucide-react";
+import { orderBy } from "lodash";
 
 const PER_PAGE = 5;
 
@@ -173,7 +174,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
 
       if (selectedTab.key === "search") {
         const response = await NotificationService.Queries.getNotifications({
-          filter: "unread",
+          filter: "all",
           page: nextPage,
           per_page: PER_PAGE,
         });
@@ -214,8 +215,8 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         _page: nextPage,
         _perPage: PER_PAGE,
         _notifiable_id: userId,
-        _orderBy: "updated_at",
-        _order: "desc",
+        _orderBy: "read_at",
+        _order: "asc",
         _type: selectedTab.type,
       };
 
@@ -366,7 +367,7 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     }
   };
 
-  const handleNotificationClick = async(item) => {
+  const handleNotificationClick = async (item) => {
 
     // console.log("item", item);
     if (item?.type === "SearchNotification") {
@@ -438,13 +439,12 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
         </div>
 
         <div className="border-b border-gray-100 bg-gray-50/70 px-5 py-3">
-          <div className={`grid grid-cols-2 gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 ${
-            visibleNotificationTabs.length === 2
-              ? "sm:grid-cols-2"
-              : visibleNotificationTabs.length === 3
-                ? "sm:grid-cols-3"
-                : "sm:grid-cols-4"
-          }`}>
+          <div className={`grid grid-cols-2 gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 ${visibleNotificationTabs.length === 2
+            ? "sm:grid-cols-2"
+            : visibleNotificationTabs.length === 3
+              ? "sm:grid-cols-3"
+              : "sm:grid-cols-4"
+            }`}>
             {visibleNotificationTabs.map((tab) => {
               const isActive = activeTab === tab.key;
               const TabIcon = tab.icon;
@@ -454,11 +454,10 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
                   key={tab.key}
                   type="button"
                   onClick={() => handleTabChange(tab.key)}
-                  className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-2 py-2 text-xs font-semibold transition sm:text-sm ${
-                    isActive
-                      ? "bg-orange-500 text-white shadow-sm"
-                      : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
-                  }`}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-2 py-2 text-xs font-semibold transition sm:text-sm ${isActive
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
+                    }`}
                   aria-pressed={isActive}
                 >
                   <TabIcon className="h-4 w-4 shrink-0" />
@@ -496,9 +495,8 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
                   key={item.id || index}
                   type="button"
                   onClick={() => handleNotificationClick(item)}
-                  className={`group relative flex w-full items-start gap-3 px-5 py-3.5 text-left transition hover:bg-orange-50/60 ${
-                    isUnread ? "bg-orange-50/30" : "bg-white"
-                  }`}
+                  className={`group relative flex w-full items-start gap-3 px-5 py-3.5 text-left transition hover:bg-orange-50/60 ${isUnread ? "bg-orange-50/30" : "bg-white"
+                    }`}
                 >
                   {isUnread && (
                     <span className="absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-orange-500" />

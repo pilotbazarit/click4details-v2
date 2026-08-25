@@ -1,7 +1,7 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Loading from '@/components/Loading';
-import ShopSelect from '@/components/ShopSelect';
+import PblHistoryPanel from '@/components/PblHistoryPanel';
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -10,10 +10,14 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import VehicleService from "@/services/VehicleService";
 import ShopService from "@/services/ShopService";
+import UserService from "@/services/UserService";
 import constData from "@/lib/constant";
-import { onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { formatPermissions, onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { hasPermission } from "@/lib/utils";
+import { useAppContext } from "@/context/AppContext";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
+import GiftService from "@/services/GiftService";
 import VehicleModelService from "@/services/VehicleModelService";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
@@ -21,128 +25,193 @@ import ProductFeatureSpecificationModal from "./modals/ProductFeatureSpecificati
 import dynamic from 'next/dynamic';
 import OutletService from "@/services/OutletService";
 import LocationService from "@/services/LocationService";
+import VehiclePricingSection from "@/components/pricing/VehiclePricingSection";
+import CategoryService from "@/services/CategoryService";
+import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 import { parseStoredUser } from "@/lib/parseStoredUser";
 const Select = dynamic(() => import('react-select'), { ssr: false });
 
+// Yup Validation Schema
+const schema = yup.object().shape({
+    v_product_type_id: yup.string().required("Product Type is Required"),
+    category: yup.string().required("Category & Sub-category is Required"),
+    v_title: yup.string().required("Title is Required"),
+    v_brand_id: yup.string().required("Brand is Required"),
+    v_model_id: yup.string().required("Model is Required"),
+
+    v_shop_id: yup.string().required("Shop is Required"),
+    // v_code: yup.string().required("Code is Required")
+});
+
+const MAX_ADDITIONAL_IMAGES = 12;
+
+const deliveryConditionOptions = [
+    { value: "Japan Condition", label: "Japan Condition" },
+    { value: "Shipment Condition", label: "Shipment Condition" },
+    { value: "As it is Port Delivery", label: "As it is Port Delivery" },
+    { value: "Port Condition", label: "Port Condition" },
+    { value: "Showroom Condition", label: "Showroom Condition" },
+    { value: "Auction Sheet Condition", label: "Auction Sheet Condition" },
+];
+
 const auctionTypeOptions = [
     {
-        value: "mod",
-        label: "MOD",
+        value: "orginal_auc",
+        label: "Orginal Auc",
     },
     {
-        value: "ussr",
-        label: "USSR",
+        value: "dealer_auc",
+        label: "Dealer Auc",
     },
     {
-        value: "d",
-        label: "D",
+        value: "car_mods_bd",
+        label: "Car Mods BD",
     },
     {
-        value: "u",
-        label: "U",
+        value: "ussr_auc",
+        label: "USSR Auc",
     },
     {
-        value: "o",
-        label: "O",
+        value: "not_orginal_auc",
+        label: "Not Orginal Auc",
     },
 ];
 
-const getAuctionTypeLabel = (value) => {
-    const matchedOption = auctionTypeOptions.find((option) => option.value === value);
-    if (matchedOption) return matchedOption.label;
-    return value ? String(value).toUpperCase() : "";
+const formatIndianNumber = (value, keepDecimal = false) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+
+    const [integerPartRaw, decimalPartRaw = ''] = raw.replace(/,/g, '').split('.');
+    const digits = String(integerPartRaw).replace(/\D+/g, '');
+    if (!digits) return '';
+
+    const formattedInteger = new Intl.NumberFormat('en-IN').format(Number(digits));
+    if (!keepDecimal || decimalPartRaw.length === 0) return formattedInteger;
+
+    const decimalDigits = decimalPartRaw.replace(/\D+/g, '').slice(0, 2);
+    return decimalDigits.length > 0 ? `${formattedInteger}.${decimalDigits}` : formattedInteger;
 };
 
-const getGoogleDocLink = (data) => {
-    const rawVideoData = data?.v_video;
+const numberWordsUnderTwenty = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const numberWordsTens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
-    if (rawVideoData && typeof rawVideoData === "object") {
-        return rawVideoData?.gdoc ? String(rawVideoData.gdoc).trim() : "";
+const numberToWordsBelowThousand = (num) => {
+    if (num < 20) return numberWordsUnderTwenty[num];
+    if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const unit = num % 10;
+        return unit ? `${numberWordsTens[ten]} ${numberWordsUnderTwenty[unit]}` : numberWordsTens[ten];
     }
 
-    if (typeof rawVideoData === "string") {
-        const trimmedVideo = rawVideoData.trim();
-        if (trimmedVideo.startsWith("{") && trimmedVideo.endsWith("}")) {
-            try {
-                const parsedVideo = JSON.parse(trimmedVideo);
-                if (parsedVideo && typeof parsedVideo === "object") {
-                    return parsedVideo?.gdoc ? String(parsedVideo.gdoc).trim() : "";
-                }
-            } catch (error) {
-                console.log("Failed to parse Google doc link:", error);
-            }
+    const hundred = Math.floor(num / 100);
+    const remainder = num % 100;
+    return remainder
+        ? `${numberWordsUnderTwenty[hundred]} Hundred ${numberToWordsBelowThousand(remainder)}`
+        : `${numberWordsUnderTwenty[hundred]} Hundred`;
+};
+
+const numberToIndianWords = (value) => {
+    const numeric = Number(String(value).replace(/\D+/g, ''));
+    if (!numeric) return '';
+    if (numeric < 1000) return numberToWordsBelowThousand(numeric);
+
+    const parts = [];
+    const units = [
+        { value: 10000000, label: 'Crore' },
+        { value: 100000, label: 'Lakh' },
+        { value: 1000, label: 'Thousand' },
+    ];
+
+    let remaining = numeric;
+
+    units.forEach((unit) => {
+        if (remaining >= unit.value) {
+            const count = Math.floor(remaining / unit.value);
+            parts.push(`${numberToIndianWords(count)} ${unit.label}`);
+            remaining %= unit.value;
         }
+    });
+
+    if (remaining > 0) {
+        parts.push(numberToWordsBelowThousand(remaining));
     }
 
-    return data?.v_video_gdoc ? String(data.v_video_gdoc).trim() : "";
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
 };
 
-const getDisplayVideoLink = (data) => {
-    const rawVideoData = data?.v_video;
+const buildPriceOptions = (baseValue) => {
+    if (baseValue === null || baseValue === undefined) return [];
 
-    if (rawVideoData && typeof rawVideoData === "object") {
-        if (rawVideoData?.user) return String(rawVideoData.user).trim();
-        if (rawVideoData?.pbl) return String(rawVideoData.pbl).trim();
-        if (rawVideoData?.gdoc) return String(rawVideoData.gdoc).trim();
+    const normalized = String(baseValue).split('.')[0].replace(/\D+/g, '').trim();
+    if (normalized.length === 0 || normalized.startsWith('0') || !/^\d+$/.test(normalized)) {
+        return [];
     }
 
-    if (typeof rawVideoData === "string") {
-        const trimmedVideo = rawVideoData.trim();
-        if (trimmedVideo.startsWith("{") && trimmedVideo.endsWith("}")) {
-            try {
-                const parsedVideo = JSON.parse(trimmedVideo);
-                if (parsedVideo && typeof parsedVideo === "object") {
-                    if (parsedVideo?.user) return String(parsedVideo.user).trim();
-                    if (parsedVideo?.pbl) return String(parsedVideo.pbl).trim();
-                    if (parsedVideo?.gdoc) return String(parsedVideo.gdoc).trim();
-                }
-            } catch (error) {
-                return trimmedVideo;
-            }
-        }
-
-        return trimmedVideo;
-    }
-
-    if (data?.v_video_user) return String(data.v_video_user).trim();
-    if (data?.v_video_pbl) return String(data.v_video_pbl).trim();
-
-    return "";
+    return Array.from({ length: 5 }, (_, i) => {
+        const value = `${normalized}${'0'.repeat(i)}`;
+        return {
+            value,
+            label: formatIndianNumber(value),
+            words: numberToIndianWords(value),
+        };
+    });
 };
 
-const isImageDocumentUrl = (url) => (
-    /\.(jpg|jpeg|png|gif|webp|bmp|svg)(?:[?#].*)?$/i.test(String(url || ""))
-);
+const isBlobValue = (value) => typeof Blob !== "undefined" && value instanceof Blob;
 
-const getDocumentFileName = (url) => {
-    const rawPath = String(url || "").split(/[?#]/)[0];
-    const fileName = rawPath.split("/").pop() || "Document";
+const appendFormValue = (
+    formData,
+    key,
+    value,
+    { fallback = "", skipNullish = false, skipEmptyString = false } = {}
+) => {
+    let normalizedValue = value;
 
-    try {
-        return decodeURIComponent(fileName);
-    } catch (error) {
-        return fileName;
+    if (normalizedValue === undefined || normalizedValue === null) {
+        if (skipNullish) return;
+        normalizedValue = fallback;
     }
+
+    if (skipEmptyString && normalizedValue === "") {
+        return;
+    }
+
+    if (typeof normalizedValue === "object" && !isBlobValue(normalizedValue)) {
+        return;
+    }
+
+    formData.append(key, normalizedValue);
 };
 
-
-
-const ViewProductForm = ({ productId }) => {
-    const isReadOnly = true;
+const UpdateProductForm = ({ productId }) => {
     const [loading, setLoading] = useState(false);
     const [frontImageFile, setFrontImageFile] = useState(null);
     const [preview, setPreview] = useState(null);
+    // true when a purchase calculation manages this vehicle's costing/pricing
+    const [pricingLocked, setPricingLocked] = useState(false);
     const [additionalImages, setAdditionalImages] = useState([]); // store File objects
     const [additionalPreviews, setAdditionalPreviews] = useState([]); // for UI previews
-    const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]);
-    const [secretDocument2Previews, setSecretDocument2Previews] = useState([]);
+    const [additionalImagePublicIds, setAdditionalImagePublicIds] = useState([]); // public_id per preview, null for unsaved local files
+    const [additionalDocumentFiles, setAdditionalDocumentFiles] = useState([]); // store File objects
+    const [additionalDocumentPreviews, setAdditionalDocumentPreviews] = useState([]); // for UI previews
+    const [additionalDocumentPublicIds, setAdditionalDocumentPublicIds] = useState([]); // public_id per preview, null for unsaved local files
+    const [secretDocumentFiles, setSecretDocumentFiles] = useState([]); // store File objects
+    const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]); // for UI previews
+    const [secretDocumentPublicIds, setSecretDocumentPublicIds] = useState([]); // public_id per preview, null for unsaved local files
+    const [secretDocument2Files, setSecretDocument2Files] = useState([]); // store File objects
+    const [secretDocument2Previews, setSecretDocument2Previews] = useState([]); // for UI previews
+    const [secretDocument2PublicIds, setSecretDocument2PublicIds] = useState([]); // public_id per preview, null for unsaved local files
+    const [loadedSaleByPbl, setLoadedSaleByPbl] = useState(0);
 
     const [shopData, setShopData] = useState([]);
+    const [partnerData, setPartnerData] = useState([]);
     const [brandData, setBrandData] = useState([]);
     const [colorData, setColorData] = useState([]);
     const [conditionData, setConditionData] = useState([]);
     const [packageData, setPackageData] = useState([]);
+    const [giftData, setGiftData] = useState([]);
+    const [isGiftLoading, setIsGiftLoading] = useState(false);
     const [skeletonData, setSkeletonData] = useState([]);
     const [transmissionData, setTransmissionData] = useState([]);
     const [gradeData, setGradeData] = useState([]);
@@ -156,10 +225,63 @@ const ViewProductForm = ({ productId }) => {
     const [seatData, setSeatData] = useState([]);
     const [isMasterDataReady, setIsMasterDataReady] = useState(false);
     const [removeAdditionalImage, setRemoveAdditionalImage] = useState([]);
+    const [removeAdditionalDocument, setRemoveAdditionalDocument] = useState([]);
+    const [removeSecretDocument, setRemoveSecretDocument] = useState([]);
+    const [removeSecretDocument2, setRemoveSecretDocument2] = useState([]);
     const [fontImageError, setFontImageError] = useState(false);
     const [selectedFsId, setSelectedFsId] = useState([]);
-    const [priceSelection, setPriceSelection] = useState('fixed');
+    const [isPblAdditionalDropdownOpen, setIsPblAdditionalDropdownOpen] = useState(false);
+    const [selectedPblAdditionalOption, setSelectedPblAdditionalOption] = useState('');
+    const [isPblAskingDropdownOpen, setIsPblAskingDropdownOpen] = useState(false);
+    const [selectedPblAskingOption, setSelectedPblAskingOption] = useState('');
+    const [masterCategoryItems, setMasterCategoryItems] = useState([]);
+    const [categoryItems, setCategoryItems] = useState([]);
+    const [categoryHistory, setCategoryHistory] = useState([]);
+    const [selectedCategoryLabel, setSelectedCategoryLabel] = useState("");
+    const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+    const [isCategoryListVisible, setIsCategoryListVisible] = useState(false);
+    const categoryDropdownRef = useRef(null);
     const [user, setUser] = useState(null);
+    const [sellerInfoRows, setSellerInfoRows] = useState([{ name: "", phone: "" }]);
+    const [moreInformation, setMoreInformation] = useState([{ id: "more-info-0", key: "", value: "" }]);
+    const { permissionList } = useAppContext();
+
+    const handleSellerInfoChange = (index, field, value) => {
+        setSellerInfoRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    };
+
+    const handleAddSellerInfoRow = () => {
+        setSellerInfoRows((prev) => [...prev, { name: "", phone: "" }]);
+    };
+
+    const handleRemoveSellerInfoRow = (index) => {
+        setSellerInfoRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+    };
+
+    const setMoreInformationRow = (id, patch) => {
+        setMoreInformation((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+    };
+
+    const addMoreInformationRow = () => {
+        setMoreInformation((current) => [...current, { id: `more-info-${Date.now()}-${current.length}`, key: "", value: "" }]);
+    };
+
+    const removeMoreInformationRow = (id) => {
+        setMoreInformation((current) => {
+            const nextRows = current.filter((row) => row.id !== id);
+            return nextRows.length ? nextRows : [{ id: "more-info-0", key: "", value: "" }];
+        });
+    };
+
+    const canShowSellerMobileToggle = (targetUser = user) => {
+        if (!targetUser) return false;
+        const targetPermissions = permissionList?.length
+            ? permissionList
+            : formatPermissions(targetUser?.permissions ?? []);
+        const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+
+        return userMode === "supreme" || hasPermission(targetPermissions, 0, "Vehicle", "Edit");
+    };
     const [countryData, setCountryData] = useState([]);
     const [locationData, setLocationData] = useState([]);
     const [availabilityStatusData, setAvailabilityStatusData] = useState([
@@ -175,12 +297,20 @@ const ViewProductForm = ({ productId }) => {
             value: "booked",
             label: "Booked",
         },
+        {
+            value: "hold",
+            label: "Hold",
+        },
+        {
+            value: "slightly_negotiable",
+            label: "Slightly Negotiable",
+        }
     ]);
 
     const [isOutletLoading, setIsOutletLoading] = useState(false);
     const [isLocationLoading, setIsLocationLoading] = useState(false);
     const [outletData, setOutletData] = useState([]);
-    const [staged, setStaged] = useState("");
+
 
     const router = useRouter();
 
@@ -193,7 +323,22 @@ const ViewProductForm = ({ productId }) => {
         trigger,
         control
     } = useForm({
-        // resolver: yupResolver(schema),
+        resolver: yupResolver(schema),
+        defaultValues: {
+            vp_currency: "BDT",
+            vp_show_price: "fixed",
+            vp_other_cost: [{ name: "", amount: "" }],
+            vp_purchase_cost: [{ name: "", amount: "" }],
+            vp_conv_rate: "1",
+            vp_bd_tax: "",
+            v_arrival_date: "",
+            v_video_gdocpbl: "",
+            v_video_gdocuser: "",
+            v_auction_type: "",
+            v_availability_status: "available",
+            v_product_type_id: "1",
+            category: "",
+        },
     });
 
     const selectedShopId = watch("v_shop_id");
@@ -201,10 +346,18 @@ const ViewProductForm = ({ productId }) => {
     const selectedModelId = watch("v_model_id");
     const vUrgentSale = watch("v_urgent_sale");
     const userFixedPrice = watch("vp_user_fixed_price");
-    const selectedAuctionType = watch("v_auction_type");
-    const googleDocLink = watch("v_video_gdoc");
+    const userPblAdditionalPrice = watch("vp_pbl_additional_amount");
+    const userPblAskingPrice = watch("vp_pbl_asking_price");
+    const pblAdditionalPriceOptions = useMemo(() => buildPriceOptions(userPblAdditionalPrice), [userPblAdditionalPrice]);
+    const pblAskingPriceOptions = useMemo(() => buildPriceOptions(userPblAskingPrice), [userPblAskingPrice]);
 
     const selectedCountryId = watch("v_country_id");
+    const selectedProductTypeId = watch("v_product_type_id");
+    const additionalImageSlotsLeft = Math.max(
+        MAX_ADDITIONAL_IMAGES - additionalPreviews.length,
+        0
+    );
+    const isAdditionalImageLimitReached = additionalImageSlotsLeft === 0;
 
     // Fetch outlet data when shop changes
     useEffect(() => {
@@ -277,7 +430,6 @@ const ViewProductForm = ({ productId }) => {
                 setValue("v_urgent_sale", false);
                 toast.error("Please enter a fixed price before marking as urgent sell.");
             } else {
-                setPriceSelection('fixed');
                 setValue('vp_show_price', 'fixed');
             }
         }
@@ -311,6 +463,32 @@ const ViewProductForm = ({ productId }) => {
         }
     }, [productId, isMasterDataReady]);
 
+    useEffect(() => {
+        if (selectedProductTypeId !== "1") {
+            setValue("v_product_type_id", "1", { shouldValidate: true });
+            setCategoryHistory([]);
+            setSelectedCategoryLabel("");
+            setValue("category", "", { shouldValidate: true });
+            setIsCategoryListVisible(false);
+            return;
+        }
+
+        fetchCategories("1");
+    }, [selectedProductTypeId, setValue]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
+                setIsCategoryListVisible(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
 
     useEffect(() => {
         const userInfo = parseStoredUser(localStorage.getItem("user"));
@@ -319,6 +497,9 @@ const ViewProductForm = ({ productId }) => {
         }
     }, []);
 
+
+
+    //  console.log("user---------------------------------------", user)
 
     const fetchModelData = async (selectedBrandId) => {
         if (selectedBrandId) {
@@ -394,6 +575,117 @@ const ViewProductForm = ({ productId }) => {
         }
     };
 
+    const fetchMasterCategories = async () => {
+        setIsCategoryLoading(true);
+        try {
+            const response = await CategoryService.Queries.getCategories({
+                _page: 1,
+                _perPage: 1000,
+                _parent_id: 0,
+            });
+
+            if (response?.status === "success") {
+                const categories = response?.data?.data || [];
+                const mappedCategories = categories.map((item) => ({
+                    c_id: item.c_id,
+                    c_name: item.c_name,
+                }));
+                setMasterCategoryItems(mappedCategories);
+            } else {
+                setMasterCategoryItems([]);
+            }
+        } catch (error) {
+            toast.error("Failed to fetch categories");
+            setMasterCategoryItems([]);
+        } finally {
+            setIsCategoryLoading(false);
+        }
+    };
+
+    const fetchCategories = async (parentId) => {
+        if (!parentId) {
+            setCategoryItems([]);
+            return;
+        }
+
+        setIsCategoryLoading(true);
+        try {
+            const response = await CategoryService.Queries.getCategories({
+                _page: 1,
+                _perPage: 5000,
+                _parent_id: parentId,
+            });
+
+            if (response?.status === "success") {
+                const categories = response?.data?.data || [];
+                const mappedCategories = categories.map((item) => ({
+                    c_id: item.c_id,
+                    c_name: item.c_name,
+                }));
+                setCategoryItems(mappedCategories);
+            } else {
+                setCategoryItems([]);
+            }
+        } catch (error) {
+            toast.error("Failed to fetch categories");
+            setCategoryItems([]);
+        } finally {
+            setIsCategoryLoading(false);
+        }
+    };
+
+    const handleCategoryClick = async (category) => {
+        setIsCategoryLoading(true);
+        try {
+            const response = await CategoryService.Queries.getCategories({
+                _page: 1,
+                _perPage: 5000,
+                _parent_id: category.c_id,
+            });
+
+            const children = response?.status === "success" ? (response?.data?.data || []) : [];
+            if (children.length > 0) {
+                const mapped = children.map((item) => ({ c_id: item.c_id, c_name: item.c_name }));
+                setCategoryItems(mapped);
+                setCategoryHistory((prev) => [...prev, category]);
+                setSelectedCategoryLabel(category.c_name || "");
+                setValue("category", "", { shouldValidate: true });
+            } else {
+                setValue("category", String(category.c_id), { shouldValidate: true });
+                setSelectedCategoryLabel(category.c_name || "");
+                setCategoryHistory((prev) => [...prev, category]);
+                setCategoryItems([]);
+                setIsCategoryListVisible(false);
+            }
+        } catch (error) {
+            setValue("category", String(category.c_id), { shouldValidate: true });
+            setSelectedCategoryLabel(category.c_name || "");
+            setCategoryHistory((prev) => [...prev, category]);
+            setIsCategoryListVisible(false);
+        } finally {
+            setIsCategoryLoading(false);
+        }
+    };
+
+    const handleCategoryBack = () => {
+        if (categoryHistory.length === 0) return;
+
+        const newHistory = [...categoryHistory];
+        newHistory.pop();
+        const parentCategory = newHistory[newHistory.length - 1];
+
+        setValue("category", "", { shouldValidate: true });
+        setCategoryHistory(newHistory);
+        setSelectedCategoryLabel(parentCategory ? parentCategory.c_name : "");
+
+        const parentId = parentCategory ? parentCategory.c_id : selectedProductTypeId;
+        if (parentId) {
+            fetchCategories(parentId);
+        } else {
+            setCategoryItems([]);
+        }
+    };
+
 
     //  Single image
     const handleImageChange = (e) => {
@@ -415,39 +707,169 @@ const ViewProductForm = ({ productId }) => {
 
     // Multiple Images
     const handleAdditionalImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        const totalAllowed = 12;
-        const remainingSlots = totalAllowed - additionalImages.length;
+        const files = Array.from(e.target.files || []);
+        const remainingSlots = MAX_ADDITIONAL_IMAGES - additionalPreviews.length;
 
-        if (remainingSlots <= 0) return;
+        if (files.length === 0) {
+            return;
+        }
+
+        if (remainingSlots <= 0) {
+            toast.error(`Maximum ${MAX_ADDITIONAL_IMAGES} additional images allowed.`);
+            e.target.value = "";
+            return;
+        }
+
+        if (files.length > remainingSlots) {
+            toast.error(
+                `You can add only ${remainingSlots} more additional image${remainingSlots > 1 ? "s" : ""}. Maximum total is ${MAX_ADDITIONAL_IMAGES}.`
+            );
+        }
 
         const filesToAdd = files.slice(0, remainingSlots);
         const previews = filesToAdd.map((file) => URL.createObjectURL(file));
 
         setAdditionalImages((prev) => [...prev, ...filesToAdd]);
         setAdditionalPreviews((prev) => [...prev, ...previews]);
+        setAdditionalImagePublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
+        e.target.value = "";
     };
 
     const handleDeleteAdditionalImage = (url, index) => {
 
-        const isCloudinaryImage = url.includes('res.cloudinary.com') && url.includes('/image/upload/');
+        const isNewImage = typeof url === "string" && url.startsWith("blob:");
+        const publicId = additionalImagePublicIds[index];
 
-        if (isCloudinaryImage) {
-            const urlParts = url.split("/");
-
-            const fileNameWithExt = urlParts[urlParts.length - 1];
-
-            const folderIndex = urlParts.findIndex(part => part === "upload") + 2;
-
-            const publicId = urlParts.slice(folderIndex).join("/").replace(/\.[^/.]+$/, "");
-
-            if (!removeAdditionalImage.includes(publicId)) {
-                setRemoveAdditionalImage(prev => [...prev, publicId]);
-            }
+        if (publicId && !removeAdditionalImage.includes(publicId)) {
+            setRemoveAdditionalImage(prev => [...prev, publicId]);
         }
 
-        setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+        if (isNewImage) {
+            const newImageIndex = additionalPreviews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setAdditionalImages((prev) => prev.filter((_, i) => i !== newImageIndex));
+        }
+
         setAdditionalPreviews((prev) => prev.filter((_, i) => i !== index));
+        setAdditionalImagePublicIds((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleAdditionalDocumentFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const totalAllowed = 12;
+        const remainingSlots = totalAllowed - additionalDocumentPreviews.length;
+
+        if (remainingSlots <= 0) return;
+
+        const filesToAdd = files.slice(0, remainingSlots);
+        const previews = filesToAdd.map((file) => URL.createObjectURL(file));
+
+        setAdditionalDocumentFiles((prev) => [...prev, ...filesToAdd]);
+        setAdditionalDocumentPreviews((prev) => [...prev, ...previews]);
+        setAdditionalDocumentPublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
+        e.target.value = "";
+    };
+
+    const handleDeleteAdditionalDocument = (url, index) => {
+        const isNewDocument = typeof url === "string" && url.startsWith("blob:");
+        const publicId = additionalDocumentPublicIds[index];
+
+        if (publicId && !removeAdditionalDocument.includes(publicId)) {
+            setRemoveAdditionalDocument(prev => [...prev, publicId]);
+        }
+
+        if (isNewDocument) {
+            const newDocumentIndex = additionalDocumentPreviews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setAdditionalDocumentFiles((prev) => prev.filter((_, i) => i !== newDocumentIndex));
+        }
+
+        setAdditionalDocumentPreviews((prev) => prev.filter((_, i) => i !== index));
+        setAdditionalDocumentPublicIds((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSecretDocumentFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const totalAllowed = 12;
+        const remainingSlots = totalAllowed - secretDocumentPreviews.length;
+
+        if (remainingSlots <= 0) return;
+
+        const filesToAdd = files.slice(0, remainingSlots);
+        const previews = filesToAdd.map((file) => URL.createObjectURL(file));
+
+        setSecretDocumentFiles((prev) => [...prev, ...filesToAdd]);
+        setSecretDocumentPreviews((prev) => [...prev, ...previews]);
+        setSecretDocumentPublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
+        e.target.value = "";
+    };
+
+    const handleDeleteSecretDocument = (url, index) => {
+        const isNewDocument = typeof url === "string" && url.startsWith("blob:");
+        const publicId = secretDocumentPublicIds[index];
+
+        if (publicId && !removeSecretDocument.includes(publicId)) {
+            setRemoveSecretDocument(prev => [...prev, publicId]);
+        }
+
+        if (isNewDocument) {
+            const newDocumentIndex = secretDocumentPreviews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setSecretDocumentFiles((prev) => prev.filter((_, i) => i !== newDocumentIndex));
+        }
+
+        setSecretDocumentPreviews((prev) => prev.filter((_, i) => i !== index));
+        setSecretDocumentPublicIds((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSecretDocument2FileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const totalAllowed = 12;
+        const remainingSlots = totalAllowed - secretDocument2Previews.length;
+
+        if (remainingSlots <= 0) return;
+
+        const filesToAdd = files.slice(0, remainingSlots);
+        const previews = filesToAdd.map((file) => URL.createObjectURL(file));
+
+        setSecretDocument2Files((prev) => [...prev, ...filesToAdd]);
+        setSecretDocument2Previews((prev) => [...prev, ...previews]);
+        setSecretDocument2PublicIds((prev) => [...prev, ...filesToAdd.map(() => null)]);
+        e.target.value = "";
+    };
+
+    const handleDeleteSecretDocument2 = (url, index) => {
+        const isNewDocument = typeof url === "string" && url.startsWith("blob:");
+        const publicId = secretDocument2PublicIds[index];
+
+        if (publicId && !removeSecretDocument2.includes(publicId)) {
+            setRemoveSecretDocument2(prev => [...prev, publicId]);
+        }
+
+        if (isNewDocument) {
+            const newDocumentIndex = secretDocument2Previews
+                .slice(0, index)
+                .filter((previewUrl) => typeof previewUrl === "string" && previewUrl.startsWith("blob:"))
+                .length;
+
+            URL.revokeObjectURL(url);
+            setSecretDocument2Files((prev) => prev.filter((_, i) => i !== newDocumentIndex));
+        }
+
+        setSecretDocument2Previews((prev) => prev.filter((_, i) => i !== index));
+        setSecretDocument2PublicIds((prev) => prev.filter((_, i) => i !== index));
     };
 
     const currentYear = new Date().getFullYear();
@@ -467,7 +889,40 @@ const ViewProductForm = ({ productId }) => {
                 _perPage: 1000
             });
 
-            setShopData(response.data.data || []);
+            const shopOptions = response.data.data.map((shop) => ({
+                value: shop?.s_id,
+                label: shop?.s_title,
+                phone: shop?.user?.phone || shop?.s_user_phone || "",
+                s_user_id: shop?.s_user_id,
+                s_id: shop?.s_id,
+                shop_name: "my-shop",
+            }));
+
+            setShopData(shopOptions);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to fetch data");
+        }
+    };
+
+    const getPartnerData = async () => {
+        try {
+            const params = {
+                order: "desc",
+                orderBy: "md_id",
+                _page: 1,
+                _perPage: 1000,
+                _mode: "partner",
+                _status: "active",
+            };
+
+            const response = await UserService.Queries.getUsers(params);
+
+            const partnerOptions = response.data.data.map((partner) => ({
+                value: partner.id,
+                label: partner.name,
+            }));
+
+            setPartnerData(partnerOptions);
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to fetch data");
         }
@@ -720,11 +1175,8 @@ const ViewProductForm = ({ productId }) => {
     }
 
     const handleList = async () => {
-        router.push("/dashboard/requested-product/");
+        router.push("/dashboard/product-list/");
     }
-
-
-
 
     //Fetch and Populate Data
     const fetchProductDetails = async () => {
@@ -733,9 +1185,6 @@ const ViewProductForm = ({ productId }) => {
             if (res.status === 'success') {
                 const data = res.data;
 
-
-                setStaged(data?.v_staged);
-
                 // Set brand and model IDs
                 const brandId = data.v_brand_id;
                 const modelId = data.v_model_id;
@@ -743,13 +1192,28 @@ const ViewProductForm = ({ productId }) => {
 
                 // Populate form fields
                 setValue('v_title', data.v_title);
-                setValue('user_name', data?.user?.name || "");
                 setValue('v_brand_id', brandId);
+                setValue('v_product_type_id', "1");
+
+                const rawCategoryId = data?.v_category_id || data?.v_category?.c_id || "";
+                const rawCategoryName = data?.v_category?.c_name || "";
+                const rawCategoryParentId = data?.v_category?.c_parent_id;
+                const isRootCategory =
+                    String(rawCategoryId) === "1" ||
+                    Number(rawCategoryParentId) === 0;
+                const hasValidCategory = !!rawCategoryId && !isRootCategory;
+
+                setValue('category', hasValidCategory ? String(rawCategoryId) : "");
+                setSelectedCategoryLabel(hasValidCategory && rawCategoryName ? String(rawCategoryName) : "");
+                setCategoryHistory([]);
 
                 // Populate fields instantly
                 setValue('v_brand_id', brandId);
                 setValue('v_model_id', modelId);
                 setValue('v_edition_id', editionId);
+                setValue('v_user_gift', data.v_user_gift || '');
+                setValue('v_pbl_gift', data.v_pbl_gift || '');
+                setPricingLocked(!!data?.has_purchase_calculation);
 
                 // === Fetch Models ===
                 if (brandId) {
@@ -814,35 +1278,57 @@ const ViewProductForm = ({ productId }) => {
                 }
 
                 const vehicleImgArr = [];
+                const vehicleImgPublicIds = [];
                 if (data?.vehicle_images?.length > 0) {
                     data.vehicle_images.forEach((img) => {
                         if (img.url !== "") {
                             vehicleImgArr.push(img.url);
+                            vehicleImgPublicIds.push(img?.public_id || null);
+                        }
+                    });
+                }
+
+                const vehicleDocArr = [];
+                const vehicleDocPublicIds = [];
+                if (data?.v_docs?.length > 0) {
+                    data.v_docs.forEach((doc) => {
+                        if (doc?.url) {
+                            vehicleDocArr.push(doc.url);
+                            vehicleDocPublicIds.push(doc?.public_id || null);
                         }
                     });
                 }
 
                 const vehicleSecretDocArr = [];
+                const vehicleSecretDocPublicIds = [];
                 if (data?.v_secret_docs?.length > 0) {
                     data.v_secret_docs.forEach((doc) => {
                         if (doc?.url) {
                             vehicleSecretDocArr.push(doc.url);
+                            vehicleSecretDocPublicIds.push(doc?.public_id || null);
                         }
                     });
                 }
 
                 const vehicleSecretDoc2Arr = [];
+                const vehicleSecretDoc2PublicIds = [];
                 if (data?.v_secret_docs_2?.length > 0) {
                     data.v_secret_docs_2.forEach((doc) => {
                         if (doc?.url) {
                             vehicleSecretDoc2Arr.push(doc.url);
+                            vehicleSecretDoc2PublicIds.push(doc?.public_id || null);
                         }
                     });
                 }
 
                 setAdditionalPreviews(vehicleImgArr);
+                setAdditionalImagePublicIds(vehicleImgPublicIds);
+                setAdditionalDocumentPreviews(vehicleDocArr);
+                setAdditionalDocumentPublicIds(vehicleDocPublicIds);
                 setSecretDocumentPreviews(vehicleSecretDocArr);
+                setSecretDocumentPublicIds(vehicleSecretDocPublicIds);
                 setSecretDocument2Previews(vehicleSecretDoc2Arr);
+                setSecretDocument2PublicIds(vehicleSecretDoc2PublicIds);
                 setPreview(data?.vehicle_front_image?.url);
 
                 // Populate other form fields
@@ -874,10 +1360,56 @@ const ViewProductForm = ({ productId }) => {
                     setValue("v_fitness_exp_date", formatted);
                 }
 
+                if (data?.v_arrival_date) {
+                    const rawDate = new Date(data.v_arrival_date);
+                    const formatted = rawDate.toISOString().split("T")[0];
+                    setValue("v_arrival_date", formatted);
+                } else {
+                    setValue("v_arrival_date", "");
+                }
+
                 setValue('v_availability_id', data.v_availability_id);
                 setValue('v_country_id', data?.v_location?.country_id);
                 setValue('v_location_id', data?.v_location?.location_id);
-                setValue('v_availability_status', data?.v_availability_status || '');
+                setValue(
+                    'v_availability_status',
+                    (data?.v_availability_status && data.v_availability_status !== 'undefined')
+                        ? data.v_availability_status
+                        : 'available'
+                );
+                setValue('v_auction_type', data?.v_auction_type || '');
+                const currentShop = shopData.find((shop) => String(shop.value) === String(data.v_shop_id));
+                const partnerId =
+                    data?.v_user_id ||
+                    data?.v_shop?.s_user_id ||
+                    data?.shop?.s_user_id ||
+                    data?.shop?.user_id ||
+                    data?.v_shop_user_id ||
+                    currentShop?.s_user_id;
+
+                if (partnerId) {
+                    setValue('v_partner_id', partnerId);
+                }
+
+                const currentShopLabel =
+                    data?.v_shop?.s_title ||
+                    data?.shop?.s_title ||
+                    data?.v_shop_name ||
+                    currentShop?.label;
+
+                if (data.v_shop_id && currentShopLabel && !currentShop) {
+                    setShopData((prevShopData) => [
+                        ...prevShopData,
+                        {
+                            value: data.v_shop_id,
+                            label: currentShopLabel,
+                            phone: data?.v_shop?.user?.phone || data?.shop?.user?.phone || data?.v_shop_user_phone || "",
+                            s_user_id: partnerId,
+                            s_id: data.v_shop_id,
+                        },
+                    ]);
+                }
+
                 setValue('v_shop_id', data.v_shop_id);
                 // setValue('v_code', data.v_code && String(data.v_code.split("-")[1]));
                 setValue('v_priority', data.v_priority);
@@ -885,26 +1417,88 @@ const ViewProductForm = ({ productId }) => {
                 setValue('vp_user_asking_price', data?.vehicle_db_price?.vp_user_asking_price);
                 setValue('vp_user_variable_price', data?.vehicle_db_price?.vp_user_variable_price);
                 setValue('vp_show_price', data?.vehicle_db_price?.vp_show_price);
-                if (data?.vehicle_db_price?.vp_show_price) {
-                    setPriceSelection(data.vehicle_db_price.vp_show_price);
-                }
+                setValue('vp_currency', data?.vehicle_db_price?.vp_currency || 'BDT');
 
                 setValue('v_urgent_sale', data.v_urgent_sale == 1);
                 setValue('vp_user_price_status', data?.vehicle_db_price?.vp_user_price_status);
                 setValue('vp_user_purchase_price', data?.vehicle_price?.v_purchase_price);
                 setValue('vp_pbl_additional_amount', data?.vehicle_db_price?.vp_pbl_additional_amount);
-                setValue('vp_pbl_price_status', data?.vehicle_db_price?.vp_pbl_price_status);
+                setValue('vp_pbl_price_status', data?.vehicle_price?.v_pbl_price_status);
                 setValue('vp_pbl_asking_price', data?.vehicle_db_price?.vp_pbl_asking_price);
                 setValue('vp_user_costing_price', data?.vehicle_db_price?.vp_user_costing_price);
+                setValue('vp_user_to_pbl_price', data?.vehicle_db_price?.vp_user_to_pbl_price);
+                setValue('vp_conv_rate', data?.vehicle_db_price?.vp_conv_rate ? String(data.vehicle_db_price.vp_conv_rate) : '1');
+                setValue('vp_bd_tax', data?.vehicle_db_price?.vp_bd_tax ? String(data.vehicle_db_price.vp_bd_tax) : '');
+
+                const otherCosts = Array.isArray(data?.vehicle_db_price?.vp_other_cost)
+                    ? data.vehicle_db_price.vp_other_cost
+                    : [];
+                setValue(
+                    'vp_other_cost',
+                    otherCosts.length > 0
+                        ? otherCosts.map((item) => ({
+                            name: item?.name ? String(item.name) : '',
+                            amount: item?.amount ? String(item.amount) : '',
+                        }))
+                        : [{ name: '', amount: '' }],
+                );
+
+                const purchaseCosts = Array.isArray(data?.vehicle_db_price?.vp_purchase_cost)
+                    ? data.vehicle_db_price.vp_purchase_cost
+                    : [];
+                setValue(
+                    'vp_purchase_cost',
+                    purchaseCosts.length > 0
+                        ? purchaseCosts.map((item) => ({
+                            name: item?.name ? String(item.name) : '',
+                            amount: item?.amount ? String(item.amount) : '',
+                        }))
+                        : [{ name: '', amount: '' }],
+                );
 
                 setValue('pbl_partner_code', data.pbl_partner_code);
-                setValue('v_auction_type', data?.v_auction_type || '');
-                setValue('v_video_gdoc', getGoogleDocLink(data));
+                setValue('v_pbl_partnership_expire_date', data.v_pbl_partnership_expire_date || '');
                 setValue('v_description', data.v_description);
                 setValue('v_user_description', data.v_user_description);
                 setValue('vm_description', data?.v_metadata?.vm_description);
-                setValue('v_video', getDisplayVideoLink(data));
-                setValue('v_is_saleBy_pbl', data.v_is_saleBy_pbl == 1);
+                setValue('v_pbl_text', data.v_pbl_text || '');
+                setValue('v_delivery_condition', data.v_delivery_condition || '');
+                setValue('v_secret_text', data.v_secret_text || '');
+                setValue('v_secret_video_link', data.v_secret_video_link || '');
+                const sellerInfoData = Array.isArray(data?.v_seller_info) ? data.v_seller_info : [];
+                setSellerInfoRows(
+                    sellerInfoData.length > 0
+                        ? sellerInfoData.map((row) => ({ name: row?.name || '', phone: row?.phone || '' }))
+                        : [{ name: '', phone: '' }]
+                );
+                const moreInfoData = Array.isArray(data?.v_more_information) ? data.v_more_information : [];
+                setMoreInformation(
+                    moreInfoData.length > 0
+                        ? moreInfoData.map((row, index) => ({ id: `more-info-${index}`, key: row?.label || '', value: row?.value || '' }))
+                        : [{ id: 'more-info-0', key: '', value: '' }]
+                );
+                const videoData = data?.v_video;
+                const userVideo = (videoData && typeof videoData === 'object')
+                    ? (videoData?.user ? String(videoData.user) : '')
+                    : (videoData ? String(videoData) : '');
+                const pblVideo = (videoData && typeof videoData === 'object')
+                    ? (videoData?.pbl ? String(videoData.pbl) : '')
+                    : '';
+                const gdocVideo = (videoData && typeof videoData === 'object')
+                    ? (videoData?.gdocpbl ? String(videoData.gdocpbl) : '')
+                    : '';
+                const gdocUserVideo = (videoData && typeof videoData === 'object')
+                    ? (videoData?.gdocuser ? String(videoData.gdocuser) : '')
+                    : '';
+                setValue('v_video_user', userVideo);
+                setValue('v_video_pbl', pblVideo);
+                setValue('v_video_gdocpbl', gdocVideo);
+                setValue('v_video_gdocuser', gdocUserVideo);
+                const isPbl = data.v_is_saleBy_pbl == 1 ? 1 : 0;
+                setLoadedSaleByPbl(isPbl);
+                setValue('v_is_saleBy_pbl', isPbl === 1);
+                setValue('v_show_seller_mobile', Number(data.v_show_seller_mobile) === 1);
+                // setValue('v_to_be_partner', data.v_to_be_partner == 1);
             }
         } catch (error) {
             console.log('Error fetching product by ID:', error);
@@ -978,13 +1572,37 @@ const ViewProductForm = ({ productId }) => {
 
     }
 
+    const getGiftData = async () => {
+        try {
+            setIsGiftLoading(true);
+            const response = await GiftService.Queries.getGifts({
+                _page: 1,
+                _perPage: 400,
+                _status: 'active',
+            });
+
+            const gifts = response.data?.data || [];
+            setGiftData(gifts.map((gift) => ({ value: gift.g_id, label: gift.g_title })));
+        } catch (error) {
+            if (error.errors) {
+                Object.values(error.errors).forEach((e) => toast.error(e[0]));
+            } else {
+                toast.error(error.message || "Something went wrong");
+            }
+        } finally {
+            setIsGiftLoading(false);
+        }
+    }
+
 
     // Load master data
     const loadAllMasterData = async () => {
         try {
             await Promise.all([
                 getShopData(),
+                getPartnerData(),
                 getBrandData(),
+                fetchMasterCategories(),
                 getColorData(),
                 getCountryData(),
                 getConditionData(),
@@ -997,6 +1615,7 @@ const ViewProductForm = ({ productId }) => {
                 getUserModeData(),
                 getAvailabilityData(),
                 getSeatData(),
+                getGiftData(),
             ]);
             setIsMasterDataReady(true);
         } catch (error) {
@@ -1009,28 +1628,190 @@ const ViewProductForm = ({ productId }) => {
     }, []);
 
     const onSubmit = async (data) => {
-        const formData = {
-            _is_approved: 1,
-            vp_pbl_additional_amount: data?.vp_pbl_additional_amount ?? "",
-            vp_user_variable_price: data?.vp_user_variable_price ?? "",
-            vp_user_costing_price: data?.vp_user_costing_price ?? "",
-            vp_pbl_price_status: data?.vp_pbl_price_status ?? "",
-            vp_pbl_asking_price: data?.vp_pbl_asking_price ?? "",
+
+        if (!frontImageFile && preview == null) {
+            setFontImageError(true);
+            return;
         }
 
+        if (additionalPreviews.length > MAX_ADDITIONAL_IMAGES) {
+            toast.error(`Maximum ${MAX_ADDITIONAL_IMAGES} additional images allowed.`);
+            return;
+        }
+
+        setFontImageError(false);
+
+        setLoading(true);
+
+        // ✅ Convert checkboxes  formData.append('v_edition_id', data.v_edition_id ? 1 : 0);
+        data.v_urgent_sale = data.v_urgent_sale ? 1 : 0;
+        data.v_is_saleBy_pbl = data.v_is_saleBy_pbl !== undefined ? (data.v_is_saleBy_pbl ? 1 : 0) : loadedSaleByPbl;
+        data.v_show_seller_mobile = data.v_show_seller_mobile ? 1 : 0;
+        // data.v_to_be_partner = data.v_to_be_partner ? 1 : 0;
+        data.v_int_grade_id = data?.v_int_grade_id ? data?.v_int_grade_id : '';
+        data.v_ext_grade_id = data?.v_ext_grade_id ? data?.v_ext_grade_id : '';
+        data.v_condition_id = data.v_condition_id ? data?.v_condition_id : '';
+        data.v_transmission_id = data.v_transmission_id ? data?.v_transmission_id : '';
+        data.v_fuel_id = data.v_fuel_id ? data?.v_fuel_id : '';
+        data.v_grade_id = data.v_grade_id ? data?.v_grade_id : '';
+        data.v_skeleton_id = data.v_skeleton_id ? data?.v_skeleton_id : '';
+        data.v_color_id = data.v_color_id ? data?.v_color_id : '';
+        data.v_edition_id = data.v_edition_id ? data?.v_edition_id : '';
+
+        data.v_location_id = data.v_location_id ? data?.v_location_id : '';
+        data.v_availability_id = data.v_availability_id ? data?.v_availability_id : '';
+        data.v_capacity = data.v_capacity ? data?.v_capacity : '';
+        data.v_mileage = data.v_mileage ? data?.v_mileage : '';
+        data.v_registration = data.v_registration ? data?.v_registration : '';
+        data.v_mod_year = data.v_mod_year ? data?.v_mod_year : '';
+        data.v_seat_id = data.v_seat_id ? data?.v_seat_id : '';
+        data.vp_user_purchase_price = data.vp_user_purchase_price ? data?.vp_user_purchase_price : '';
+        data.vp_user_asking_price = data.vp_user_asking_price ? data?.vp_user_asking_price : '';
+        data.vp_user_fixed_price = data.vp_user_fixed_price ? data?.vp_user_fixed_price : '';
+        data.vp_user_variable_price = data.vp_user_variable_price ? data?.vp_user_variable_price : '';
+        data.vp_pbl_additional_amount = data.vp_pbl_additional_amount ? data?.vp_pbl_additional_amount : '';
+        data.vp_pbl_price_status = data.vp_pbl_price_status ? data?.vp_pbl_price_status : '';
+        data.vp_pbl_asking_price = data.vp_pbl_asking_price ? data?.vp_pbl_asking_price : '';
+        data.vp_user_costing_price = data.vp_user_costing_price ? data?.vp_user_costing_price : '';
+        data.vp_user_to_pbl_price = data.vp_user_to_pbl_price ? data?.vp_user_to_pbl_price : '';
+        data.vp_conv_rate = data.vp_conv_rate ? String(data.vp_conv_rate) : '1';
+        data.vp_bd_tax = data.vp_bd_tax ? String(data.vp_bd_tax) : '';
+        data.vp_pbl_hs_asking_price = data.vp_pbl_hs_asking_price ? data?.vp_pbl_hs_asking_price : '';
+        data.vp_pbl_hs_asking_price = data.vp_pbl_hs_asking_price ? data?.vp_pbl_hs_asking_price : '';
+        data.v_priority = data.v_priority ? data?.v_priority : '';
+        data.v_product_type_id = data.v_product_type_id ? data?.v_product_type_id : '1';
+        data.category = data.category ? data?.category : '';
+        data.v_shop_id = data.v_shop_id ? data?.v_shop_id : '';
+        data.v_country_id = data.v_country_id ? data?.v_country_id : '';
+        data.v_availability_status = (data.v_availability_status && data.v_availability_status !== 'undefined') ? data.v_availability_status : 'available';
+        // data.v_code = data.v_code ? data?.v_code : '';
+        data.v_description = data.v_description ? data?.v_description : '';
+        data.v_user_description = data.v_user_description ? data?.v_user_description : '';
+        data.vm_description = data.vm_description ? data?.vm_description : '';
+        data.v_pbl_text = data.v_pbl_text ? data?.v_pbl_text : '';
+        data.v_delivery_condition = data.v_delivery_condition ? data?.v_delivery_condition : '';
+        data.v_video_user = data.v_video_user ? data?.v_video_user : '';
+        data.v_video_pbl = data.v_video_pbl ? data?.v_video_pbl : '';
+        data.v_video_gdocpbl = data.v_video_gdocpbl ? data?.v_video_gdocpbl : '';
+        data.v_video_gdocuser = data.v_video_gdocuser ? data?.v_video_gdocuser : '';
+        data.v_chassis = data.v_chassis ? data?.v_chassis : '';
+        data.v_engine = data.v_engine ? data?.v_engine : '';
+        data.v_tax_token_exp_date = data.v_tax_token_exp_date ? data?.v_tax_token_exp_date : '';
+        data.v_fitness_exp_date = data.v_fitness_exp_date ? data?.v_fitness_exp_date : '';
+        data.v_arrival_date = data.v_arrival_date ? data?.v_arrival_date : '';
+        data.v_auction_type = data.v_auction_type ? data?.v_auction_type : '';
+        data.pbl_partner_code = data.pbl_partner_code ? data?.pbl_partner_code : '';
+
+
+
+        const formData = new FormData();
+
+        // ✅ Append form fields
+        for (let key in data) {
+            if (key !== "vp_other_cost" && key !== "vp_purchase_cost" && key !== "v_video_user" && key !== "v_video_pbl" && key !== "v_video_gdocpbl" && key !== "v_video_gdocuser" && key !== "v_video" && key !== "v_product_type_id" && key !== "category" && key !== "v_partner_id") {
+                appendFormValue(formData, key, data[key]);
+            }
+        }
+
+        const sellerInfoPayload = sellerInfoRows.filter((row) => (row.name && row.name.trim()) || (row.phone && row.phone.trim()));
+        appendFormValue(formData, "v_seller_info", JSON.stringify(sellerInfoPayload));
+
+        formData.append("extended_data_clear", "1");
+        moreInformation
+            .map((item) => ({ key: String(item.key || "").trim(), value: String(item.value || "").trim() }))
+            .filter((item) => item.key || item.value)
+            .forEach((item) => {
+                formData.append("ed_entity[]", "vehicle");
+                formData.append("ed_entity_key[]", item.key);
+                formData.append("ed_entity_value[]", item.value);
+            });
+
+        const otherCosts = Array.isArray(data?.vp_other_cost) ? data.vp_other_cost : [];
+        otherCosts.forEach((item, index) => {
+            appendFormValue(formData, `vp_other_cost[${index}][name]`, item?.name ? String(item.name).trim() : "");
+            appendFormValue(formData, `vp_other_cost[${index}][amount]`, item?.amount ? String(item.amount).replace(/,/g, "").trim() : "");
+        });
+
+        const purchaseCosts = Array.isArray(data?.vp_purchase_cost) ? data.vp_purchase_cost : [];
+        purchaseCosts.forEach((item, index) => {
+            appendFormValue(formData, `vp_purchase_cost[${index}][name]`, item?.name ? String(item.name).trim() : "");
+            appendFormValue(formData, `vp_purchase_cost[${index}][amount]`, item?.amount ? String(item.amount).replace(/,/g, "").trim() : "");
+        });
+        appendFormValue(formData, "v_video[user]", data.v_video_user ? String(data.v_video_user).trim() : "");
+        appendFormValue(formData, "v_video[pbl]", data.v_video_pbl ? String(data.v_video_pbl).trim() : "");
+        appendFormValue(formData, "v_video[gdocpbl]", data.v_video_gdocpbl ? String(data.v_video_gdocpbl).trim() : "");
+        appendFormValue(formData, "v_video[gdocuser]", data.v_video_gdocuser ? String(data.v_video_gdocuser).trim() : "");
+        appendFormValue(formData, "v_vehicle_type_id", data.v_product_type_id ? data.v_product_type_id : "1");
+        appendFormValue(formData, "v_type_id", data.v_product_type_id ? data.v_product_type_id : "1");
+        appendFormValue(formData, "v_category_id", data.category ? data.category : "");
+
+        // ✅ Append images
+        if (frontImageFile) {
+            appendFormValue(formData, "vi_front_image", frontImageFile);
+        }
+
+        additionalImages && additionalImages.forEach((file) => {
+            formData.append("vi_image[]", file);
+        });
+        additionalDocumentFiles && additionalDocumentFiles.forEach((file, index) => {
+            formData.append(`v_docs[${index}]`, file);
+        });
+        secretDocumentFiles && secretDocumentFiles.forEach((file, index) => {
+            formData.append(`v_secret_docs[${index}]`, file);
+        });
+        secretDocument2Files && secretDocument2Files.forEach((file, index) => {
+            formData.append(`v_secret_docs_2[${index}]`, file);
+        });
+
+        if (removeAdditionalImage && removeAdditionalImage.length > 0) {
+            removeAdditionalImage.forEach(img => {
+                formData.append("v_remove_image[]", img);
+            });
+        }
+        if (removeAdditionalDocument && removeAdditionalDocument.length > 0) {
+            removeAdditionalDocument.forEach(doc => {
+                formData.append("v_docs_remove[]", doc);
+            });
+        }
+        if (removeSecretDocument && removeSecretDocument.length > 0) {
+            removeSecretDocument.forEach((doc, index) => {
+                formData.append(`v_secret_docs_remove[${index}]`, doc);
+            });
+        }
+        if (removeSecretDocument2 && removeSecretDocument2.length > 0) {
+            removeSecretDocument2.forEach((doc, index) => {
+                formData.append(`v_secret_docs_2_remove[${index}]`, doc);
+            });
+        }
+
+        selectedFsId.forEach((fsId) => {
+            formData.append("v_fs[]", fsId);
+        });
+
+        // ✅ Append method override
+        appendFormValue(formData, '_method', 'PUT');
+
         try {
-            const response = await VehicleService.Commands.approvedVehicle(productId, formData);
+            const response = await VehicleService.Commands.updateVehicle(productId, formData);
 
             if (response.status === 'success') {
-                // setAdditionalImages([]);
-                // setPreview(null);
+                setAdditionalImages([]);
+                setAdditionalDocumentFiles([]);
+                setAdditionalDocumentPreviews([]);
+                setSecretDocumentFiles([]);
+                setSecretDocumentPreviews([]);
+                setRemoveSecretDocument([]);
+                setSecretDocument2Files([]);
+                setSecretDocument2Previews([]);
+                setRemoveSecretDocument2([]);
+                setPreview(null);
                 setLoading(false);
-                toast.success("Vehicle Approved Successfully!");
-                router.push("/dashboard/requested-product/");
+                toast.success("Vehicle updated successfully!");
+                router.push("/dashboard/product-list/");
             }
         } catch (error) {
-            // setLoading(false);
-            // toast.error("Vehicle update failed!");
+            setLoading(false);
+            toast.error("Vehicle update failed!");
         }
     };
 
@@ -1051,6 +1832,42 @@ const ViewProductForm = ({ productId }) => {
         }
     };
 
+    const handlePartnerChange = async (item) => {
+        if (!item?.value) {
+            setShopData([]);
+            setValue("v_shop_id", "");
+            setValue("v_availability_id", null);
+            return;
+        }
+
+        try {
+            const params = {
+                order: "desc",
+                orderBy: "md_id",
+                _page: 1,
+                _perPage: 1000,
+                _user_id: item.value,
+            };
+
+            const response = await ShopService.Queries.getShops(params);
+
+            const shopOptions = response.data.data.map((shop) => ({
+                value: shop?.s_id,
+                label: shop?.s_title,
+                phone: shop?.user?.phone || shop?.s_user_phone || "",
+                s_user_id: shop?.s_user_id,
+                s_id: shop?.s_id,
+                shop_name: "partner-shop",
+            }));
+
+            setShopData(shopOptions);
+            setValue("v_shop_id", "");
+            setValue("v_availability_id", null);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to fetch data");
+        }
+    };
+
     return (
         <>
             <div className="flex-1 min-h-screen flex flex-col justify-between">
@@ -1061,29 +1878,44 @@ const ViewProductForm = ({ productId }) => {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white shadow-sm rounded-lg mb-6 border border-gray-200">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-800">
-                                    Approved Vehicle
+                                    Requested Vehicle
                                 </h2>
-                                <p className="text-sm text-gray-500 mt-1">
+
+
+
+                                {/* <p className="text-sm text-gray-500 mt-1">
                                     Update existing vehicle details.
-                                </p>
+                                </p> */}
                             </div>
+
+                            {/* <div>
+                                <span className="text-2xl font-bold text-gray-900">Your User Mode:</span>
+                                <span className="text-2xl font-bold text-red-700 ml-2">
+                                    {user?.user_mode === 'supreme' ? "Super Admin" : user?.user_mode === 'pbl' ? "PBL" : user?.user_mode === 'admin' ? "Admin" : user?.user_mode === 'partner' ? "Partner" : "User"}
+                                </span><br />
+                                <span className="text-sm font-black">To be Partner Call Hotline</span>
+                            </div> */}
+
+
                             <div className="text-right">
-                                <Button
-                                    onClick={handleList}
-                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                    <svg
-                                        className="w-5 h-5"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
+                                <Link href={`/dashboard/products/vehicle/edit/${productId}`} target="_blank" rel="noopener noreferrer">
+                                    <Button
+                                        type="button"
+                                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                                     >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                    </svg>
-                                    Requested Product List
-                                </Button>
-                                <p className="text-sm text-gray-500 mt-1">Overview of all requested products</p>
+                                        <svg
+                                            className="w-5 h-5"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                        Edit Product
+                                    </Button>
+                                </Link>
+                                {/* <p className="text-sm text-gray-500 mt-1">Overview of all added vehicles</p> */}
                             </div>
                         </div>
 
@@ -1093,300 +1925,461 @@ const ViewProductForm = ({ productId }) => {
 
                         <div className="w-full overflow-hidden rounded-md bg-white border border-gray-500/20">
                             <form onSubmit={handleSubmit(onSubmit)}>
-                                <fieldset disabled={isReadOnly} className="contents">
+                                <fieldset disabled={true} className="pointer-events-none opacity-80">
                                     <div className="p-4">
-                                        <div className="mb-3">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Product Info</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                        <div className="border border-gray-300 rounded-lg p-4 mb-4">
+                                            <div className="mb-3">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-1">Product Info</h4>
+                                                <div className="flex w-20 h-0.5">
+                                                    <div className="w-1/2 bg-green-500"></div>
+                                                    <div className="w-1/2 bg-gray-500/20"></div>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        {/* Product Info section */}
-                                        <div className="mb-2 flex gap-4">
-                                            <div className="w-[50%]">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Title <span className="text-red-500">*</span>
-                                                </label>
-                                                <Input
-                                                    {...register("v_title")}
-                                                    id="v_title"
-                                                    name="v_title"
-                                                    placeholder="Title *"
-                                                />
-                                                {errors.v_title && (
-                                                    <p className="text-red-500 text-sm">{errors.v_title.message}</p>
-                                                )}
-                                            </div>
-                                            <div className="w-[50%]">
-                                                <label className="text-base font-medium" htmlFor="user_name">
-                                                    User Name
-                                                </label>
-                                                <Input
-                                                    {...register("user_name")}
-                                                    id="user_name"
-                                                    name="user_name"
-                                                    placeholder="User Name"
-                                                    readOnly
-                                                    className="bg-gray-100 cursor-not-allowed text-gray-500"
-                                                />
-                                            </div>
-                                        </div>
+                                            {/* Product Info section */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_product_type_id">
+                                                        Product Type <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <Controller
+                                                        name="v_product_type_id"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                id="v_product_type_id"
+                                                                options={masterCategoryItems.map((item) => ({
+                                                                    value: String(item.c_id),
+                                                                    label: item.c_name,
+                                                                }))}
+                                                                value={masterCategoryItems
+                                                                    .map((item) => ({ value: String(item.c_id), label: item.c_name }))
+                                                                    .find((option) => option.value === "1") || null}
+                                                                placeholder="Select Product Type"
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                                isDisabled
+                                                                isSearchable={false}
+                                                            />
+                                                        )}
+                                                    />
+                                                    {errors.v_product_type_id && (
+                                                        <p className="text-red-500 text-sm">{errors.v_product_type_id.message}</p>
+                                                    )}
+                                                </div>
 
-                                        <div className="grid grid-cols-4 gap-4 mb-4">
-                                            <div className="">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Brand <span className="text-red-500">*</span>
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="category">
+                                                        Category <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative" ref={categoryDropdownRef}>
+                                                        <div
+                                                            onClick={() => selectedProductTypeId && setIsCategoryListVisible(!isCategoryListVisible)}
+                                                            className={`flex justify-between items-center border rounded-lg p-2 bg-white shadow-sm ${selectedProductTypeId ? "cursor-pointer" : "cursor-not-allowed bg-gray-100"}`}
+                                                        >
+                                                            <span className="text-sm text-gray-500 truncate">
+                                                                {categoryHistory.length === 0 && (
+                                                                    selectedCategoryLabel
+                                                                        ? selectedCategoryLabel
+                                                                        : (selectedProductTypeId ? "Select a category..." : "Select Product Type first")
+                                                                )}
+                                                                {categoryHistory.map((cat, index) => (
+                                                                    <span key={cat.c_id}>
+                                                                        {cat.c_name} {index < categoryHistory.length - 1 ? " / " : ""}
+                                                                    </span>
+                                                                ))}
+                                                            </span>
+                                                            <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isCategoryListVisible ? "rotate-180" : ""}`} />
+                                                        </div>
+
+                                                        {isCategoryListVisible && selectedProductTypeId && (
+                                                            <div className="absolute top-full left-0 w-full bg-white border mt-1 rounded-lg shadow-lg z-20 p-2">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                                                                        {categoryHistory.length > 0 && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleCategoryBack();
+                                                                                }}
+                                                                                className="hover:underline text-red-500 pr-2"
+                                                                            >
+                                                                                Back
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                {isCategoryLoading ? (
+                                                                    <div className="p-2 text-gray-500">Loading...</div>
+                                                                ) : (
+                                                                    <div className="max-h-40 overflow-y-auto">
+                                                                        {categoryItems.length > 0 ? (
+                                                                            categoryItems.map((item) => (
+                                                                                <div
+                                                                                    key={item.c_id}
+                                                                                    onClick={() => {
+                                                                                        handleCategoryClick(item);
+                                                                                    }}
+                                                                                    className="p-2 hover:bg-gray-100 cursor-pointer rounded flex justify-between items-center"
+                                                                                >
+                                                                                    <span>{item.c_name}</span>
+                                                                                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                                                                                </div>
+                                                                            ))
+                                                                        ) : (
+                                                                            <div className="p-2 text-gray-500">No sub-categories.</div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <Controller
+                                                        name="category"
+                                                        control={control}
+                                                        render={({ field }) => <input {...field} value={field.value || ""} type="hidden" />}
+                                                    />
+                                                    {errors.category && (
+                                                        <p className="text-red-500 text-sm">{errors.category.message}</p>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_title">
+                                                        Title <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <Input
+                                                        {...register("v_title")}
+                                                        id="v_title"
+                                                        name="v_title"
+                                                        placeholder="Title *"
+                                                    />
+                                                    {errors.v_title && (
+                                                        <p className="text-red-500 text-sm">{errors.v_title.message}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-4 gap-4 mb-4">
+                                                <div className="">
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Brand <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <select
+                                                        id="v_brand_id"
+                                                        name="v_brand_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_brand_id")}
+                                                    >
+                                                        <option value="">Select Brand</option>
+                                                        {
+                                                            brandData.map((brand) => (
+                                                                <option key={brand.value} value={brand.value}>
+                                                                    {brand.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {errors.v_brand_id && (
+                                                        <p className="text-red-500 text-sm">{errors.v_brand_id.message}</p>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Model <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <select
+                                                        id="v_model_id"
+                                                        name="v_model_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_model_id")}
+                                                        disabled={isModelLoading}
+                                                    >
+                                                        <option value="">{isModelLoading ? 'Loading...' : 'Select Model'}</option>
+                                                        {
+                                                            modelData.map((model) => (
+                                                                <option key={model.value} value={model.value}>
+                                                                    {model.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {errors.v_model_id && (
+                                                        <p className="text-red-500 text-sm">{errors.v_model_id.message}</p>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Package
+                                                        {/* <span className="text-red-500">*</span> */}
+                                                    </label>
+                                                    <select
+                                                        id="v_edition_id"
+                                                        name="v_edition_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_edition_id")}
+                                                        onChange={(e) => handlePackageClick(e.target.value)}
+                                                        disabled={isPackageLoading}
+                                                    >
+                                                        <option value="">{isPackageLoading ? 'Loading...' : 'Select Package'}</option>
+                                                        {
+                                                            packageData.map((edition) => (
+                                                                <option key={edition.value} value={edition.value}>
+                                                                    {edition.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {errors.v_edition_id && (
+                                                        <p className="text-red-500 text-sm">{errors.v_edition_id.message}</p>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_user_gift">
+                                                        User Gift
+                                                    </label>
+                                                    <select
+                                                        id="v_user_gift"
+                                                        name="v_user_gift"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_user_gift")}
+                                                        disabled={isGiftLoading}
+                                                    >
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select gift from seller'}</option>
+                                                        {
+                                                            giftData.map((gift) => (
+                                                                <option key={gift.value} value={gift.value}>
+                                                                    {gift.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div>
+
+                                                {/* <div>
+                                                <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                    PBL Gift
                                                 </label>
                                                 <select
-                                                    id="v_brand_id"
-                                                    name="v_brand_id"
+                                                    id="v_pbl_gift"
+                                                    name="v_pbl_gift"
                                                     className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_brand_id")}
+                                                    {...register("v_pbl_gift")}
+                                                    disabled={isGiftLoading}
                                                 >
-                                                    <option value="">Select Brand</option>
+                                                    <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
                                                     {
-                                                        brandData.map((brand) => (
-                                                            <option key={brand.value} value={brand.value}>
-                                                                {brand.label}
+                                                        giftData.map((gift) => (
+                                                            <option key={gift.value} value={gift.value}>
+                                                                {gift.label}
                                                             </option>
                                                         ))
                                                     }
                                                 </select>
-                                                {errors.v_brand_id && (
-                                                    <p className="text-red-500 text-sm">{errors.v_brand_id.message}</p>
-                                                )}
-                                            </div>
+                                            </div> */}
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Model <span className="text-red-500">*</span>
-                                                </label>
-                                                <select
-                                                    id="v_model_id"
-                                                    name="v_model_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_model_id")}
-                                                    disabled={isModelLoading}
-                                                >
-                                                    <option value="">{isModelLoading ? 'Loading...' : 'Select Model'}</option>
-                                                    {
-                                                        modelData.map((model) => (
-                                                            <option key={model.value} value={model.value}>
-                                                                {model.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                                {errors.v_model_id && (
-                                                    <p className="text-red-500 text-sm">{errors.v_model_id.message}</p>
-                                                )}
-                                            </div>
-
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Package
-                                                    {/* <span className="text-red-500">*</span> */}
-                                                </label>
-                                                <select
-                                                    id="v_edition_id"
-                                                    name="v_edition_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_edition_id")}
-                                                    onChange={(e) => handlePackageClick(e.target.value)}
-                                                    disabled={isPackageLoading}
-                                                >
-                                                    <option value="">{isPackageLoading ? 'Loading...' : 'Select Package'}</option>
-                                                    {
-                                                        packageData.map((edition) => (
-                                                            <option key={edition.value} value={edition.value}>
-                                                                {edition.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                                {errors.v_edition_id && (
-                                                    <p className="text-red-500 text-sm">{errors.v_edition_id.message}</p>
-                                                )}
-                                            </div>
-
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Condition
-                                                </label>
-                                                <select
-                                                    id="v_condition_id"
-                                                    name="v_condition_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_condition_id")}
-                                                >
-                                                    <option value="">Select Condition</option>
-                                                    {
-                                                        conditionData.map((condition) => (
-                                                            <option key={condition.value} value={condition.value}>
-                                                                {condition.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                                {/* {errors.v_condition_id && (
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Condition
+                                                    </label>
+                                                    <select
+                                                        id="v_condition_id"
+                                                        name="v_condition_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_condition_id")}
+                                                    >
+                                                        <option value="">Select Condition</option>
+                                                        {
+                                                            conditionData.map((condition) => (
+                                                                <option key={condition.value} value={condition.value}>
+                                                                    {condition.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {/* {errors.v_condition_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_condition_id.message}</p>
                                                             )} */}
-                                            </div>
+                                                </div>
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Model Year
-                                                </label>
-                                                <select
-                                                    id="v_mod_year"
-                                                    name="v_mod_year"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_mod_year")}
-                                                >
-                                                    <option value="">Select Model Year</option>
-                                                    {years.map((year) => (
-                                                        <option key={year} value={year}>
-                                                            {year}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                {/* {errors.v_mod_year && (
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Model Year
+                                                    </label>
+                                                    <select
+                                                        id="v_mod_year"
+                                                        name="v_mod_year"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_mod_year")}
+                                                    >
+                                                        <option value="">Select Model Year</option>
+                                                        {years.map((year) => (
+                                                            <option key={year} value={year}>
+                                                                {year}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {/* {errors.v_mod_year && (
                                                                 <p className="text-red-500 text-sm">{errors.v_mod_year.message}</p>
                                                             )} */}
-                                            </div>
+                                                </div>
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Registration Year
-                                                </label>
-                                                <select
-                                                    id="v_registration"
-                                                    name="v_registration"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_registration")}
-                                                >
-                                                    <option value="" >Select Registration Year</option>
-                                                    {years.map((year) => (
-                                                        <option key={year} value={year}>
-                                                            {year}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Point
-                                                </label>
-                                                <select
-                                                    id="v_grade_id"
-                                                    name="v_grade_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_grade_id")}
-                                                >
-                                                    <option value="">Select Point</option>
-                                                    {
-                                                        gradeData.map((grade) => (
-                                                            <option key={grade.value} value={grade.value}>
-                                                                {grade.label}
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Registration Year
+                                                    </label>
+                                                    <select
+                                                        id="v_registration"
+                                                        name="v_registration"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_registration")}
+                                                    >
+                                                        <option value="" >Select Registration Year</option>
+                                                        {years.map((year) => (
+                                                            <option key={year} value={year}>
+                                                                {year}
                                                             </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                                {/* {errors.v_grade_id && (
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Point
+                                                    </label>
+                                                    <select
+                                                        id="v_grade_id"
+                                                        name="v_grade_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_grade_id")}
+                                                    >
+                                                        <option value="">Select Point</option>
+                                                        {
+                                                            gradeData.map((grade) => (
+                                                                <option key={grade.value} value={grade.value}>
+                                                                    {grade.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {/* {errors.v_grade_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_grade_id.message}</p>
                                                             )} */}
-                                            </div>
+                                                </div>
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Exterior Grade
-                                                </label>
-                                                <select
-                                                    id="v_ext_grade_id"
-                                                    name="v_ext_grade_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_ext_grade_id")}
-                                                >
-                                                    <option value="">Select Exterior Grade</option>
-                                                    {
-                                                        exteriorGradeData.map((grade) => (
-                                                            <option key={grade.value} value={grade.value}>
-                                                                {grade.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                            </div>
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Exterior Grade
+                                                    </label>
+                                                    <select
+                                                        id="v_ext_grade_id"
+                                                        name="v_ext_grade_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_ext_grade_id")}
+                                                    >
+                                                        <option value="">Select Exterior Grade</option>
+                                                        {
+                                                            exteriorGradeData.map((grade) => (
+                                                                <option key={grade.value} value={grade.value}>
+                                                                    {grade.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div>
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Interior Grade
-                                                </label>
-                                                <select
-                                                    id="v_int_grade_id"
-                                                    name="v_int_grade_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_int_grade_id")}
-                                                >
-                                                    <option value="">Select Interior Grade</option>
-                                                    {
-                                                        interiorGradeData.map((grade) => (
-                                                            <option key={grade.value} value={grade.value}>
-                                                                {grade.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                            </div>
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Interior Grade
+                                                    </label>
+                                                    <select
+                                                        id="v_int_grade_id"
+                                                        name="v_int_grade_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_int_grade_id")}
+                                                    >
+                                                        <option value="">Select Interior Grade</option>
+                                                        {
+                                                            interiorGradeData.map((grade) => (
+                                                                <option key={grade.value} value={grade.value}>
+                                                                    {grade.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div>
 
 
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Mileage
-                                                </label>
-                                                <Input
-                                                    id="v_mileage"
-                                                    name="v_mileage"
-                                                    placeholder="Enter Mileage"
-                                                    {...register("v_mileage")}
-                                                    onKeyDown={onlyNumberInput}
-                                                />
-                                                {/* {errors.v_color_id && (
+                                                <div className="mb-2">
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Mileage
+                                                    </label>
+                                                    <Input
+                                                        id="v_mileage"
+                                                        name="v_mileage"
+                                                        placeholder="Enter Mileage"
+                                                        {...register("v_mileage")}
+                                                        onKeyDown={onlyNumberInput}
+                                                    />
+                                                    {/* {errors.v_color_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_mileage.message}</p>
                                                             )} */}
-                                            </div>
+                                                </div>
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Color
-                                                </label>
-                                                <select
-                                                    id="v_color_id"
-                                                    name="v_color_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_color_id")}
-                                                >
-                                                    <option value="">Select Color</option>
-                                                    {
-                                                        colorData.map((color) => (
-                                                            <option key={color.value} value={color.value}>
-                                                                {color.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                                {/* {errors.v_color_id && (
+                                                <div className="mb-2">
+                                                    <label className="text-base font-medium" htmlFor="v_delivery_condition">
+                                                        Delivery Condition
+                                                    </label>
+                                                    <Controller
+                                                        name="v_delivery_condition"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={deliveryConditionOptions}
+                                                                onChange={(selectedOption) => field.onChange(selectedOption ? selectedOption.value : '')}
+                                                                value={deliveryConditionOptions.find(option => option.value === field.value) || null}
+                                                                placeholder="Select Delivery Condition"
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                            />
+                                                        )}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Color
+                                                    </label>
+                                                    <select
+                                                        id="v_color_id"
+                                                        name="v_color_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_color_id")}
+                                                    >
+                                                        <option value="">Select Color</option>
+                                                        {
+                                                            colorData.map((color) => (
+                                                                <option key={color.value} value={color.value}>
+                                                                    {color.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {/* {errors.v_color_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_color_id.message}</p>
                                                             )} */}
-                                            </div>
+                                                </div>
 
 
 
@@ -1394,165 +2387,192 @@ const ViewProductForm = ({ productId }) => {
 
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Fuel
-                                                </label>
-                                                <select
-                                                    id="v_fuel_id"
-                                                    name="v_fuel_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_fuel_id")}
-                                                >
-                                                    <option value="">Select Fuel</option>
-                                                    {
-                                                        fuelData.map((fuel) => (
-                                                            <option key={fuel.value} value={fuel.value}>
-                                                                {fuel.label}
-                                                            </option>
-                                                        ))
-                                                    }0
-                                                </select>
-                                                {/* {errors.v_fuel_id && (
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Fuel
+                                                    </label>
+                                                    <select
+                                                        id="v_fuel_id"
+                                                        name="v_fuel_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_fuel_id")}
+                                                    >
+                                                        <option value="">Select Fuel</option>
+                                                        {
+                                                            fuelData.map((fuel) => (
+                                                                <option key={fuel.value} value={fuel.value}>
+                                                                    {fuel.label}
+                                                                </option>
+                                                            ))
+                                                        }0
+                                                    </select>
+                                                    {/* {errors.v_fuel_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_fuel_id.message}</p>
                                                             )} */}
-                                            </div>
+                                                </div>
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Transmission
-                                                </label>
-                                                <select
-                                                    id="v_transmission_id"
-                                                    name="v_transmission_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_transmission_id")}
-                                                >
-                                                    {/* Option */}
-                                                    <option value="">Select Transmission</option>
-                                                    {
-                                                        transmissionData.map((transmission) => (
-                                                            <option key={transmission.value} value={transmission.value}>
-                                                                {transmission.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                            </div>
-
-
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Capacity (CC)
-                                                </label>
-                                                <Input
-                                                    id="v_capacity"
-                                                    name="v_capacity"
-                                                    placeholder="Enter Capacity (CC)"
-                                                    {...register("v_capacity")}
-                                                    onKeyDown={onlyDecimalInput}
-                                                />
-                                            </div>
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Transmission
+                                                    </label>
+                                                    <select
+                                                        id="v_transmission_id"
+                                                        name="v_transmission_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_transmission_id")}
+                                                    >
+                                                        {/* Option */}
+                                                        <option value="">Select Transmission</option>
+                                                        {
+                                                            transmissionData.map((transmission) => (
+                                                                <option key={transmission.value} value={transmission.value}>
+                                                                    {transmission.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div>
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Body
-                                                </label>
-                                                <select
-                                                    id="v_skeleton_id"
-                                                    name="v_skeleton_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_skeleton_id")}
-                                                >
-                                                    <option value="">Select Body</option>
-                                                    {
-                                                        skeletonData.map((skeleton) => (
-                                                            <option key={skeleton.value} value={skeleton.value}>
-                                                                {skeleton.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                            </div>
+                                                <div className="mb-2">
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Capacity (CC)
+                                                    </label>
+                                                    <Input
+                                                        id="v_capacity"
+                                                        name="v_capacity"
+                                                        placeholder="Enter Capacity (CC)"
+                                                        {...register("v_capacity")}
+                                                        onKeyDown={onlyDecimalInput}
+                                                    />
+                                                </div>
 
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Seat
-                                                </label>
-                                                <select
-                                                    id="v_seat_id"
-                                                    name="v_seat_id"
-                                                    className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("v_seat_id")}
-                                                >
-                                                    <option value="">Select Seat</option>
-                                                    {
-                                                        seatData.map((seat) => (
-                                                            <option key={seat.value} value={seat.value}>
-                                                                {seat.label}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                                {/* {errors.v_seat_id && (
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Body
+                                                    </label>
+                                                    <select
+                                                        id="v_skeleton_id"
+                                                        name="v_skeleton_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_skeleton_id")}
+                                                    >
+                                                        <option value="">Select Body</option>
+                                                        {
+                                                            skeletonData.map((skeleton) => (
+                                                                <option key={skeleton.value} value={skeleton.value}>
+                                                                    {skeleton.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div>
+
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Seat
+                                                    </label>
+                                                    <select
+                                                        id="v_seat_id"
+                                                        name="v_seat_id"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_seat_id")}
+                                                    >
+                                                        <option value="">Select Seat</option>
+                                                        {
+                                                            seatData.map((seat) => (
+                                                                <option key={seat.value} value={seat.value}>
+                                                                    {seat.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                    {/* {errors.v_seat_id && (
                                                                 <p className="text-red-500 text-sm">{errors.v_seat_id.message}</p>
                                                             )} */}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="grid grid-cols-4 gap-4 mb-4">
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Chassis No
-                                                </label>
-                                                <Input
-                                                    id="v_chassis"
-                                                    name="v_chassis"
-                                                    placeholder="Enter Chassis No"
-                                                    {...register("v_chassis")}
-                                                />
-                                                {/* {errors.v_chassis && (
+                                            <div className="grid grid-cols-4 gap-4 mb-4">
+                                                <div className="mb-2">
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Chassis No
+                                                    </label>
+                                                    <Input
+                                                        id="v_chassis"
+                                                        name="v_chassis"
+                                                        placeholder="Enter Chassis No"
+                                                        {...register("v_chassis")}
+                                                    />
+                                                    {/* {errors.v_chassis && (
                                                             <p className="text-red-500 text-sm">{errors.v_chassis.message}</p>
                                                             )} */}
+                                                </div>
+
+                                                <div className="mb-2">
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Engine No
+                                                    </label>
+                                                    <Input
+                                                        id="v_engine"
+                                                        name="v_engine"
+                                                        placeholder="Enter Engine No"
+                                                        {...register("v_engine")}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Tax Token Exp. Date
+                                                    </label>
+                                                    <input type="date" {...register("v_tax_token_exp_date")} className="outline-none py-2 px-3 rounded border w-full" />
+
+                                                    {errors.v_tax_token_exp_date && (
+                                                        <p className="text-red-500 text-sm">{errors.v_tax_token_exp_date.message}</p>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="customer-name">
+                                                        Fitness Exp. Date
+                                                    </label>
+                                                    <input type="date" {...register("v_fitness_exp_date")} className="outline-none py-2 px-3 rounded border w-full" />
+                                                    {errors.v_fitness_exp_date && (
+                                                        <p className="text-red-500 text-sm">{errors.v_fitness_exp_date.message}</p>
+                                                    )}
+                                                </div>
+
+
+                                                <div>
+                                                    <div>
+                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                            Arrival Date to BD
+                                                        </label>
+                                                        <input type="date" {...register("v_arrival_date")} className="outline-none py-2 px-3 rounded border w-full" />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div>
+                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                            Google link (Pic)
+                                                        </label>
+                                                        {/* <input type="date" {...register("v_arrival_date")} className="outline-none py-2 px-3 rounded border w-full" /> */}
+                                                        <Input
+                                                            id="v_video_gdocuser"
+                                                            name="v_video_gdocuser"
+                                                            placeholder="Enter Google Link"
+                                                            {...register("v_video_gdocuser")}
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Engine No
-                                                </label>
-                                                <Input
-                                                    id="v_engine"
-                                                    name="v_engine"
-                                                    placeholder="Enter Engine No"
-                                                    {...register("v_engine")}
-                                                />
-                                            </div>
 
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Tax Token Exp. Date
-                                                </label>
-                                                <input type="date" {...register("v_tax_token_exp_date")} className="outline-none py-2 px-3 rounded border w-full" />
 
-                                                {errors.v_tax_token_exp_date && (
-                                                    <p className="text-red-500 text-sm">{errors.v_tax_token_exp_date.message}</p>
-                                                )}
-                                            </div>
-
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Fitness Exp. Date
-                                                </label>
-                                                <input type="date" {...register("v_fitness_exp_date")} className="outline-none py-2 px-3 rounded border w-full" />
-                                                {errors.v_fitness_exp_date && (
-                                                    <p className="text-red-500 text-sm">{errors.v_fitness_exp_date.message}</p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
+                                            {/* <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
                                             <div>
                                                 <label className="text-base font-medium" htmlFor="customer-name">
                                                     Availability
@@ -1575,45 +2595,97 @@ const ViewProductForm = ({ productId }) => {
 
                                             </div>
                                         </div> */}
+                                            <hr />
 
-
-
-                                        <hr />
-
-                                        {/* Shop section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Shop</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                            {/* Shop section */}
+                                            <div className="mb-3 mt-4">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-1">Shop</h4>
+                                                <div className="flex w-20 h-0.5">
+                                                    <div className="w-1/2 bg-green-500"></div>
+                                                    <div className="w-1/2 bg-gray-500/20"></div>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="grid grid-cols-4 gap-4 mb-4">
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    Shop List <span className="text-red-500">*</span>
-                                                </label>
-                                                <Controller
-                                                    name="v_shop_id"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <ShopSelect
-                                                            shops={shopData}
-                                                            value={field.value}
-                                                            onChange={(shopId) => field.onChange(shopId)}
-                                                            placeholder="Select Shop"
-                                                        />
+
+
+                                            <div className="grid grid-cols-4 gap-4 mb-4">
+                                                {
+                                                    ((user?.user_mode === 'supreme') || (user?.user_mode === 'admin') || (user?.user_mode === 'pbl')) && (
+                                                        <div>
+                                                            <label
+                                                                className="text-base font-medium"
+                                                                htmlFor="v_partner_id"
+                                                            >
+                                                                Partner List
+                                                            </label>
+
+                                                            <Controller
+                                                                name="v_partner_id"
+                                                                control={control}
+                                                                rules={{ required: "Partner is required" }}
+                                                                render={({ field }) => (
+                                                                    <Select
+                                                                        {...field}
+                                                                        options={partnerData}
+                                                                        onChange={(selectedOption) => {
+                                                                            field.onChange(selectedOption ? selectedOption.value : "");
+                                                                            handlePartnerChange(selectedOption);
+                                                                        }}
+                                                                        value={partnerData.find((option) => String(option.value) === String(field.value)) || null}
+                                                                        placeholder="Select Partner"
+                                                                        className="basic-single"
+                                                                        classNamePrefix="select"
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+                                                    )
+                                                }
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_shop_id">
+                                                        Shop List <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <Controller
+                                                        name="v_shop_id"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={shopData}
+                                                                onChange={(selectedOption) => {
+                                                                    field.onChange(selectedOption ? selectedOption.value : '');
+                                                                    setValue('v_availability_id', null);
+                                                                }}
+                                                                value={shopData.find((option) => String(option.value) === String(field.value)) || null}
+                                                                placeholder="Select Shop"
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                                formatOptionLabel={(option) => (
+                                                                    <div className="flex items-center justify-between gap-3">
+                                                                        <span>{option.label}</span>
+                                                                        {option.phone ? <span className="text-xs text-gray-400">{option.phone}</span> : null}
+                                                                    </div>
+                                                                )}
+                                                                filterOption={(option, input) => {
+                                                                    const term = input.trim().toLowerCase();
+                                                                    if (!term) return true;
+                                                                    return (
+                                                                        option.label.toLowerCase().includes(term) ||
+                                                                        String(option.data.phone || "").toLowerCase().includes(term)
+                                                                    );
+                                                                }}
+                                                            />
+                                                        )}
+                                                    />
+                                                    {errors.v_shop_id && (
+                                                        <p className="text-red-500 text-sm">{errors.v_shop_id.message}</p>
                                                     )}
-                                                />
-                                                {errors.v_shop_id && (
-                                                    <p className="text-red-500 text-sm">{errors.v_shop_id.message}</p>
-                                                )}
-                                            </div>
+                                                </div>
 
 
 
-                                            {/* <div className="hidden">
+                                                {/* <div className="hidden">
                                                 <select
                                                     id="v_code"
                                                     name="v_code"
@@ -1630,7 +2702,7 @@ const ViewProductForm = ({ productId }) => {
                                             </div> */}
 
 
-                                            {/* <div>
+                                                {/* <div>
                                                 <label className="text-base font-medium" htmlFor="v_code">
                                                     Code <span className="text-red-500">*</span>
                                                 </label>
@@ -1650,776 +2722,252 @@ const ViewProductForm = ({ productId }) => {
                                                 </select>
                                             </div> */}
 
-                                            {/* 🟢 "🟢" : "⚪️" */}
+                                                {/* 🟢 "🟢" : "⚪️" */}
 
 
-                                            {
-                                                user && (user.user_mode === 'pbl' || user.user_mode === 'admin' || user.user_mode === 'supreme') && (
-                                                    <>
-                                                        <div className="mb-2">
-                                                            <label className="text-base font-medium" htmlFor="customer-name">
-                                                                Priority
-                                                            </label>
-                                                            <Input
-                                                                id="v_priority"
-                                                                name="v_priority"
-                                                                placeholder="Select Priority"
-                                                                {...register("v_priority")}
-                                                                onKeyDown={onlyNumberInput}
-                                                            />
-                                                            {errors.v_priority && (
-                                                                <p className="text-red-500 text-sm">{errors.v_priority.message}</p>
-                                                            )}
-                                                        </div>
+                                            </div>
 
-
-                                                        <div>
-                                                            <label className="text-base font-medium" htmlFor="customer-name">
-                                                                Users Mode
-                                                            </label>
-                                                            <select
-                                                                id="v_user_mode"
-                                                                name="v_user_mode"
-                                                                className="outline-none py-2 px-3 rounded border w-full"
-                                                                {...register("v_user_mode")}
-                                                            >
-                                                                <option value="">Select User Mode</option>
-                                                                {
-                                                                    userModeData.map((userMode) => (
-                                                                        <option key={userMode.value} value={userMode.value}>
-                                                                            {userMode.label}
-                                                                        </option>
-                                                                    ))
+                                            {/* Outlet */}
+                                            <div className="grid grid-cols-4 gap-4 mb-4 mt-4">
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_availability_id">
+                                                        Outlet List
+                                                    </label>
+                                                    <Controller
+                                                        name="v_availability_id"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={
+                                                                    isOutletLoading ? [{ value: "Loading...", label: "Loading..." }] :
+                                                                        outletData
                                                                 }
-                                                            </select>
-                                                            {/* {errors.v_user_mode && (
-                                                                <p className="text-red-500 text-sm">{errors.v_user_mode.message}</p>
-                                                            )} */}
-                                                        </div>
-
-                                                    </>
-                                                )
-                                            }
-
-
-                                        </div>
-
-                                        {/* Outlet */}
-                                        <div className="grid grid-cols-4 gap-4 mb-4 mt-4">
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="v_availability_id">
-                                                    Outlet List
-                                                </label>
-                                                <Controller
-                                                    name="v_availability_id"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Select
-                                                            {...field}
-                                                            options={
-                                                                isOutletLoading ? [{ value: "Loading...", label: "Loading..." }] :
-                                                                    outletData
-                                                            }
-                                                            onChange={(selectedOption) => {
-                                                                field.onChange(selectedOption ? selectedOption.value : '');
-                                                                // fetchShopDetails(selectedOption ? selectedOption.value : '');
-                                                            }}
-                                                            value={outletData.find(option => option.value === field.value) || null}
-                                                            placeholder={selectedShopId ? "Select Outlet" : "Select Shop First"}
-                                                            isDisabled={isReadOnly || !selectedShopId}
-                                                            className="basic-single"
-                                                            classNamePrefix="select"
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-                                            {/* shopData */}
-
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="v_country_id">
-                                                    Country List
-                                                </label>
-                                                <Controller
-                                                    name="v_country_id"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Select
-                                                            {...field}
-                                                            options={countryData}
-                                                            onChange={(selectedOption) => {
-                                                                field.onChange(selectedOption ? selectedOption.value : '');
-                                                                // fetchLocationDetails(selectedOption ? selectedOption.value : '');
-                                                                // setValue('v_location_id', null);
-                                                            }}
-                                                            value={countryData.find(option => option.value === field.value)}
-                                                            placeholder="Select Country"
-                                                            isDisabled={isReadOnly}
-                                                            className="basic-single"
-                                                            classNamePrefix="select"
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            {/* locationData */}
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="v_location_id">
-                                                    Location List
-                                                </label>
-                                                <Controller
-                                                    name="v_location_id"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Select
-                                                            {...field}
-                                                            options={
-                                                                isLocationLoading
-                                                                    ? [{
-                                                                        value: '',
-                                                                        label: 'Loading...'
-                                                                    }]
-                                                                    : locationData
-                                                            }
-                                                            onChange={(selectedOption) => {
-                                                                field.onChange(selectedOption ? selectedOption.value : '');
-                                                            }}
-                                                            value={locationData.find(option => option.value === field.value) || null}
-                                                            placeholder={selectedCountryId ? "Select Location" : "Select Country First"}
-                                                            isDisabled={isReadOnly || !selectedCountryId}
-                                                            className="basic-single"
-                                                            classNamePrefix="select"
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            {/* v_availability_status */}
-                                            <div>
-                                                <label className="text-base font-medium" htmlFor="v_availability_status">
-                                                    Availability Status
-                                                </label>
-                                                <Controller
-                                                    name="v_availability_status"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Select
-                                                            {...field}
-                                                            options={availabilityStatusData}
-                                                            onChange={(selectedOption) => {
-                                                                field.onChange(selectedOption ? selectedOption.value : '');
-                                                                // fetchLocationDetails(selectedOption ? selectedOption.value : '');
-                                                            }}
-                                                            value={availabilityStatusData.find(option => option.value === field.value)}
-                                                            placeholder="Select Status"
-                                                            isDisabled={isReadOnly}
-                                                            className="basic-single"
-                                                            classNamePrefix="select"
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                        </div>
-
-                                        <hr />
-
-                                        <div>
-                                            <span className="text-sm font-semibold text-gray-600 mb-1">Call PBL Hotline to be Partner</span>
-                                        </div>
-
-
-                                        {/* User Pricing section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">User Pricing</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-4 gap-4">
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    User Fixed Price
-                                                </label>
-                                                <div className="flex items-center">
-                                                    <Input
-                                                        id="vp_user_fixed_price"
-                                                        name="vp_user_fixed_price"
-                                                        placeholder="Enter User Fixed Price"
-                                                        {...register("vp_user_fixed_price")}
-                                                        onKeyDown={onlyDecimalInput}
+                                                                onChange={(selectedOption) => {
+                                                                    field.onChange(selectedOption ? selectedOption.value : '');
+                                                                    // fetchShopDetails(selectedOption ? selectedOption.value : '');
+                                                                }}
+                                                                value={outletData.find(option => option.value === field.value) || null}
+                                                                placeholder={selectedShopId ? "Select Outlet" : "Select Shop First"}
+                                                                isDisabled={!selectedShopId}
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                            />
+                                                        )}
                                                     />
-                                                    <input
-                                                        type="radio"
-                                                        id="fixed_price_radio"
-                                                        name="price_selection"
-                                                        value="fixed"
-                                                        checked={priceSelection === 'fixed'}
-                                                        onChange={() => {
-                                                            setPriceSelection('fixed');
-                                                            setValue('vp_show_price', 'fixed');
-                                                        }}
-                                                        className="ml-2"
+                                                </div>
+                                                {/* shopData */}
+
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_country_id">
+                                                        Country List
+                                                    </label>
+                                                    <Controller
+                                                        name="v_country_id"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={countryData}
+                                                                onChange={(selectedOption) => {
+                                                                    field.onChange(selectedOption ? selectedOption.value : '');
+                                                                    // fetchLocationDetails(selectedOption ? selectedOption.value : '');
+                                                                    // setValue('v_location_id', null);
+                                                                }}
+                                                                value={countryData.find(option => option.value === field.value)}
+                                                                placeholder="Select Country"
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                            />
+                                                        )}
                                                     />
                                                 </div>
 
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-4 gap-4">
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    User Asking Price
-                                                </label>
-                                                <div className="flex items-center">
-                                                    <Input
-                                                        id="vp_user_asking_price"
-                                                        name="vp_user_asking_price"
-                                                        placeholder="Enter User Asking Price"
-                                                        {...register("vp_user_asking_price")}
-                                                        onKeyDown={onlyDecimalInput}
+                                                {/* locationData */}
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_location_id">
+                                                        Location List
+                                                    </label>
+                                                    <Controller
+                                                        name="v_location_id"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={
+                                                                    isLocationLoading
+                                                                        ? [{
+                                                                            value: '',
+                                                                            label: 'Loading...'
+                                                                        }]
+                                                                        : locationData
+                                                                }
+                                                                onChange={(selectedOption) => {
+                                                                    field.onChange(selectedOption ? selectedOption.value : '');
+                                                                }}
+                                                                value={locationData.find(option => option.value === field.value) || null}
+                                                                placeholder={selectedCountryId ? "Select Location" : "Select Country First"}
+                                                                isDisabled={!selectedCountryId}
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                            />
+                                                        )}
                                                     />
-                                                    <input
-                                                        type="radio"
-                                                        id="asking_price_radio"
-                                                        name="price_selection"
-                                                        value="asking"
-                                                        checked={priceSelection === 'asking'}
-                                                        onChange={() => {
-                                                            setPriceSelection('asking');
-                                                            setValue('vp_show_price', 'asking');
-                                                        }}
-                                                        className="ml-2"
+                                                </div>
+
+                                                {/* v_availability_status */}
+                                                <div>
+                                                    <label className="text-base font-medium" htmlFor="v_availability_status">
+                                                        Availability Status
+                                                    </label>
+                                                    <Controller
+                                                        name="v_availability_status"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                options={availabilityStatusData}
+                                                                onChange={(selectedOption) => {
+                                                                    field.onChange(selectedOption ? selectedOption.value : '');
+                                                                    // fetchLocationDetails(selectedOption ? selectedOption.value : '');
+                                                                }}
+                                                                value={availabilityStatusData.find(option => option.value === field.value)}
+                                                                placeholder="Select Status"
+                                                                className="basic-single"
+                                                                classNamePrefix="select"
+                                                            />
+                                                        )}
                                                     />
                                                 </div>
                                             </div>
-                                        </div>
-
-                                    </div>
-
-                                </fieldset>
 
 
 
-                                <div className="grid grid-cols-4 gap-4 p-4">
-                                    <div className="mb-2">
-                                        <label className="text-base font-medium" htmlFor="customer-name">
-                                            User Variable Price
-                                        </label>
-                                        <div className="flex items-center">
-                                            <Input
-                                                id="vp_user_variable_price"
-                                                name="vp_user_variable_price"
-                                                placeholder="Enter User Variable Price"
-                                                {...register("vp_user_variable_price")}
-                                                disabled={isReadOnly}
-                                                onKeyDown={onlyDecimalInput}
-                                            />
-                                            <input
-                                                type="radio"
-                                                id="variable_price_radio"
-                                                name="price_selection"
-                                                value="variable"
-                                                checked={priceSelection === 'variable'}
-                                                disabled={isReadOnly}
-                                                onChange={() => {
-                                                    setPriceSelection('variable');
-                                                    setValue('vp_show_price', 'variable');
-                                                }}
-                                                className="ml-2"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <fieldset disabled={isReadOnly} className="contents">
-                                    <div className="p-4">
-
-                                        <div className="mt-2 mb-4">
-                                            <div className="flex items-center">
-
-                                                <input
-                                                    type="checkbox"
-                                                    id="v_urgent_sale"
-                                                    name="v_urgent_sale"
-                                                    className="mr-2 h-5 w-5"
-                                                    {...register("v_urgent_sale")}
-                                                />
-                                                <label htmlFor="v_urgent_sale" className="text-lg font-semibold text-gray-600">
-                                                    Urgent Sell &nbsp;
-                                                </label>
+                                            {/* User Description section */}
+                                            <div className="mb-3 mt-4">
+                                                <h4 className="text-lg font-semibold text-gray-800 mb-1">Description (User Shop Only)</h4>
+                                                <div className="flex w-28 h-1">
+                                                    <div className="w-4/5 bg-green-500"></div>
+                                                    <div className="w-1/3 bg-gray-500/20"></div>
+                                                </div>
                                             </div>
-                                        </div>
 
 
-                                        {/* --------------------------------------- */}
-
-
-                                        <div className="grid grid-cols-4 gap-4 ">
-                                            <div className="mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    User Price Negotiation
-                                                </label>
-                                                <select
-                                                    id="vp_user_price_status"
-                                                    name="vp_user_price_status"
+                                            <div>
+                                                <textarea
+                                                    id="v_user_description"
+                                                    name="v_user_description"
+                                                    placeholder="Description"
+                                                    rows="6"
                                                     className="outline-none py-2 px-3 rounded border w-full"
-                                                    {...register("vp_user_price_status")}
-                                                >
-                                                    <option value="" className="text-gray-800">Select </option>
-                                                    <option value="negotiable">Negotiation</option>
-                                                    <option value="fixed">Fixed</option>
-                                                    <option value="variable">Variable</option>
-                                                </select>
-                                                {errors.vp_user_price_status && (
-                                                    <p className="text-red-500 text-sm">{errors.vp_user_price_status.message}</p>
+                                                    {...register("v_user_description")}
+                                                ></textarea>
+                                                {errors.v_user_description && (
+                                                    <p className="text-red-500 text-sm">{errors.v_user_description.message}</p>
                                                 )}
                                             </div>
 
 
-                                            <div className=" mb-2">
-                                                <label className="text-base font-medium" htmlFor="customer-name">
-                                                    User Purchase Price
+
+                                            <div className="mb-2 w-[50%]">
+                                                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="v_video_user">
+                                                    Video Link (User)
                                                 </label>
                                                 <Input
-                                                    id="vp_user_purchase_price"
-                                                    name="vp_user_purchase_price"
-                                                    placeholder="Enter User Purchase Price"
-                                                    {...register("vp_user_purchase_price")}
-                                                    onKeyDown={onlyDecimalInput}
+                                                    id="v_video_user"
+                                                    name="v_video_user"
+                                                    placeholder="User Video Link"
+                                                    {...register("v_video_user")}
                                                 />
                                             </div>
 
 
 
-                                        </div>
+                                            <hr />
 
-                                    </div>
+                                            <VehiclePricingSection
+                                                register={register}
+                                                watch={watch}
+                                                setValue={setValue}
+                                                control={control}
+                                                purchasePriceField="vp_user_purchase_price"
+                                                partnerPriceLabel="Partner Price"
+                                                hotlineText="Call PBL Hotline to be Partner"
+                                                pricingLocked={pricingLocked}
+                                            />
 
-
-                                </fieldset>
-
-                                <div className="px-4">
-                                    {/* PBL Pricing section */}
-                                    {
-                                        (user?.user_mode === 'supreme' || user?.user_mode === 'admin') && (
-                                            <>
-                                                <div className="mb-3">
-                                                    <h4 className="text-sm font-semibold text-gray-800 mb-1">PBL Pricing</h4>
-                                                    <div className="flex w-20 h-0.5">
-                                                        <div className="w-1/2 bg-green-500"></div>
-                                                        <div className="w-1/2 bg-gray-500/20"></div>
-                                                    </div>
-                                                </div>
-
-
-                                                <div className="mb-3 mt-4">
-                                                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents</h4>
-                                                    <div className="flex w-20 h-0.5">
-                                                        <div className="w-1/2 bg-green-500"></div>
-                                                        <div className="w-1/2 bg-gray-500/20"></div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mb-4">
-                                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                                        {secretDocumentPreviews.length > 0 ? (
-                                                            secretDocumentPreviews.map((doc, index) => (
-                                                                <a
-                                                                    key={`${doc}-${index}`}
-                                                                    href={doc}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-blue-400"
-                                                                >
-                                                                    {isImageDocumentUrl(doc) ? (
-                                                                        <img
-                                                                            src={doc}
-                                                                            alt={`Secret Document ${index + 1}`}
-                                                                            className="h-40 w-full object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="flex h-40 items-center justify-center bg-gray-50 p-4 text-center text-sm font-medium text-gray-600">
-                                                                            {getDocumentFileName(doc)}
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="border-t border-gray-200 px-3 py-2 text-xs font-medium text-blue-600">
-                                                                        View document
-                                                                    </div>
-                                                                </a>
-                                                            ))
-                                                        ) : (
-                                                            <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-sm text-gray-500 sm:col-span-2 xl:col-span-4">
-                                                                No secret documents uploaded.
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="mb-3 mt-4">
-                                                    <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents 2</h4>
-                                                    <div className="flex w-20 h-0.5">
-                                                        <div className="w-1/2 bg-green-500"></div>
-                                                        <div className="w-1/2 bg-gray-500/20"></div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mb-4">
-                                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                                        {secretDocument2Previews.length > 0 ? (
-                                                            secretDocument2Previews.map((doc, index) => (
-                                                                <a
-                                                                    key={`${doc}-${index}`}
-                                                                    href={doc}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-blue-400"
-                                                                >
-                                                                    {isImageDocumentUrl(doc) ? (
-                                                                        <img
-                                                                            src={doc}
-                                                                            alt={`Secret Document 2 ${index + 1}`}
-                                                                            className="h-40 w-full object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="flex h-40 items-center justify-center bg-gray-50 p-4 text-center text-sm font-medium text-gray-600">
-                                                                            {getDocumentFileName(doc)}
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="border-t border-gray-200 px-3 py-2 text-xs font-medium text-blue-600">
-                                                                        View document
-                                                                    </div>
-                                                                </a>
-                                                            ))
-                                                        ) : (
-                                                            <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-sm text-gray-500 sm:col-span-2 xl:col-span-4">
-                                                                No secret documents uploaded.
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-4 gap-4 mb-4">
-
-                                                    <div className="mb-2">
-                                                        <label className="text-base font-medium" htmlFor="customer-name">
-                                                            PBL Additional Price
-                                                        </label>
-                                                        <Input
-                                                            id="vp_pbl_additional_amount"
-                                                            name="vp_pbl_additional_amount"
-                                                            placeholder="Enter PBL Additional Price"
-                                                            {...register("vp_pbl_additional_amount")}
-                                                            onKeyDown={onlyDecimalInput}
-                                                        />
-                                                    </div>
-
-                                                    <div className="mb-2">
-                                                        <label className="text-base font-medium" htmlFor="customer-name">
-                                                            PBL Asking Price
-                                                        </label>
-                                                        <Input
-                                                            id="vp_pbl_asking_price"
-                                                            name="vp_pbl_asking_price"
-                                                            placeholder="Enter PBL Asking Price"
-                                                            {...register("vp_pbl_asking_price")}
-                                                            onKeyDown={onlyDecimalInput}
-                                                        />
-                                                    </div>
-
-
-                                                    <div className="mb-2">
-                                                        <label className="text-base font-medium" htmlFor="customer-name">
-                                                            User Costing Price
-                                                        </label>
-                                                        <Input
-                                                            id="vp_user_costing_price"
-                                                            name="vp_user_costing_price"
-                                                            placeholder="Enter PBL Additional Price"
-                                                            {...register("vp_user_costing_price")}
-                                                            onKeyDown={onlyDecimalInput}
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-base font-medium" htmlFor="customer-name">
-                                                            PBL Price Negotiation
-                                                        </label>
-                                                        <select
-                                                            id="vp_pbl_price_status"
-                                                            name="vp_pbl_price_status"
-                                                            className="outline-none py-2 px-3 rounded border w-full"
-                                                            {...register("vp_pbl_price_status")}
-                                                        >
-                                                            <option value="" className="text-gray-800">Select PBL Price Negotiation</option>
-                                                            <option value="negotiable">Negotiation</option>
-                                                            <option value="fixed">Fixed</option>
-                                                            <option value="variable">Variable</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="mb-2">
-                                                        <label className="text-base font-medium" htmlFor="customer-name">
-                                                            PBL Partner Code
-                                                        </label>
-                                                        <Input
-                                                            id="pbl_partner_code"
-                                                            name="pbl_partner_code"
-                                                            placeholder="Enter PBL Partner Code"
-                                                            {...register("pbl_partner_code")}
-                                                            disabled={isReadOnly}
-                                                            onKeyDown={onlyDecimalInput}
-                                                        />
-                                                    </div>
-
-                                                    <div className="mb-2">
-                                                        <label className="text-base font-medium" htmlFor="v_video_gdoc">
-                                                            Google link (Pic)
-                                                        </label>
-                                                        <Input
-                                                            id="v_video_gdoc"
-                                                            name="v_video_gdoc"
-                                                            value={googleDocLink || ""}
-                                                            placeholder="No Google Link"
-                                                            readOnly
-                                                            disabled={isReadOnly}
-                                                        />
-                                                        {googleDocLink && (
-                                                            <a
-                                                                href={googleDocLink}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="mt-2 block break-all text-xs font-medium text-blue-600 hover:underline"
-                                                            >
-                                                                Open Google link
-                                                            </a>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="mb-2">
-                                                        <label className="text-base font-medium" htmlFor="v_auction_type">
-                                                            Auction Types
-                                                        </label>
-                                                        <Input
-                                                            id="v_auction_type"
-                                                            name="v_auction_type"
-                                                            value={getAuctionTypeLabel(selectedAuctionType)}
-                                                            placeholder="No Auction Type"
-                                                            readOnly
-                                                            disabled={isReadOnly}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )
-                                    }
-
-                                    <fieldset disabled={isReadOnly} className="contents">
-                                        <hr />
-
-                                        {/* Description section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Description</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
-
-                                        {/* <div>
-                                        <textarea
-                                            id="v_description"
-                                            name="v_description"
-                                            placeholder="Description"
-                                            rows="6"
-                                            className="outline-none py-2 px-3 rounded border w-full"
-                                            {...register("v_description")}
-                                        ></textarea>
-                                        {errors.v_description && (
-                                            <p className="text-red-500 text-sm">{errors.v_description.message}</p>
-                                        )}
-                                    </div> */}
-                                        {
-                                            (user?.user_mode === 'supreme' || user?.user_mode === 'admin') ? (
-                                                <div>
-                                                    <textarea
-                                                        id="v_description"
-                                                        name="v_description"
-                                                        placeholder="Description"
-                                                        rows="6"
-                                                        className="outline-none py-2 px-3 rounded border w-full"
-                                                        {...register("v_description")}
-                                                    ></textarea>
-                                                    {errors.v_description && (
-                                                        <p className="text-red-500 text-sm">{errors.v_description.message}</p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    <textarea
-                                                        id="v_user_description"
-                                                        name="v_user_description"
-                                                        placeholder="Description"
-                                                        rows="6"
-                                                        className="outline-none py-2 px-3 rounded border w-full"
-                                                        {...register("v_user_description")}
-                                                    ></textarea>
-                                                    {errors.v_user_description && (
-                                                        <p className="text-red-500 text-sm">{errors.v_user_description.message}</p>
-                                                    )}
-                                                </div>
-                                            )
-                                        }
-
-                                        {/* Special Description section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Special Description</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <textarea
-                                                id="vm_description"
-                                                name="vm_description"
-                                                placeholder="Special Description"
-                                                rows="4"
-                                                className="outline-none py-2 px-3 rounded border w-full"
-                                                {...register("vm_description")}
-                                            ></textarea>
-                                            {errors.vm_description && (
-                                                <p className="text-red-500 text-sm">{errors.vm_description.message}</p>
-                                            )}
-                                        </div>
-
-                                        {/* PBL Pricing section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Front Image</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
-
-
-
-                                        <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
-                                            <div>
-                                                <div className={`flex justify-center items-center border ${fontImageError && `border-2 border-dashed border-red-600 rounded-lg`}`}>
-                                                    <label
-                                                        htmlFor="front-image-upload"
-                                                        className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition"
-                                                    >
-                                                        <span className="text-sm text-gray-600">Click to Upload Font Image</span>
-                                                        <input
-                                                            type="file"
-                                                            id="front-image-upload"
-                                                            name="frontImage"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={handleImageChange}
-                                                        />
+                                            <div className="grid grid-cols-4 gap-4 mb-4 mt-4">
+                                                <div className="mb-2">
+                                                    <label className="text-base font-medium" htmlFor="vp_user_price_status">
+                                                        User Price Negotiation
                                                     </label>
-                                                </div>
-                                                {
-                                                    fontImageError && <span className="text-red-500 text-lg font-bold mt-2 ">Front Image is required</span>
-                                                }
-                                            </div>
-
-                                            {/* Preview Box */}
-                                            <div className="col-span-4 relative">
-                                                {preview && (
-                                                    <div className="w-40 h-40 border rounded-lg overflow-hidden relative">
-                                                        <img
-                                                            src={preview}
-                                                            alt="Front Preview"
-                                                            className="object-cover w-full h-full"
-                                                        />
-
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleFrontImageDelete}
-                                                            className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
-                                                            aria-label="Delete image"
-                                                        >
-                                                            <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                className="h-4 w-4 text-red-500"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth={2}
-                                                            >
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-
-                                        {/* PBL Pricing section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Additional Images</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
-                                            {/* Upload Box */}
-                                            <div className="flex justify-center items-center">
-                                                <label
-                                                    htmlFor="additional-images-upload"
-                                                    className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition"
-                                                >
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        className="w-6 h-6 text-gray-500"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
+                                                    <select
+                                                        id="vp_user_price_status"
+                                                        name="vp_user_price_status"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("vp_user_price_status")}
                                                     >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
-                                                        />
-                                                        <circle cx="12" cy="13" r="4" />
-                                                    </svg>
-                                                    <input
-                                                        type="file"
-                                                        id="additional-images-upload"
-                                                        name="additionalImages"
-                                                        accept="image/*"
-                                                        multiple
-                                                        className="hidden"
-                                                        onChange={handleAdditionalImageChange}
-                                                    />
-                                                </label>
+                                                        <option value="" className="text-gray-800">Select </option>
+                                                        <option value="negotiable">Negotiation</option>
+                                                        <option value="fixed">Fixed</option>
+                                                        <option value="variable">Variable</option>
+                                                    </select>
+                                                    {errors.vp_user_price_status && (
+                                                        <p className="text-red-500 text-sm">{errors.vp_user_price_status.message}</p>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            {/* Image Previews */}
-                                            <div className="col-span-4">
-                                                <div className="grid grid-cols-6 gap-4 image-preview">
-                                                    {additionalPreviews.map((img, index) => (
-                                                        <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+
+                                            {/* Front Image section */}
+                                            <div className="mb-3 mt-4">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-1">Front Image</h4>
+                                                <div className="flex w-20 h-0.5">
+                                                    <div className="w-1/2 bg-green-500"></div>
+                                                    <div className="w-1/2 bg-gray-500/20"></div>
+                                                </div>
+                                            </div>
+
+
+
+                                            <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                <div>
+                                                    <div className={`flex justify-center items-center border ${fontImageError && `border-2 border-dashed border-red-600 rounded-lg`}`}>
+                                                        <label
+                                                            htmlFor="front-image-upload"
+                                                            className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition"
+                                                        >
+                                                            <span className="text-sm text-gray-600">Click to Upload Font Image</span>
+                                                            <input
+                                                                type="file"
+                                                                id="front-image-upload"
+                                                                name="frontImage"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={handleImageChange}
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                    {
+                                                        fontImageError && <span className="text-red-500 text-lg font-bold mt-2 ">Front Image is required</span>
+                                                    }
+                                                </div>
+
+                                                {/* Preview Box */}
+                                                <div className="col-span-4 relative">
+                                                    {preview && (
+                                                        <div className="w-40 h-40 border rounded-lg overflow-hidden relative">
                                                             <img
-                                                                src={img}
-                                                                alt={`Preview ${index}`}
+                                                                src={preview}
+                                                                alt="Front Preview"
                                                                 className="object-cover w-full h-full"
                                                             />
-                                                            {/* SVG Delete Button */}
+
+
                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleDeleteAdditionalImage(img, index)}
+                                                                onClick={handleFrontImageDelete}
                                                                 className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
                                                                 aria-label="Delete image"
                                                             >
@@ -2435,33 +2983,879 @@ const ViewProductForm = ({ productId }) => {
                                                                 </svg>
                                                             </button>
                                                         </div>
-                                                    ))}
+                                                    )}
                                                 </div>
                                             </div>
+
+
+                                            {/* Additional Images section */}
+                                            <div className="mb-3 mt-4">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                                                    Additional Images ({additionalPreviews.length}/{MAX_ADDITIONAL_IMAGES})
+                                                </h4>
+                                                <div className="flex w-20 h-0.5">
+                                                    <div className="w-1/2 bg-green-500"></div>
+                                                    <div className="w-1/2 bg-gray-500/20"></div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                {/* Upload Box */}
+                                                <div className="flex justify-center items-center">
+                                                    <label
+                                                        htmlFor="additional-images-upload"
+                                                        className={`flex-1 h-40 flex flex-col justify-center items-center gap-2 border border-dashed border-gray-400 rounded-lg text-center transition ${isAdditionalImageLimitReached ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-blue-500"}`}
+                                                    >
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            className="w-6 h-6 text-gray-500"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            stroke="currentColor"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                            />
+                                                            <circle cx="12" cy="13" r="4" />
+                                                        </svg>
+                                                        <input
+                                                            type="file"
+                                                            id="additional-images-upload"
+                                                            name="additionalImages"
+                                                            accept="image/*"
+                                                            multiple
+                                                            className="hidden"
+                                                            disabled={isAdditionalImageLimitReached}
+                                                            onChange={handleAdditionalImageChange}
+                                                        />
+                                                    </label>
+                                                </div>
+
+                                                {/* Image Previews */}
+                                                <div className="col-span-4">
+                                                    <div className="grid grid-cols-6 gap-4 image-preview">
+                                                        {additionalPreviews.map((img, index) => (
+                                                            <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                <img
+                                                                    src={img}
+                                                                    alt={`Preview ${index}`}
+                                                                    className="object-cover w-full h-full"
+                                                                />
+                                                                {/* SVG Delete Button */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteAdditionalImage(img, index)}
+                                                                    className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                    aria-label="Delete image"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        className="h-4 w-4 text-red-500"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth={2}
+                                                                    >
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+                                            <div className="mb-3 mt-4">
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-1">Additional Documents/Auction Sheet/Brochure</h4>
+                                                <div className="flex w-20 h-0.5">
+                                                    <div className="w-1/2 bg-green-500"></div>
+                                                    <div className="w-1/2 bg-gray-500/20"></div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                <div className="flex justify-center items-center">
+                                                    <label
+                                                        htmlFor="additional-documents-upload"
+                                                        className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                                    >
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            className="w-6 h-6 text-gray-500"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                            stroke="currentColor"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                            />
+                                                            <circle cx="12" cy="13" r="4" />
+                                                        </svg>
+                                                        <input
+                                                            type="file"
+                                                            id="additional-documents-upload"
+                                                            name="additionalDocuments"
+                                                            accept="image/*,.pdf,.doc,.docx"
+                                                            multiple
+                                                            className="hidden"
+                                                            onChange={handleAdditionalDocumentFileChange}
+                                                        />
+                                                    </label>
+                                                </div>
+
+                                                <div className="col-span-4">
+                                                    <div className="grid grid-cols-6 gap-4 image-preview">
+                                                        {additionalDocumentPreviews.map((doc, index) => (
+                                                            <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                <img
+                                                                    src={doc}
+                                                                    alt={`Document Preview ${index}`}
+                                                                    className="object-cover w-full h-full"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteAdditionalDocument(doc, index)}
+                                                                    className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                    aria-label="Delete document image"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        className="h-4 w-4 text-red-500"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth={2}
+                                                                    >
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                         </div>
+
+                                        <div className="mb-3 mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+                                            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-gray-800">More Information</h4>
+                                                    <p className="text-xs text-gray-500">Add public vehicle facts like warranty, service history, or extra features.</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-900 px-3 text-sm font-medium text-white hover:bg-slate-800"
+                                                    onClick={addMoreInformationRow}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    Add Row
+                                                </button>
+                                            </div>
+
+                                            <div className="grid gap-3">
+                                                {moreInformation.map((item) => (
+                                                    <div key={item.id} className="grid gap-2 md:grid-cols-[220px_1fr_40px]">
+                                                        <input
+                                                            value={item.key}
+                                                            placeholder="Label, e.g. Warranty"
+                                                            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                                            onChange={(event) => setMoreInformationRow(item.id, { key: event.target.value })}
+                                                        />
+                                                        <input
+                                                            value={item.value}
+                                                            placeholder="Value, e.g. 1 year service warranty"
+                                                            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-900"
+                                                            onChange={(event) => setMoreInformationRow(item.id, { value: event.target.value })}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                                                            onClick={() => removeMoreInformationRow(item.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* PBL Section */}
+                                        {
+                                            (user?.user_mode === 'supreme' || user?.user_mode === 'admin' || user?.user_mode === 'pbl') && (
+                                                <div className="border border-gray-900 rounded-lg p-4 mb-4">
+                                                    <div className="mb-4 flex flex-row justify-center gap-2">
+                                                        <h4 className="text-2xl font-bold text-gray-800 mb-1 border-b-2 border-gray-500">PBL Section</h4>
+                                                        {/* <div className="flex w-20 h-0.5">
+                                                        <div className="w-1/2 bg-green-500"></div>
+                                                        <div className="w-1/2 bg-gray-500/20"></div>
+                                                    </div> */}
+                                                    </div>
+
+
+
+                                                    <div>
+                                                        <div className="mb-3 mt-4">
+                                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents</h4>
+                                                            <div className="flex w-20 h-0.5">
+                                                                <div className="w-1/2 bg-green-500"></div>
+                                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                            <div className="flex justify-center items-center">
+                                                                <label
+                                                                    htmlFor="secret-documents-upload"
+                                                                    className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        className="w-6 h-6 text-gray-500"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={2}
+                                                                            d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                                        />
+                                                                        <circle cx="12" cy="13" r="4" />
+                                                                    </svg>
+                                                                    <input
+                                                                        type="file"
+                                                                        id="secret-documents-upload"
+                                                                        name="secretDocuments"
+                                                                        accept="image/*,.pdf,.doc,.docx"
+                                                                        multiple
+                                                                        className="hidden"
+                                                                        onChange={handleSecretDocumentFileChange}
+                                                                    />
+                                                                </label>
+                                                            </div>
+
+                                                            <div className="col-span-4">
+                                                                <div className="grid grid-cols-6 gap-4 image-preview">
+                                                                    {secretDocumentPreviews.map((doc, index) => (
+                                                                        <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                            <img
+                                                                                src={doc}
+                                                                                alt={`Secret Document Preview ${index}`}
+                                                                                className="object-cover w-full h-full"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteSecretDocument(doc, index)}
+                                                                                className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                                aria-label="Delete secret document image"
+                                                                            >
+                                                                                <svg
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                    className="h-4 w-4 text-red-500"
+                                                                                    fill="none"
+                                                                                    viewBox="0 0 24 24"
+                                                                                    stroke="currentColor"
+                                                                                    strokeWidth={2}
+                                                                                >
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="mb-3 mt-4">
+                                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents 2</h4>
+                                                            <div className="flex w-20 h-0.5">
+                                                                <div className="w-1/2 bg-green-500"></div>
+                                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                            <div className="flex justify-center items-center">
+                                                                <label
+                                                                    htmlFor="secret-documents-2-upload"
+                                                                    className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        className="w-6 h-6 text-gray-500"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={2}
+                                                                            d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                                        />
+                                                                        <circle cx="12" cy="13" r="4" />
+                                                                    </svg>
+                                                                    <input
+                                                                        type="file"
+                                                                        id="secret-documents-2-upload"
+                                                                        name="secretDocuments2"
+                                                                        accept="image/*,.pdf,.doc,.docx"
+                                                                        multiple
+                                                                        className="hidden"
+                                                                        onChange={handleSecretDocument2FileChange}
+                                                                    />
+                                                                </label>
+                                                            </div>
+
+                                                            <div className="col-span-4">
+                                                                <div className="grid grid-cols-6 gap-4 image-preview">
+                                                                    {secretDocument2Previews.map((doc, index) => (
+                                                                        <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                            <img
+                                                                                src={doc}
+                                                                                alt={`Secret Document 2 Preview ${index}`}
+                                                                                className="object-cover w-full h-full"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteSecretDocument2(doc, index)}
+                                                                                className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                                aria-label="Delete secret document 2 image"
+                                                                            >
+                                                                                <svg
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                    className="h-4 w-4 text-red-500"
+                                                                                    fill="none"
+                                                                                    viewBox="0 0 24 24"
+                                                                                    stroke="currentColor"
+                                                                                    strokeWidth={2}
+                                                                                >
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="text-base font-medium" htmlFor="v_secret_text">
+                                                            Secret Text
+                                                        </label>
+                                                        <textarea
+                                                            id="v_secret_text"
+                                                            name="v_secret_text"
+                                                            placeholder="Secret Text"
+                                                            rows="4"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_secret_text")}
+                                                        ></textarea>
+                                                    </div>
+
+
+                                                    {/* <div>
+                                                    <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                        PBL Gift
+                                                    </label>
+                                                    <select
+                                                        id="v_pbl_gift"
+                                                        name="v_pbl_gift"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_pbl_gift")}
+                                                        disabled={isGiftLoading}
+                                                    >
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        {
+                                                            giftData.map((gift) => (
+                                                                <option key={gift.value} value={gift.value}>
+                                                                    {gift.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div> */}
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="text-base font-medium" htmlFor="v_secret_video_link">
+                                                            Secret Video Link
+                                                        </label>
+                                                        <Input
+                                                            id="v_secret_video_link"
+                                                            name="v_secret_video_link"
+                                                            placeholder="Enter Secret Video Link"
+                                                            {...register("v_secret_video_link")}
+                                                        />
+                                                    </div>
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                            PBL Gift
+                                                        </label>
+                                                        <select
+                                                            id="v_pbl_gift"
+                                                            name="v_pbl_gift"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_pbl_gift")}
+                                                            disabled={isGiftLoading}
+                                                        >
+                                                            <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                            {
+                                                                giftData.map((gift) => (
+                                                                    <option key={gift.value} value={gift.value}>
+                                                                        {gift.label}
+                                                                    </option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                    </div>
+
+
+
+                                                    <div className="grid grid-cols-4 gap-4 mb-4">
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Additional Price
+                                                            </label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="vp_pbl_additional_amount"
+                                                                    name="vp_pbl_additional_amount"
+                                                                    placeholder="Enter PBL Additional Price"
+                                                                    {...register("vp_pbl_additional_amount")}
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={formatIndianNumber(userPblAdditionalPrice, true)}
+                                                                    onChange={(e) => {
+                                                                        const cleaned = String(e.target.value)
+                                                                            .replace(/,/g, '')
+                                                                            .replace(/[^\d.]/g, '');
+                                                                        const [integerPart = '', decimalPart = ''] = cleaned.split('.');
+                                                                        const normalizedInteger = integerPart.replace(/\D+/g, '').slice(0, 12);
+                                                                        const normalizedDecimal = decimalPart.replace(/\D+/g, '').slice(0, 2);
+                                                                        const normalizedValue = cleaned.includes('.')
+                                                                            ? `${normalizedInteger}.${normalizedDecimal}`
+                                                                            : normalizedInteger;
+
+                                                                        setValue('vp_pbl_additional_amount', normalizedValue, { shouldDirty: true, shouldValidate: true });
+                                                                        setSelectedPblAdditionalOption('');
+                                                                        setIsPblAdditionalDropdownOpen(normalizedInteger.length > 0);
+                                                                    }}
+                                                                    onFocus={() => setIsPblAdditionalDropdownOpen(pblAdditionalPriceOptions.length > 0)}
+                                                                    onBlur={() => {
+                                                                        setTimeout(() => setIsPblAdditionalDropdownOpen(false), 120);
+                                                                    }}
+                                                                    onKeyDown={onlyDecimalInput}
+                                                                />
+                                                                {isPblAdditionalDropdownOpen && pblAdditionalPriceOptions.length > 0 && (
+                                                                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
+                                                                        {pblAdditionalPriceOptions.map((option) => {
+                                                                            const isSelected = selectedPblAdditionalOption === option.value;
+                                                                            return (
+                                                                                <button
+                                                                                    key={option.value}
+                                                                                    type="button"
+                                                                                    onMouseDown={(e) => e.preventDefault()}
+                                                                                    className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
+                                                                                    onClick={() => {
+                                                                                        setValue('vp_pbl_additional_amount', option.value, { shouldDirty: true, shouldValidate: true });
+                                                                                        setSelectedPblAdditionalOption(option.value);
+                                                                                        setIsPblAdditionalDropdownOpen(false);
+                                                                                    }}
+                                                                                >
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                                                                                        <p className="mt-1 text-xs text-gray-700">{option.words}</p>
+                                                                                    </div>
+                                                                                    {/* <span className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${isSelected ? 'border-blue-600' : 'border-gray-400'}`}>
+                                                                                    {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
+                                                                                </span> */}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Asking Price
+                                                            </label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="vp_pbl_asking_price"
+                                                                    name="vp_pbl_asking_price"
+                                                                    placeholder="Enter PBL Asking Price"
+                                                                    {...register("vp_pbl_asking_price")}
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={formatIndianNumber(userPblAskingPrice, true)}
+                                                                    onChange={(e) => {
+                                                                        const cleaned = String(e.target.value)
+                                                                            .replace(/,/g, '')
+                                                                            .replace(/[^\d.]/g, '');
+                                                                        const [integerPart = '', decimalPart = ''] = cleaned.split('.');
+                                                                        const normalizedInteger = integerPart.replace(/\D+/g, '').slice(0, 12);
+                                                                        const normalizedDecimal = decimalPart.replace(/\D+/g, '').slice(0, 2);
+                                                                        const normalizedValue = cleaned.includes('.')
+                                                                            ? `${normalizedInteger}.${normalizedDecimal}`
+                                                                            : normalizedInteger;
+
+                                                                        setValue('vp_pbl_asking_price', normalizedValue, { shouldDirty: true, shouldValidate: true });
+                                                                        setSelectedPblAskingOption('');
+                                                                        setIsPblAskingDropdownOpen(normalizedInteger.length > 0);
+                                                                    }}
+                                                                    onFocus={() => setIsPblAskingDropdownOpen(pblAskingPriceOptions.length > 0)}
+                                                                    onBlur={() => {
+                                                                        setTimeout(() => setIsPblAskingDropdownOpen(false), 120);
+                                                                    }}
+                                                                    onKeyDown={onlyDecimalInput}
+                                                                />
+                                                                {isPblAskingDropdownOpen && pblAskingPriceOptions.length > 0 && (
+                                                                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
+                                                                        {pblAskingPriceOptions.map((option) => {
+                                                                            const isSelected = selectedPblAskingOption === option.value;
+                                                                            return (
+                                                                                <button
+                                                                                    key={option.value}
+                                                                                    type="button"
+                                                                                    onMouseDown={(e) => e.preventDefault()}
+                                                                                    className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
+                                                                                    onClick={() => {
+                                                                                        setValue('vp_pbl_asking_price', option.value, { shouldDirty: true, shouldValidate: true });
+                                                                                        setSelectedPblAskingOption(option.value);
+                                                                                        setIsPblAskingDropdownOpen(false);
+                                                                                    }}
+                                                                                >
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                                                                                        <p className="mt-1 text-xs text-gray-700">{option.words}</p>
+                                                                                    </div>
+                                                                                    {/* <span className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${isSelected ? 'border-blue-600' : 'border-gray-400'}`}>
+                                                                                    {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
+                                                                                </span> */}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Price Negotiation
+                                                            </label>
+                                                            <select
+                                                                id="vp_pbl_hs_price_status"
+                                                                name="vp_pbl_hs_price_status"
+                                                                className="outline-none py-2 px-3 rounded border w-full"
+                                                                {...register("vp_pbl_hs_price_status")}
+                                                            >
+                                                                <option value="" className="text-gray-800">Select PBL Price Negotiation</option>
+                                                                <option value="negotiable">Negotiation</option>
+                                                                <option value="fixed">Fixed</option>
+                                                                <option value="variable">Variable</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Partner Code
+                                                            </label>
+                                                            <Input
+                                                                id="pbl_partner_code"
+                                                                name="pbl_partner_code"
+                                                                placeholder="Enter PBL Partner Code"
+                                                                {...register("pbl_partner_code")}
+                                                                onKeyDown={onlyDecimalInput}
+                                                            />
+                                                        </div>
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="v_pbl_partnership_expire_date">
+                                                                Product Expire Date
+                                                            </label>
+                                                            <Input
+                                                                id="v_pbl_partnership_expire_date"
+                                                                type="date"
+                                                                {...register("v_pbl_partnership_expire_date")}
+                                                            />
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                After this date, the vehicle is automatically removed from PBL sale (home &amp; category pages).
+                                                            </p>
+                                                        </div>
+
+                                                        <PblHistoryPanel type="vehicle" id={productId} />
+
+
+
+                                                        {
+
+
+                                                            user && (user.user_mode === 'pbl' || user.user_mode === 'admin' || user.user_mode === 'supreme') && (
+                                                                <>
+                                                                    <div className="mb-2">
+                                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                                            Priority
+                                                                        </label>
+                                                                        <Input
+                                                                            id="v_priority"
+                                                                            name="v_priority"
+                                                                            placeholder="Select Priority"
+                                                                            {...register("v_priority")}
+                                                                            onKeyDown={onlyNumberInput}
+                                                                        />
+                                                                        {errors.v_priority && (
+                                                                            <p className="text-red-500 text-sm">{errors.v_priority.message}</p>
+                                                                        )}
+                                                                    </div>
+
+
+
+
+                                                                </>
+                                                            )
+                                                        }
+
+
+                                                        <div>
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                Google link (Pic)
+                                                            </label>
+                                                            <Input
+                                                                id="v_video_gdocpbl"
+                                                                name="v_video_gdocpbl"
+                                                                placeholder="Enter Google Link"
+                                                                {...register("v_video_gdocpbl")}
+                                                            />
+                                                        </div>
+
+
+
+
+
+                                                        <div>
+                                                            <label className="text-base font-medium" htmlFor="v_auction_type">
+                                                                Auction Types
+                                                            </label>
+                                                            <Controller
+                                                                name="v_auction_type"
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Select
+                                                                        {...field}
+                                                                        options={auctionTypeOptions}
+                                                                        onChange={(selectedOption) => {
+                                                                            field.onChange(selectedOption ? selectedOption.value : '');
+                                                                        }}
+                                                                        value={auctionTypeOptions.find(option => option.value === field.value) || null}
+                                                                        placeholder="Select Auction Type"
+                                                                        className="basic-single"
+                                                                        classNamePrefix="select"
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+
+                                                        {/* <div className="">
+                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                            Users Mode (Call PBL Hotline to be Partner)
+                                                        </label>
+                                                        <select
+                                                            id="v_user_mode"
+                                                            name="v_user_mode"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_user_mode")}
+                                                        >
+                                                            <option value="">Select User Mode</option>
+                                                            {
+                                                                userModeData.map((userMode) => (
+                                                                    <option key={userMode.value} value={userMode.value}>
+                                                                        {userMode.label}
+                                                                    </option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                    </div> */}
+                                                        {/* <div className="mb-3 mt-4">
+        <span className="text-sm font-semibold text-gray-600 mb-1">{hotlineText}</span>
+        </div> */}
+
+
+                                                    </div>
+
+
+                                                    {/* Description section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-lg font-semibold text-gray-800 mb-1">Description (PB)</h4>
+                                                        <div className="flex w-24 h-1">
+                                                            <div className="w-2/3 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <textarea
+                                                            id="v_description"
+                                                            name="v_description"
+                                                            placeholder="Description (PB)"
+                                                            rows="6"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_description")}
+                                                        ></textarea>
+                                                        {errors.v_description && (
+                                                            <p className="text-red-500 text-sm">{errors.v_description.message}</p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Special Description section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-lg font-bold text-gray-800 mb-1">Special Description (PB)</h4>
+                                                        <div className="flex w-40 h-1">
+                                                            <div className="w-2/3 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <textarea
+                                                            id="vm_description"
+                                                            name="vm_description"
+                                                            placeholder="Special Description"
+                                                            rows="4"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("vm_description")}
+                                                        ></textarea>
+                                                        {errors.vm_description && (
+                                                            <p className="text-red-500 text-sm">{errors.vm_description.message}</p>
+                                                        )}
+                                                    </div>
+
+
+
+                                                    {/* Video Link PBL section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-sm font-semibold text-gray-800 mb-1">Video Link</h4>
+                                                        <div className="flex w-20 h-0.5">
+                                                            <div className="w-1/2 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="v_video_pbl">
+                                                            Video Link (PBL)
+                                                        </label>
+                                                        <Input
+                                                            id="v_video_pbl"
+                                                            name="v_video_pbl"
+                                                            placeholder="PBL Video Link"
+                                                            {...register("v_video_pbl")}
+                                                        />
+                                                    </div>
+
+                                                    {/* Vendor Agreement section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-lg font-semibold text-gray-800 mb-1">Vendor Agreement</h4>
+                                                        <div className="flex w-24 h-1">
+                                                            <div className="w-2/3 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <textarea
+                                                            id="v_pbl_text"
+                                                            name="v_pbl_text"
+                                                            placeholder="Vendor Agreement"
+                                                            rows="4"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_pbl_text")}
+                                                        ></textarea>
+                                                    </div>
+
+                                                    {canShowSellerMobileToggle() && (
+                                                        <div className="mt-4 flex items-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="v_show_seller_mobile"
+                                                                className="mr-2"
+                                                                {...register("v_show_seller_mobile")}
+                                                            />
+                                                            <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
+                                                                Show Seller Mobile Number
+                                                            </label>
+                                                        </div>
+                                                    )}
+
+                                                    {canShowSellerMobileToggle() && watch("v_show_seller_mobile") && (
+                                                        <div className="mt-4">
+                                                            <h4 className="text-sm font-semibold text-gray-800 mb-2">Sellers</h4>
+                                                            {sellerInfoRows.map((row, index) => (
+                                                                <div key={index} className="flex items-end gap-2 mb-2">
+                                                                    <div className="flex-1">
+                                                                        <label className="text-sm font-medium text-gray-700">Seller Name</label>
+                                                                        <Input
+                                                                            value={row.name}
+                                                                            placeholder="Seller Name"
+                                                                            onChange={(e) => handleSellerInfoChange(index, "name", e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <label className="text-sm font-medium text-gray-700">Phone</label>
+                                                                        <Input
+                                                                            value={row.phone}
+                                                                            placeholder="Phone"
+                                                                            onChange={(e) => handleSellerInfoChange(index, "phone", e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveSellerInfoRow(index)}
+                                                                        className="px-3 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleAddSellerInfoRow}
+                                                                className="mt-1 px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+                                                            >
+                                                                + Add Seller
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                </div>
+                                            )
+                                        }
 
                                         <hr />
 
-                                        {/* SEO Description section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Video Link</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
 
 
-                                        <div className="text-center mb-2 w-[50%]">
-                                            <Input
-                                                id="v_video"
-                                                name="v_video"
-                                                placeholder="Video Link"
-                                                {...register("v_video")}
-                                            />
-                                        </div>
 
-                                        <div className="mt-4 mb-4 hidden">
+
+                                        <div className="mt-4 mb-4">
                                             <div className="flex items-center mt-4">
 
                                                 <input
@@ -2472,79 +3866,57 @@ const ViewProductForm = ({ productId }) => {
                                                     disabled={user?.user_mode == 'member'}
                                                     {...register("v_is_saleBy_pbl")}
                                                 />
-                                                <label htmlFor="terms" className={`text-sm ${(user?.user_mode == 'member' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I am click4details.com Partner. I Certify that this Product and Information is Authentic and According to Signed &nbsp;
+                                                <label htmlFor="terms" className={`text-sm ${user?.user_mode == 'member' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                    {/* আমার এই প্রোডাক্ট টি pilotbazar.com এ বিক্রয় এর জন্য অনুমতি দেওয়া হলো এবং আমি pilotbazar.com এর সকল শর্ত মানতে রাজি আছি। &nbsp; */}
+                                                    আমি আমার এই প্রোডাক্টটি pilotbazar.com এ বিক্রয়ের জন্য অনুমতি প্রদান করছি
+                                                    এবং pilotbazar.com এর সকল
                                                     <Link href="/terms-and-conditions" className="text-blue-500 hover:underline">
-                                                        Terms and Conditions
-                                                    </Link>. Please Sale My Product and Increase My Profit.
+                                                        {/* Terms and Conditions */} শর্তাবলী
+                                                    </Link> মেনে নিতে সম্মত আছি।
+                                                    {/* অনুগ্রহ করে আমার প্রোডাক্টটি বিক্রয়ে সহায়তা করুন এবং আমার ব্যবসার মুনাফা বৃদ্ধিতে সহায়তা করুন। */}
+                                                    {/* Please Sale My Product and Increase My Profit. */}
                                                 </label>
                                             </div>
 
 
-                                            <div className="flex items-center mt-4">
+                                            {/* <div className="flex items-center mt-4">
 
-                                                <input
-                                                    type="checkbox"
-                                                    id="want_to_be_partner"
-                                                    name="terms"
-                                                    className="mr-2"
-                                                    disabled={user?.user_mode == 'partner' || user?.user_mode == 'user'}
-                                                    {...register("want_to_be_partner")}
-                                                />
-                                                <label htmlFor="want_to_be_partner" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                    I Want to be a Partner of click4details.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox click4details.com team will Call You Soon. Or Call click4details.com Hotline Number 01969444000 to be Our Partner. &nbsp;
-                                                </label>
-                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                id="partnership"
+                                                name="partnership"
+                                                className="mr-2"
+                                                disabled={user?.user_mode == 'partner' || user?.user_mode == 'user'}
+                                               
+                                                {...register("v_to_be_partner")}
+                                            />
+                                            <label htmlFor="partnership" className={`text-sm ${(user?.user_mode == 'partner' || user?.user_mode == 'user') ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                I Want to be a Partner of pilotbazar.com. Please Click the Checkbox and Submit to be Our Partner. If You Click the Checkbox pilotbazar.com team will Call You Soon. Or Call pilotbazar.com Hotline Number 01969444000 to be Our Partner. &nbsp;
+                                            </label>
+                                        </div> */}
 
                                         </div>
 
-                                    </fieldset>
-                                </div>
+                                        <hr />
 
-                                <hr />
+                                        <div className="hidden justify-center gap-2 mt-4">
 
-                                {
-                                    console.log("staged", staged)
-                                }
+                                            <button
+                                                type="submit"
+                                                className="bg-gray-400 text-white px-6 py-2.5 rounded font-medium rounded-lg"
+                                            >
+                                                Save As Draft
+                                            </button>
 
-                                {
-                                    ((user?.user_mode === 'supreme') || (user?.user_mode === 'admin') ||  (user?.user_mode === 'pbl')) && (
-                                        <div className="flex justify-center gap-2 mt-4 p-4">
-                                            {/* v_staged: "review" */}
-                                            {
-                                                staged === "review" && (
-                                                    <button
-                                                        type="submit"
-                                                        className="bg-green-600 text-white px-6 py-2.5 rounded font-medium rounded-lg"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                )
-                                            }
-
-
-                                            {
-                                                staged === "approved" && (
-                                                    <button
-                                                        disabled
-                                                        className="bg-blue-300 text-white px-6 py-2.5 rounded font-medium rounded-lg"
-                                                    >
-                                                        Approved
-                                                    </button>
-                                                )
-                                            }
-
-                                            {/* <button
-                                        type="submit"
-                                        className="bg-blue-600 text-white px-6 py-2.5 rounded font-medium rounded-lg"
-                                    >
-                                        Approved
-                                    </button> */}
+                                            <button
+                                                type="submit"
+                                                className="bg-blue-600 text-white px-6 py-2.5 rounded font-medium rounded-lg"
+                                            >
+                                                Submit
+                                            </button>
                                         </div>
-                                    )
-                                }
-
-
+                                    </div>
+                                </fieldset>
                             </form>
                         </div>
                     </div>
@@ -2565,4 +3937,4 @@ const ViewProductForm = ({ productId }) => {
     );
 };
 
-export default ViewProductForm;
+export default UpdateProductForm;

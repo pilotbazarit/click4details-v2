@@ -10,6 +10,8 @@ const Queries = {
         filter: params?.filter ?? "unread",
         page: params?.page ?? 1,
         per_page: params?.per_page ?? 10,
+        order_by: params?.order_by,
+        order: params?.order,
       },
       headers: { Accept: "application/json" },
     }),

@@ -569,10 +569,10 @@ const ProductDetails = ({ productDetails }) => {
         );
 
 
-        // console.log("isMyShop", isMyShop); myshop false hote hobe 
-        // console.log("isCompanyShop", isCompanyShop); isCompanyShop false hote hobe
-        // console.log("userMode", userMode); userMode supreme 
-        // console.log("additionalSecretDocuments", additionalSecretDocuments); additionalSecretDocuments length 0 er basi hote hobe
+    // console.log("isMyShop", isMyShop); myshop false hote hobe 
+    // console.log("isCompanyShop", isCompanyShop); isCompanyShop false hote hobe
+    // console.log("userMode", userMode); userMode supreme 
+    // console.log("additionalSecretDocuments", additionalSecretDocuments); additionalSecretDocuments length 0 er basi hote hobe
 
 
     const canShowAdditionalSecretDocument =
@@ -941,6 +941,11 @@ const ProductDetails = ({ productDetails }) => {
             detailsToCopy += `Auction Type : ${String(productDetails.v_auction_type).toUpperCase()}\n`;
         }
 
+        // Location
+        if (productDetails?.v_location?.location_name) {
+            detailsToCopy += `Location : ${productDetails?.v_location?.location_name}${productDetails?.v_location?.uo_id ? ` (${productDetails?.v_location?.uo_id})` : ""}\n`;
+        }
+
         try {
             await navigator.clipboard.writeText(detailsToCopy);
             toast.success('Copied to clipboard!');
@@ -952,29 +957,38 @@ const ProductDetails = ({ productDetails }) => {
 
 
     const handleFeatureCopyClick = () => {
-        if (!productDetails?.feature_specification) return;
+        let featureText = "";
 
-        // প্রতিটা ফিচার থেকে ডাটা ফরম্যাট করা
-        const featureText = productDetails.feature_specification
-            .map((feature) => {
-                if (
-                    feature?.specification?.length > 0 &&
-                    feature.specification.some((item) => item.is_selected)
-                ) {
-                    const selectedItems = feature.specification
-                        .filter((item) => item.is_selected)
-                        .map((item) => item.fs_title)
-                        .join(", "); // কমা দিয়ে join
+        if (productDetails?.feature_specification) {
+            // প্রতিটা ফিচার থেকে ডাটা ফরম্যাট করা
+            featureText = productDetails.feature_specification
+                .map((feature) => {
+                    if (
+                        feature?.specification?.length > 0 &&
+                        feature.specification.some((item) => item.is_selected)
+                    ) {
+                        const selectedItems = feature.specification
+                            .filter((item) => item.is_selected)
+                            .map((item) => item.fs_title)
+                            .join(", "); // কমা দিয়ে join
 
-                    return `${feature.md_title}: ${selectedItems}`;
-                }
-                return null;
-            })
-            .filter(Boolean) // null বাদ দিচ্ছে
-            .join("\n"); // নতুন লাইনে যোগ করবে
+                        return `${feature.md_title}: ${selectedItems}`;
+                    }
+                    return null;
+                })
+                .filter(Boolean) // null বাদ দিচ্ছে
+                .join("\n"); // নতুন লাইনে যোগ করবে
+        }
+
+        let finalFeatureText = featureText;
+        if (productDetails?.v_location?.location_name) {
+            finalFeatureText += (finalFeatureText ? "\n" : "") + `Location : ${productDetails?.v_location?.location_name}${productDetails?.v_location?.uo_id ? ` (${productDetails?.v_location?.uo_id})` : ""}`;
+        }
+
+        if (!finalFeatureText) return;
 
         // Clipboard এ কপি করা
-        navigator.clipboard.writeText(featureText).then(() => {
+        navigator.clipboard.writeText(finalFeatureText.trim()).then(() => {
             toast.success("Copied to clipboard!");
         });
     };
@@ -1278,7 +1292,7 @@ const ProductDetails = ({ productDetails }) => {
     };
 
     const handleCallClick = () => {
-        const phoneNumber = user?.phone || "+8809638660077";
+        const phoneNumber = user?.phone || "+8801969944400";
         window.location.href = `tel:${phoneNumber}`;
     };
 
@@ -1912,6 +1926,7 @@ const ProductDetails = ({ productDetails }) => {
                                         ['Tax Token :', formatProductDetailsDate(productDetails?.v_tax_token_exp_date)],
                                         ['Fitness :', formatProductDetailsDate(productDetails?.v_fitness_exp_date)],
                                         ['Arrival Date :', formatProductDetailsDate(productDetails?.v_arrival_date)],
+                                        ['Location:', productDetails?.v_location?.location_name + `${productDetails?.v_location?.uo_id ? " (" + productDetails?.v_location?.uo_id + ")" : ""}`]
                                     ].map(([label, value], i) => (
                                         <motion.div
                                             key={i}
