@@ -2589,7 +2589,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               (!isMyShop && !isCompanyShop) && (
                 <button
                   onClick={() => {
-                    const phoneNumber = parsedUser?.phone || '+8809638660077';
+                    const phoneNumber = parsedUser?.phone || '+8801969944400';
                     window.location.href = `tel:${phoneNumber}`;
                   }}
                   title="Contact Via Phone"
@@ -2803,7 +2803,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                       `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=costing`
                     );
                   }}
-                  className="h-11 w-full rounded-xl border border-blue-300 bg-blue-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-blue-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Costing
                 </button>
@@ -2818,9 +2818,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                       `/dashboard/products/purchase-payments?entity_type=vehicle&entity_id=${product?.v_id}&section=payment`
                     );
                   }}
-                  className="h-11 w-full rounded-xl border border-orange-300 bg-orange-50 px-3 text-base font-semibold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
-                  Payment
+                  Purchase Payment
                 </button>
               </div>
             </div>
@@ -2836,7 +2836,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   }}
                   className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
-                  Money Receipt
+                  Sell Receipt
                 </button>
               </div>
 
@@ -2845,7 +2845,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                   type="button"
                   disabled={!hasQuationViewPermission}
                   onClick={() => openBillCopyModal()}
-                  className="h-11 w-full rounded-xl border border-green-300 bg-green-50 px-3 text-base font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="h-11 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base font-semibold text-gray-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   Bank Docs
                 </button>
