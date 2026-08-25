@@ -865,7 +865,7 @@ const VehiclePricingSection = ({
 
 
           <div className="rounded-xl border border-gray-200 bg-white p-3 md:p-4">
-            <div className="grid grid-cols-1 gap-2">
+            {/* <div className="grid grid-cols-1 gap-2">
               {showCurrencyField && (
                 <div className="mb-2">
                   <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="vp_currency">
@@ -936,9 +936,9 @@ const VehiclePricingSection = ({
                   )}
                 </div>
               </div>
-            </div>
+            </div> */}
 
-            <div className="grid grid-cols-1 gap-2">
+            {/* <div className="grid grid-cols-1 gap-2">
               <div className="mb-2">
                 <label className="text-base font-medium" htmlFor="vp_user_costing_price">
                   User Costing Price
@@ -1000,7 +1000,7 @@ const VehiclePricingSection = ({
                   </button>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <div className="grid grid-cols-1 gap-2">
               <div className="mb-2">

@@ -2148,7 +2148,7 @@ const Vehicle = () => {
 
                         <hr />
 
-                        {/* <VehiclePricingSection
+                        <VehiclePricingSection
                           register={register}
                           watch={watch}
                           setValue={setValue}
@@ -2156,7 +2156,7 @@ const Vehicle = () => {
                           purchasePriceField="vp_user_purchase_price"
                           partnerPriceLabel="Partner B2B Price"
                           hotlineText="Call Our Hotline to be Partner"
-                        /> */}
+                        />
 
                         {/* Front Image section */}
                         <div className="mb-3 mt-4">
