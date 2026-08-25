@@ -411,10 +411,10 @@ const NavbarContent = () => {
 
     if (categoryType === "vehicle") {
       console.log("category type vehicle", category?.name);
-      if(category.name === 'Vehicle'){
+      if (category.name === 'Vehicle') {
         router.push('/');
         return;
-      }else{
+      } else {
         // console.log("Else--------", category?.name);
 
         const categoryId = category?.id;
@@ -478,6 +478,7 @@ const NavbarContent = () => {
   const isActivePbHome = pathname === '/pb-home/' || pathname === '/pb-home' || pathname === '/';
   const isActiveFilterProduct = pathname === '/filter-products/' || pathname === '/filter-products';
   const isActiveContactUs = pathname === '/contact-us/' || pathname === '/contact-us';
+  const isActiveHowToUse = pathname === '/how-to-use/' || pathname === '/how-to-use';
   const isActiveAboutUs = pathname === '/about-us/' || pathname === '/about-us';
   const isActiveGeneralProduct = pathname === '/general-products/' || pathname === '/general-products';
 
@@ -889,6 +890,17 @@ const NavbarContent = () => {
             }
 
 
+            <Link
+              href="/how-to-use"
+              className={`transition duration-300 ${isActiveHowToUse
+                ? 'text-black  bg-blue-600/10 border-b-2 border-blue-500 rounded-full px-4 py-1'
+                : 'hover:text-gray-900'
+                }`}
+            >
+              How to Use
+            </Link>
+
+
 
 
           </div>
@@ -1011,21 +1023,21 @@ const NavbarContent = () => {
 
 
 
-           <button
-              type="button"
-              onClick={() => setIsNotificationOpen(true)}
-              className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative focus:outline-none"
-              aria-label="Notifications"
-            >
-              <div className="relative">
-                <Bell className="w-6 h-6" />
-                {totalNotificationCount > 0 && (
-                  <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
-                    {totalNotificationCount > 99 ? "99+" : totalNotificationCount}
-                  </span>
-                )}
-              </div>
-            </button>
+          <button
+            type="button"
+            onClick={() => setIsNotificationOpen(true)}
+            className="flex items-center gap-2 text-lg font-medium hover:text-orange-500 transition relative focus:outline-none"
+            aria-label="Notifications"
+          >
+            <div className="relative">
+              <Bell className="w-6 h-6" />
+              {totalNotificationCount > 0 && (
+                <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                  {totalNotificationCount > 99 ? "99+" : totalNotificationCount}
+                </span>
+              )}
+            </div>
+          </button>
 
 
           {/* {(parsedUser?.user_mode === 'supreme' || parsedUser?.user_mode === 'admin') ? (
@@ -1301,7 +1313,7 @@ const NavbarContent = () => {
                   </button>
                 </li>
 
-         
+
                 {/* -------------------- */}
 
                 {
