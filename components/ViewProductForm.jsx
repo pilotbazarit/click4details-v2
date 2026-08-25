@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Loading from '@/components/Loading';
 import ShopSelect from '@/components/ShopSelect';
 import { Input } from "@/components/ui/input";
@@ -23,10 +23,91 @@ import OutletService from "@/services/OutletService";
 import LocationService from "@/services/LocationService";
 import CategoryService from "@/services/CategoryService";
 import GiftService from "@/services/GiftService";
-
+import PblHistoryPanel from "@/components/PblHistoryPanel";
 import { parseStoredUser } from "@/lib/parseStoredUser";
-import { Pencil, Check, Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { Pencil, Check, Eye, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+
 const Select = dynamic(() => import('react-select'), { ssr: false });
+
+const formatIndianNumber = (value, keepDecimal = false) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+
+    const [integerPartRaw, decimalPartRaw = ''] = raw.replace(/,/g, '').split('.');
+    const digits = String(integerPartRaw).replace(/\D+/g, '');
+    if (!digits) return '';
+
+    const formattedInteger = new Intl.NumberFormat('en-IN').format(Number(digits));
+    if (!keepDecimal || decimalPartRaw.length === 0) return formattedInteger;
+
+    const decimalDigits = decimalPartRaw.replace(/\D+/g, '').slice(0, 2);
+    return decimalDigits.length > 0 ? `${formattedInteger}.${decimalDigits}` : formattedInteger;
+};
+
+const numberWordsUnderTwenty = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const numberWordsTens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+const numberToWordsBelowThousand = (num) => {
+    if (num < 20) return numberWordsUnderTwenty[num];
+    if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const unit = num % 10;
+        return unit ? `${numberWordsTens[ten]} ${numberWordsUnderTwenty[unit]}` : numberWordsTens[ten];
+    }
+
+    const hundred = Math.floor(num / 100);
+    const remainder = num % 100;
+    return remainder
+        ? `${numberWordsUnderTwenty[hundred]} Hundred ${numberToWordsBelowThousand(remainder)}`
+        : `${numberWordsUnderTwenty[hundred]} Hundred`;
+};
+
+const numberToIndianWords = (value) => {
+    const numeric = Number(String(value).replace(/\D+/g, ''));
+    if (!numeric) return '';
+    if (numeric < 1000) return numberToWordsBelowThousand(numeric);
+
+    const parts = [];
+    const units = [
+        { value: 10000000, label: 'Crore' },
+        { value: 100000, label: 'Lakh' },
+        { value: 1000, label: 'Thousand' },
+    ];
+
+    let remaining = numeric;
+
+    units.forEach((unit) => {
+        if (remaining >= unit.value) {
+            const count = Math.floor(remaining / unit.value);
+            parts.push(`${numberToIndianWords(count)} ${unit.label}`);
+            remaining %= unit.value;
+        }
+    });
+
+    if (remaining > 0) {
+        parts.push(numberToWordsBelowThousand(remaining));
+    }
+
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+const buildPriceOptions = (baseValue) => {
+    if (baseValue === null || baseValue === undefined) return [];
+
+    const normalized = String(baseValue).split('.')[0].replace(/\D+/g, '').trim();
+    if (normalized.length === 0 || normalized.startsWith('0') || !/^\d+$/.test(normalized)) {
+        return [];
+    }
+
+    return Array.from({ length: 5 }, (_, i) => {
+        const value = `${normalized}${'0'.repeat(i)}`;
+        return {
+            value,
+            label: formatIndianNumber(value),
+            words: numberToIndianWords(value),
+        };
+    });
+};
 
 const auctionTypeOptions = [
     {
@@ -42,12 +123,36 @@ const auctionTypeOptions = [
         label: "D",
     },
     {
-        value: "u",
-        label: "U",
+        value: "s",
+        label: "S",
+    },
+    {
+        value: "h",
+        label: "H",
     },
     {
         value: "o",
         label: "O",
+    },
+    {
+        value: "orginal_auc",
+        label: "Orginal Auc",
+    },
+    {
+        value: "dealer_auc",
+        label: "Dealer Auc",
+    },
+    {
+        value: "car_mods_bd",
+        label: "Car Mods BD",
+    },
+    {
+        value: "ussr_auc",
+        label: "USSR Auc",
+    },
+    {
+        value: "not_orginal_auc",
+        label: "Not Orginal Auc",
     },
 ];
 
@@ -66,7 +171,7 @@ const getGoogleDocLink = (data) => {
 
     if (typeof rawVideoData === "string") {
         const trimmedVideo = rawVideoData.trim();
-        if (trimmedVideo.startsWith("{") && trimmedVideo.endsWith("}")) {
+        if (trimmedVideo.startswith("{") && trimmedVideo.endswith("}")) {
             try {
                 const parsedVideo = JSON.parse(trimmedVideo);
                 if (parsedVideo && typeof parsedVideo === "object") {
@@ -206,6 +311,36 @@ const ViewProductForm = ({ productId }) => {
     });
 
 
+        const handleSecretDocumentFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const filePreviews = files.map(file => URL.createObjectURL(file));
+
+        setSecretDocumentPreviews(prev => [...prev, ...filePreviews]);
+        setSecretDocumentFiles(prev => [...prev, ...files]);
+    };
+
+    const handleDeleteSecretDocument = (doc, index) => {
+        const updatedPreviews = secretDocumentPreviews.filter((_, i) => i !== index);
+        const updatedFiles = secretDocumentFiles.filter((_, i) => i !== index);
+        setSecretDocumentPreviews(updatedPreviews);
+        setSecretDocumentFiles(updatedFiles);
+    };
+
+    const handleSecretDocument2FileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const filePreviews = files.map(file => URL.createObjectURL(file));
+
+        setSecretDocument2Previews(prev => [...prev, ...filePreviews]);
+        setSecretDocument2Files(prev => [...prev, ...files]);
+    };
+
+    const handleDeleteSecretDocument2 = (doc, index) => {
+        const updatedPreviews = secretDocument2Previews.filter((_, i) => i !== index);
+        const updatedFiles = secretDocument2Files.filter((_, i) => i !== index);
+        setSecretDocument2Previews(updatedPreviews);
+        setSecretDocument2Files(updatedFiles);
+    };
+
     const handleSellerInfoChange = (index, field, value) => {
         setSellerInfoRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
     };
@@ -239,6 +374,11 @@ const ViewProductForm = ({ productId }) => {
     const userFixedPrice = watch("vp_user_fixed_price");
     const selectedAuctionType = watch("v_auction_type");
     const googleDocLink = watch("v_video_gdoc");
+    const userPblAdditionalPrice = watch("vp_pbl_additional_amount");
+    const userPblAskingPrice = watch("vp_pbl_asking_price");
+    const pblAdditionalPriceOptions = useMemo(() => buildPriceOptions(userPblAdditionalPrice), [userPblAdditionalPrice]);
+    const pblAskingPriceOptions = useMemo(() => buildPriceOptions(userPblAskingPrice), [userPblAskingPrice]);
+
 
     const selectedCountryId = watch("v_country_id");
     const selectedProductTypeId = watch("v_product_type_id");
