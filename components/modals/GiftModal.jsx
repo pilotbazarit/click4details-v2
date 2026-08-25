@@ -124,7 +124,7 @@ const GiftModal = ({ open, setOpen, getGifts, initialData }) => {
                         </DialogTitle>
                     </DialogHeader>
                     <p className="mt-1 text-sm text-purple-100">
-                        Gifts can be attached to any vehicle or product as a seller gift or a PilotBazar gift.
+                        Gifts can be attached to any vehicle or product as a seller gift or a click4details gift.
                     </p>
                 </div>
 

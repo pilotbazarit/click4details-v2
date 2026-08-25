@@ -523,6 +523,33 @@ const getClientPaymentSignedAmount = (amount, status) => {
   return 0;
 };
 
+// The currency a customer first paid this vehicle in is the one every later
+// payment has to use, so resolve it from their earliest payment rather than
+// from whatever order the API happened to return.
+const getFirstPaymentCurrency = (paymentList) => {
+  const dated = paymentList
+    .map((entry) => ({
+      entry,
+      id: parseClientPaymentNumber(entry?.p_id ?? entry?.id ?? 0),
+      paidAt: dayjs(entry?.p_paid_at ?? entry?.paidAt ?? entry?.p_created_at ?? null),
+    }))
+    .sort((a, b) => {
+      const aValid = a.paidAt.isValid();
+      const bValid = b.paidAt.isValid();
+      if (aValid && bValid && !a.paidAt.isSame(b.paidAt)) {
+        return a.paidAt.valueOf() - b.paidAt.valueOf();
+      }
+      return a.id - b.id;
+    });
+
+  const firstEntry = dated[0]?.entry;
+  const rawCurrency = firstEntry?.p_currency ?? firstEntry?.currency ?? "";
+
+  return String(rawCurrency || "").trim()
+    ? resolvePaymentCurrencyValue(rawCurrency)
+    : "";
+};
+
 const buildPaymentHistoryQueryParams = ({
   productId,
   customerId = "",
@@ -567,6 +594,9 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   const [isCreatePaymentCustomerHistoryLoading, setIsCreatePaymentCustomerHistoryLoading] = useState(false);
   const [createPaymentCustomerPaidAmount, setCreatePaymentCustomerPaidAmount] = useState(0);
   const [isCreatePaymentSoldPriceLocked, setIsCreatePaymentSoldPriceLocked] = useState(false);
+  // A customer's payments against one vehicle all have to settle in the same
+  // currency, so once they've paid once the picker is pinned to that currency.
+  const [isCreatePaymentCurrencyLocked, setIsCreatePaymentCurrencyLocked] = useState(false);
   const [selectedPaymentCustomerId, setSelectedPaymentCustomerId] = useState("");
   const initialCustomerSelectedRef = React.useRef(false);
   const [createPaymentForm, setCreatePaymentForm] = useState(() =>
@@ -705,6 +735,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           soldPrice: "",
           paidAmount: 0,
           hasExistingSoldPrice: false,
+          currency: "",
+          hasExistingCurrency: false,
         };
       }
 
@@ -748,10 +780,14 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           return totalPaidAmount + getClientPaymentSignedAmount(paymentAmount, paymentStatus);
         }, 0);
 
+        const existingCurrency = getFirstPaymentCurrency(responseList);
+
         return {
           soldPrice: normalizedSoldPrice,
           paidAmount,
           hasExistingSoldPrice: normalizedSoldPrice !== "",
+          currency: existingCurrency,
+          hasExistingCurrency: existingCurrency !== "",
         };
       } catch (error) {
         toast.error(
@@ -764,6 +800,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
           soldPrice: "",
           paidAmount: 0,
           hasExistingSoldPrice: false,
+          currency: "",
+          hasExistingCurrency: false,
         };
       } finally {
         setIsCreatePaymentCustomerHistoryLoading(false);
@@ -987,6 +1025,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     setIsAmountDropdownOpen(false);
     setCreatePaymentCustomerPaidAmount(0);
     setIsCreatePaymentSoldPriceLocked(false);
+    setIsCreatePaymentCurrencyLocked(false);
     setAdvancedDetailsOpen(true);
     setEditingPaymentItem(null);
     setCreatePaymentOpen(true);
@@ -1044,6 +1083,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     setCreatePaymentForm(buildPaymentFormFromHistoryItem(editingPaymentItem));
     setCreatePaymentCustomerPaidAmount(0);
     setIsCreatePaymentSoldPriceLocked(true);
+    setIsCreatePaymentCurrencyLocked(true);
   }, [
     buildPaymentFormFromHistoryItem,
     createPaymentCustomers.length,
@@ -1062,6 +1102,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     if (!selectedCustomerId) {
       setCreatePaymentCustomerPaidAmount(0);
       setIsCreatePaymentSoldPriceLocked(false);
+      setIsCreatePaymentCurrencyLocked(false);
       setCreatePaymentForm((prev) => {
         if (prev.soldPrice === "" && prev.duePrice === "") {
           return prev;
@@ -1086,6 +1127,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
       setCreatePaymentCustomerPaidAmount(pricing.paidAmount);
       setIsCreatePaymentSoldPriceLocked(pricing.hasExistingSoldPrice);
+      setIsCreatePaymentCurrencyLocked(pricing.hasExistingCurrency);
       setCreatePaymentForm((prev) => {
         if (prev.customerId !== selectedCustomerId) {
           return prev;
@@ -1094,6 +1136,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
         return {
           ...prev,
           soldPrice: pricing.hasExistingSoldPrice ? pricing.soldPrice : "",
+          currency: pricing.hasExistingCurrency ? pricing.currency : prev.currency,
         };
       });
     };
@@ -1217,6 +1260,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       setEditingPaymentItem(null);
       setCreatePaymentCustomerPaidAmount(0);
       setIsCreatePaymentSoldPriceLocked(false);
+      setIsCreatePaymentCurrencyLocked(false);
       setIsSoldPriceDropdownOpen(false);
       setIsAmountDropdownOpen(false);
       setCreatePaymentForm(buildInitialCreatePaymentForm(customerName, customerPhone));
@@ -2189,6 +2233,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                       value={createPaymentForm.currency}
                       onChange={(event) => handleCreatePaymentFieldChange("currency", event.target.value)}
                       className={formInputClass}
+                      disabled={isCreatePaymentCustomerHistoryLoading || isCreatePaymentCurrencyLocked}
                     >
                       {currencyOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -2197,6 +2242,13 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                       ))}
                     </select>
                   </div>
+                  {isCreatePaymentCurrencyLocked && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      {isEditPaymentMode
+                        ? "The currency of a recorded payment can't be changed."
+                        : `Locked to ${createPaymentForm.currency} - this customer's first payment for this vehicle used it, so every later payment must too.`}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -2380,7 +2432,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                           value={createPaymentForm.reference}
                           onChange={(event) => handleCreatePaymentFieldChange("reference", event.target.value)}
                           className={formInputClass}
-                          placeholder="Reference/Name"
+                          placeholder="Reference/ Name/ Bank Name/Bank Branch"
                         />
                       </div>
                     </div>

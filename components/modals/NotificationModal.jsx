@@ -2,7 +2,7 @@ import ConversationService from "@/services/ConversationService";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NotificationService from "@/services/NotificationService";
-import { Bell, Car, MessageCircle, Package, Search, UserPlus, X } from "lucide-react";
+import { Bell, Calendar, Car, ExternalLink, MessageCircle, Package, Phone, Search, UserPlus, X } from "lucide-react";
 
 const PER_PAGE = 5;
 
@@ -34,7 +34,9 @@ const NOTIFICATION_TABS = [
 
 const NOTIFICATION_TYPE_META = {
   Vehicle: { icon: Car, iconClass: "bg-blue-50 text-blue-600" },
+  VehiclePartnershipExpired: { icon: Car, iconClass: "bg-red-50 text-red-600" },
   Product: { icon: Package, iconClass: "bg-purple-50 text-purple-600" },
+  ProductPartnershipExpired: { icon: Package, iconClass: "bg-red-50 text-red-600" },
   ConversationNotification: { icon: MessageCircle, iconClass: "bg-teal-50 text-teal-600" },
   want_to_be_partner: { icon: UserPlus, iconClass: "bg-amber-50 text-amber-600" },
   SearchNotification: { icon: Search, iconClass: "bg-sky-50 text-sky-600" },
@@ -124,6 +126,11 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       userInfo: item?.data || null,
       vehicleId: item?.data?.vehicle_id || null,
       productId: item?.data?.product_id || null,
+      ownerName: item?.data?.owner_name || null,
+      ownerMobile: item?.data?.owner_mobile || null,
+      ownerEmail: item?.data?.owner_email || null,
+      shopName: item?.data?.shop_name || null,
+      expireDate: item?.data?.expire_date || null,
       type: shortType
     };
   }, []);
@@ -346,6 +353,19 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
     fetchNotificationsPage({ nextPage: pageRef.current + 1, replace: false });
   };
 
+  // Marking one read has to tell the navbar bell, otherwise its count keeps
+  // showing the pre-click number until the next 2-minute poll.
+  const markNotificationRead = async (notificationId) => {
+    if (!notificationId) return;
+    try {
+      await NotificationService.Commands.vehicleNotificationRead(notificationId);
+    } finally {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notificationsUpdated"));
+      }
+    }
+  };
+
   const handleNotificationClick = async(item) => {
 
     // console.log("item", item);
@@ -360,18 +380,32 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
       return;
     }
 
+    if (item?.type === "VehiclePartnershipExpired" || (item?.type === "Vehicle" && item?.expireDate)) {
+      onClose && onClose();
+      await markNotificationRead(item?.id);
+      router.push(`/dashboard/products/vehicle/edit/${item?.vehicleId}/`);
+      return;
+    }
+
+    if (item?.type === "ProductPartnershipExpired" || (item?.type === "Product" && item?.expireDate)) {
+      onClose && onClose();
+      await markNotificationRead(item?.id);
+      router.push(`/dashboard/products/general-product/create/?edit=${item?.productId}`);
+      return;
+    }
+
     if (item?.type === "Vehicle") {
       onClose && onClose();
-      await NotificationService.Commands.vehicleNotificationRead(item?.id);
+      await markNotificationRead(item?.id);
       router.push(`/dashboard/requested-product/${item?.vehicleId}/`);
     } else if (item?.type === "Product") {
       onClose && onClose();
-      await NotificationService.Commands.vehicleNotificationRead(item?.id);
+      await markNotificationRead(item?.id);
       router.push(`/dashboard/requested-general-product/${item?.productId}/`);
     } else if (item?.type === "want_to_be_partner") {
 
       onClose && onClose();
-      await NotificationService.Commands.vehicleNotificationRead(item?.id);
+      await markNotificationRead(item?.id);
       router.push(`/dashboard/user-details/${item?.userInfo?.user_id}`);
     }
   };
@@ -488,6 +522,36 @@ const NotificationModal = ({ isOpen, onClose, onOpenChat }) => {
                     {item.description && (
                       <p className="mt-0.5 truncate text-xs text-gray-500">{item.description}</p>
                     )}
+
+                    {item.ownerMobile && (
+                      <div className="mt-2 rounded-md bg-amber-50/80 p-2 border border-amber-200/60 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-1 text-gray-700 font-medium">
+                          <span>Owner: <strong className="text-gray-900">{item.ownerName}</strong> ({item.shopName || "Shop"})</span>
+                          {item.expireDate && (
+                            <span className="text-red-600 font-semibold">Expired: {item.expireDate}</span>
+                          )}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <a
+                            href={`tel:${item.ownerMobile}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition"
+                          >
+                            <Phone className="h-3 w-3" /> Call: {item.ownerMobile}
+                          </a>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleNotificationClick(item);
+                            }}
+                            className="inline-flex items-center gap-1 cursor-pointer text-xs font-semibold text-blue-700 hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" /> Edit Vehicle
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <p className="mt-1 text-[11px] text-gray-400">{item.timeText || formatNotificationTime(item.time)}</p>
                   </div>
 

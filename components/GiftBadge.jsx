@@ -14,7 +14,7 @@ const GiftBadge = ({ userGift = null, pblGift = null, className = "", variant = 
 
   const gifts = [
     userGift ? { ...userGift, _label: "Seller Gift" } : null,
-    pblGift ? { ...pblGift, _label: "PilotBazar Gift" } : null,
+    pblGift ? { ...pblGift, _label: "click4details Gift" } : null,
   ].filter(Boolean);
 
   if (gifts.length === 0) return null;

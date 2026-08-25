@@ -372,14 +372,13 @@ const NavbarContent = () => {
 
 
 
-  const getUnreadNotifications = async () => {
+  const getUnreadNotifications = async (isCancelled = () => false) => {
     try {
-      // const response = await LoginService.Queries.getUnreadNotifications();
-
       const response = await ConversationService.Queries.getUnreadNotifications();
+      if (isCancelled()) return;
       if (response && response.status === "success") {
         const nextCount = Number(response?.data?.unread_count);
-        setUnreadNotificationCount(nextCount);
+        setUnreadNotificationCount(Number.isFinite(nextCount) ? nextCount : 0);
       }
     } catch (error) {
       console.log("Error fetching unread notifications:", error);
@@ -444,6 +443,11 @@ const NavbarContent = () => {
   } catch (error) {
     console.error("Failed to parse user data:", error);
   }
+
+  // Mirrors NotificationModal's own gate for the "Search Notification" tab -
+  // the badge must only count what that user can actually open.
+  const canViewSearchNotifications =
+    parsedUser?.user_mode === "supreme" || parsedUser?.user_mode === "admin";
 
   useEffect(() => {
     const query = searchParams.get('query');
@@ -607,17 +611,34 @@ const NavbarContent = () => {
     return () => window.removeEventListener("notificationsUpdated", onUpdated);
   }, []);
 
-  // Fetch notification count and recent unread when user is logged in or auth_token exists; refresh every 2 minutes and when notificationsUpdated fires
+  // Fetch notification counts when a user is logged in; refresh every 2
+  // minutes and whenever notificationsUpdated fires. Both halves of the bell
+  // badge are refreshed together here - the personal /notifications count used
+  // to be fetched once per login and never again, so marking anything read
+  // left a stale number on the bell until a full page reload.
   const NOTIFICATION_POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
   useEffect(() => {
     const hasAuth = !!user || (typeof window !== "undefined" && !!localStorage.getItem("auth_token"));
     if (!hasAuth) {
       setNotificationCount(0);
       setRecentNotifications([]);
+      setUnreadNotificationCount(0); // logged out - drop any stale count from the previous session
       return;
     }
+
+    // Search-history notifications are platform-wide (the API's unread count
+    // is "every row this user hasn't read", not "rows addressed to them"), and
+    // NotificationModal only shows that tab to supreme/admin. Adding them to
+    // everyone's badge gave a normal user a permanent, unclearable count -
+    // 739 rows in production - for notifications they can't even open.
+    if (!canViewSearchNotifications) {
+      setNotificationCount(0);
+      setRecentNotifications([]);
+    }
+
     let cancelled = false;
     const fetchNotifications = async () => {
+      if (!canViewSearchNotifications) return;
       try {
         const response = await NotificationService.Queries.getNotifications({
           filter: "unread",
@@ -638,13 +659,17 @@ const NavbarContent = () => {
         }
       }
     };
-    fetchNotifications();
-    const intervalId = setInterval(fetchNotifications, NOTIFICATION_POLL_INTERVAL_MS);
+    const refreshAll = () => {
+      fetchNotifications();
+      getUnreadNotifications(() => cancelled);
+    };
+    refreshAll();
+    const intervalId = setInterval(refreshAll, NOTIFICATION_POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [user, pathname, notificationRefreshTrigger]);
+  }, [user, pathname, notificationRefreshTrigger, canViewSearchNotifications]);
 
   const setLogout = async () => {
     try {
@@ -694,16 +719,6 @@ const NavbarContent = () => {
     setIsResetPasswordModalOpen(false);
   };
 
-
-   useEffect(() => {
-    if (!parsedUser) {
-      setUnreadNotificationCount(0); // logged out - clear any stale count left over from a previous session
-      return;
-    }
-
-     getUnreadNotifications();
-
-  }, [parsedUser]);
 
   const totalNotificationCount = (Number(notificationCount) || 0) + (Number(unreadNotificationCount) || 0);
 
@@ -1004,9 +1019,11 @@ const NavbarContent = () => {
             >
               <div className="relative">
                 <Bell className="w-6 h-6" />
-                <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
-                  {totalNotificationCount}
-                </span>
+                {totalNotificationCount > 0 && (
+                  <span className="absolute -top-3 -right-3 bg-orange-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                    {totalNotificationCount > 99 ? "99+" : totalNotificationCount}
+                  </span>
+                )}
               </div>
             </button>
 

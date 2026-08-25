@@ -87,10 +87,14 @@ const FIELD_DEFS = {
     },
   ],
   sms: [
-    { name: "user", label: "SMS Username" },
+    { name: "user", label: "SMS Account (not sent to the gateway)" },
     { name: "key", label: "API Key", secret: true },
-    { name: "sender_id", label: "Sender ID" },
-    { name: "url", label: "API URL", placeholder: "https://" },
+    { name: "sender_id", label: "Sender ID", placeholder: "Approved sender id / masking" },
+    {
+      name: "url",
+      label: "Send API URL",
+      placeholder: "https://bulksmsbd.net/api/smsapi",
+    },
   ],
   shipping: [
     { name: "dhaka_charge", label: "Dhaka Delivery Charge (৳)", type: "number" },
