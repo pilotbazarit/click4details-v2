@@ -11,7 +11,9 @@ import * as yup from "yup";
 import VehicleService from "@/services/VehicleService";
 import ShopService from "@/services/ShopService";
 import constData from "@/lib/constant";
-import { onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { formatPermissions, onlyDecimalInput, onlyNumberInput } from "@/helpers/functions";
+import { useAppContext } from "@/context/AppContext";
+import { hasPermission } from "@/lib/utils";
 import MasterDataService from "@/services/MasterDataService";
 import PackageService from "@/services/PackageService";
 import VehicleModelService from "@/services/VehicleModelService";
@@ -236,7 +238,19 @@ const getDocumentFileName = (url) => {
 
 
 
+
 const ViewProductForm = ({ productId }) => {
+    const { permissionList } = useAppContext();
+    const canShowSellerMobileToggle = (targetUser = user) => {
+        if (!targetUser) return false;
+        const targetPermissions = permissionList?.length
+            ? permissionList
+            : formatPermissions(targetUser?.permissions ?? []);
+        const userMode = String(targetUser?.user_mode ?? "").toLowerCase();
+
+        return userMode === "supreme" || hasPermission(targetPermissions, 0, "Vehicle", "Edit");
+    };
+
     const [isEditing, setIsEditing] = useState(false);
     const isReadOnly = !isEditing;
     const [loading, setLoading] = useState(false);
@@ -246,6 +260,8 @@ const ViewProductForm = ({ productId }) => {
     const [additionalPreviews, setAdditionalPreviews] = useState([]); // for UI previews
     const [secretDocumentPreviews, setSecretDocumentPreviews] = useState([]);
     const [secretDocument2Previews, setSecretDocument2Previews] = useState([]);
+    const [isPblAdditionalDropdownOpen, setIsPblAdditionalDropdownOpen] = useState(false);
+    const [isPblAskingDropdownOpen, setIsPblAskingDropdownOpen] = useState(false);
 
     const [shopData, setShopData] = useState([]);
     const [brandData, setBrandData] = useState([]);
@@ -270,7 +286,7 @@ const ViewProductForm = ({ productId }) => {
     const [priceSelection, setPriceSelection] = useState('fixed');
     const [user, setUser] = useState(null);
     const [countryData, setCountryData] = useState([]);
-    
+
     // Missing state from UpdateProductForm for Category & Gift
     const [giftData, setGiftData] = useState([]);
     const [isGiftLoading, setIsGiftLoading] = useState(false);
@@ -311,7 +327,7 @@ const ViewProductForm = ({ productId }) => {
     });
 
 
-        const handleSecretDocumentFileChange = (e) => {
+    const handleSecretDocumentFileChange = (e) => {
         const files = Array.from(e.target.files);
         const filePreviews = files.map(file => URL.createObjectURL(file));
 
@@ -1431,11 +1447,10 @@ const ViewProductForm = ({ productId }) => {
                                 <Button
                                     type="button"
                                     onClick={() => setIsEditing(!isEditing)}
-                                    className={`flex items-center gap-1.5 ${
-                                        isEditing
-                                            ? "bg-amber-600 hover:bg-amber-700 text-white"
-                                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                    }`}
+                                    className={`flex items-center gap-1.5 ${isEditing
+                                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        }`}
                                 >
                                     {isEditing ? <Eye size={16} /> : <Pencil size={16} />}
                                     {isEditing ? "View Mode" : "Enable Quick Edit"}
@@ -2334,6 +2349,28 @@ const ViewProductForm = ({ productId }) => {
                                                 />
                                             </div>
 
+
+
+
+                                        </div>
+
+                                        {/* Video section */}
+                                        <div className="mb-3 mt-4">
+                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Video Link</h4>
+                                            <div className="flex w-20 h-0.5">
+                                                <div className="w-1/2 bg-green-500"></div>
+                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                            </div>
+                                        </div>
+
+
+                                        <div className="text-center mb-2 w-[50%]">
+                                            <Input
+                                                id="v_video"
+                                                name="v_video"
+                                                placeholder="Video Link"
+                                                {...register("v_video")}
+                                            />
                                         </div>
 
                                         <hr />
@@ -3022,24 +3059,669 @@ const ViewProductForm = ({ productId }) => {
 
                                         <hr />
 
-                                        {/* Video section */}
-                                        <div className="mb-3 mt-4">
-                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Video Link</h4>
-                                            <div className="flex w-20 h-0.5">
-                                                <div className="w-1/2 bg-green-500"></div>
-                                                <div className="w-1/2 bg-gray-500/20"></div>
-                                            </div>
-                                        </div>
+                                        {/* PBL Section */}
+                                        {
+                                            (user?.user_mode === 'supreme' || user?.user_mode === 'admin' || user?.user_mode === 'pbl') && (
+                                                <div className="border border-gray-900 rounded-lg p-4 mb-4">
+                                                    <div className="mb-4 flex flex-row justify-center gap-2">
+                                                        <h4 className="text-2xl font-bold text-gray-800 mb-1 border-b-2 border-gray-500">PBL Section</h4>
+                                                        {/* <div className="flex w-20 h-0.5">
+                                                        <div className="w-1/2 bg-green-500"></div>
+                                                        <div className="w-1/2 bg-gray-500/20"></div>
+                                                    </div> */}
+                                                    </div>
 
 
-                                        <div className="text-center mb-2 w-[50%]">
-                                            <Input
-                                                id="v_video"
-                                                name="v_video"
-                                                placeholder="Video Link"
-                                                {...register("v_video")}
-                                            />
-                                        </div>
+
+                                                    <div>
+                                                        <div className="mb-3 mt-4">
+                                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents</h4>
+                                                            <div className="flex w-20 h-0.5">
+                                                                <div className="w-1/2 bg-green-500"></div>
+                                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                            <div className="flex justify-center items-center">
+                                                                <label
+                                                                    htmlFor="secret-documents-upload"
+                                                                    className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        className="w-6 h-6 text-gray-500"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={2}
+                                                                            d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                                        />
+                                                                        <circle cx="12" cy="13" r="4" />
+                                                                    </svg>
+                                                                    <input
+                                                                        type="file"
+                                                                        id="secret-documents-upload"
+                                                                        name="secretDocuments"
+                                                                        accept="image/*,.pdf,.doc,.docx"
+                                                                        multiple
+                                                                        className="hidden"
+                                                                        onChange={handleSecretDocumentFileChange}
+                                                                    />
+                                                                </label>
+                                                            </div>
+
+                                                            <div className="col-span-4">
+                                                                <div className="grid grid-cols-6 gap-4 image-preview">
+                                                                    {secretDocumentPreviews.map((doc, index) => (
+                                                                        <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                            <img
+                                                                                src={doc}
+                                                                                alt={`Secret Document Preview ${index}`}
+                                                                                className="object-cover w-full h-full"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteSecretDocument(doc, index)}
+                                                                                className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                                aria-label="Delete secret document image"
+                                                                            >
+                                                                                <svg
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                    className="h-4 w-4 text-red-500"
+                                                                                    fill="none"
+                                                                                    viewBox="0 0 24 24"
+                                                                                    stroke="currentColor"
+                                                                                    strokeWidth={2}
+                                                                                >
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="mb-3 mt-4">
+                                                            <h4 className="text-sm font-semibold text-gray-800 mb-1">Secret Documents 2</h4>
+                                                            <div className="flex w-20 h-0.5">
+                                                                <div className="w-1/2 bg-green-500"></div>
+                                                                <div className="w-1/2 bg-gray-500/20"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-5 gap-4 mt-4 mb-4">
+                                                            <div className="flex justify-center items-center">
+                                                                <label
+                                                                    htmlFor="secret-documents-2-upload"
+                                                                    className="flex-1 h-40 flex flex-col justify-center items-center gap-2 cursor-pointer border border-dashed border-gray-400 rounded-lg text-center hover:border-blue-500 transition bg-gray-100"
+                                                                >
+                                                                    <svg
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        className="w-6 h-6 text-gray-500"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={2}
+                                                                            d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+                                                                        />
+                                                                        <circle cx="12" cy="13" r="4" />
+                                                                    </svg>
+                                                                    <input
+                                                                        type="file"
+                                                                        id="secret-documents-2-upload"
+                                                                        name="secretDocuments2"
+                                                                        accept="image/*,.pdf,.doc,.docx"
+                                                                        multiple
+                                                                        className="hidden"
+                                                                        onChange={handleSecretDocument2FileChange}
+                                                                    />
+                                                                </label>
+                                                            </div>
+
+                                                            <div className="col-span-4">
+                                                                <div className="grid grid-cols-6 gap-4 image-preview">
+                                                                    {secretDocument2Previews.map((doc, index) => (
+                                                                        <div key={index} className="w-40 h-40 border rounded-lg overflow-hidden relative">
+                                                                            <img
+                                                                                src={doc}
+                                                                                alt={`Secret Document 2 Preview ${index}`}
+                                                                                className="object-cover w-full h-full"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteSecretDocument2(doc, index)}
+                                                                                className="absolute top-1 right-1 bg-white p-1 rounded-full shadow hover:bg-red-100 transition"
+                                                                                aria-label="Delete secret document 2 image"
+                                                                            >
+                                                                                <svg
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                    className="h-4 w-4 text-red-500"
+                                                                                    fill="none"
+                                                                                    viewBox="0 0 24 24"
+                                                                                    stroke="currentColor"
+                                                                                    strokeWidth={2}
+                                                                                >
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="text-base font-medium" htmlFor="v_secret_text">
+                                                            Secret Text
+                                                        </label>
+                                                        <textarea
+                                                            id="v_secret_text"
+                                                            name="v_secret_text"
+                                                            placeholder="Secret Text"
+                                                            rows="4"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_secret_text")}
+                                                        ></textarea>
+                                                    </div>
+
+
+                                                    {/* <div>
+                                                    <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                        PBL Gift
+                                                    </label>
+                                                    <select
+                                                        id="v_pbl_gift"
+                                                        name="v_pbl_gift"
+                                                        className="outline-none py-2 px-3 rounded border w-full"
+                                                        {...register("v_pbl_gift")}
+                                                        disabled={isGiftLoading}
+                                                    >
+                                                        <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                        {
+                                                            giftData.map((gift) => (
+                                                                <option key={gift.value} value={gift.value}>
+                                                                    {gift.label}
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                </div> */}
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="text-base font-medium" htmlFor="v_secret_video_link">
+                                                            Secret Video Link
+                                                        </label>
+                                                        <Input
+                                                            id="v_secret_video_link"
+                                                            name="v_secret_video_link"
+                                                            placeholder="Enter Secret Video Link"
+                                                            {...register("v_secret_video_link")}
+                                                        />
+                                                    </div>
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="text-base font-medium" htmlFor="v_pbl_gift">
+                                                            PBL Gift
+                                                        </label>
+                                                        <select
+                                                            id="v_pbl_gift"
+                                                            name="v_pbl_gift"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_pbl_gift")}
+                                                            disabled={isGiftLoading}
+                                                        >
+                                                            <option value="">{isGiftLoading ? 'Loading...' : 'Select PilotBazar gift'}</option>
+                                                            {
+                                                                giftData.map((gift) => (
+                                                                    <option key={gift.value} value={gift.value}>
+                                                                        {gift.label}
+                                                                    </option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                    </div>
+
+
+
+                                                    <div className="grid grid-cols-4 gap-4 mb-4">
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Additional Price
+                                                            </label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="vp_pbl_additional_amount"
+                                                                    name="vp_pbl_additional_amount"
+                                                                    placeholder="Enter PBL Additional Price"
+                                                                    {...register("vp_pbl_additional_amount")}
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={formatIndianNumber(userPblAdditionalPrice, true)}
+                                                                    onChange={(e) => {
+                                                                        const cleaned = String(e.target.value)
+                                                                            .replace(/,/g, '')
+                                                                            .replace(/[^\d.]/g, '');
+                                                                        const [integerPart = '', decimalPart = ''] = cleaned.split('.');
+                                                                        const normalizedInteger = integerPart.replace(/\D+/g, '').slice(0, 12);
+                                                                        const normalizedDecimal = decimalPart.replace(/\D+/g, '').slice(0, 2);
+                                                                        const normalizedValue = cleaned.includes('.')
+                                                                            ? `${normalizedInteger}.${normalizedDecimal}`
+                                                                            : normalizedInteger;
+
+                                                                        setValue('vp_pbl_additional_amount', normalizedValue, { shouldDirty: true, shouldValidate: true });
+                                                                        setSelectedPblAdditionalOption('');
+                                                                        setIsPblAdditionalDropdownOpen(normalizedInteger.length > 0);
+                                                                    }}
+                                                                    onFocus={() => setIsPblAdditionalDropdownOpen(pblAdditionalPriceOptions.length > 0)}
+                                                                    onBlur={() => {
+                                                                        setTimeout(() => setIsPblAdditionalDropdownOpen(false), 120);
+                                                                    }}
+                                                                    onKeyDown={onlyDecimalInput}
+                                                                />
+                                                                {isPblAdditionalDropdownOpen && pblAdditionalPriceOptions.length > 0 && (
+                                                                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
+                                                                        {pblAdditionalPriceOptions.map((option) => {
+                                                                            const isSelected = selectedPblAdditionalOption === option.value;
+                                                                            return (
+                                                                                <button
+                                                                                    key={option.value}
+                                                                                    type="button"
+                                                                                    onMouseDown={(e) => e.preventDefault()}
+                                                                                    className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
+                                                                                    onClick={() => {
+                                                                                        setValue('vp_pbl_additional_amount', option.value, { shouldDirty: true, shouldValidate: true });
+                                                                                        setSelectedPblAdditionalOption(option.value);
+                                                                                        setIsPblAdditionalDropdownOpen(false);
+                                                                                    }}
+                                                                                >
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                                                                                        <p className="mt-1 text-xs text-gray-700">{option.words}</p>
+                                                                                    </div>
+                                                                                    {/* <span className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${isSelected ? 'border-blue-600' : 'border-gray-400'}`}>
+                                                                                    {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
+                                                                                </span> */}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Asking Price
+                                                            </label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id="vp_pbl_asking_price"
+                                                                    name="vp_pbl_asking_price"
+                                                                    placeholder="Enter PBL Asking Price"
+                                                                    {...register("vp_pbl_asking_price")}
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={formatIndianNumber(userPblAskingPrice, true)}
+                                                                    onChange={(e) => {
+                                                                        const cleaned = String(e.target.value)
+                                                                            .replace(/,/g, '')
+                                                                            .replace(/[^\d.]/g, '');
+                                                                        const [integerPart = '', decimalPart = ''] = cleaned.split('.');
+                                                                        const normalizedInteger = integerPart.replace(/\D+/g, '').slice(0, 12);
+                                                                        const normalizedDecimal = decimalPart.replace(/\D+/g, '').slice(0, 2);
+                                                                        const normalizedValue = cleaned.includes('.')
+                                                                            ? `${normalizedInteger}.${normalizedDecimal}`
+                                                                            : normalizedInteger;
+
+                                                                        setValue('vp_pbl_asking_price', normalizedValue, { shouldDirty: true, shouldValidate: true });
+                                                                        setSelectedPblAskingOption('');
+                                                                        setIsPblAskingDropdownOpen(normalizedInteger.length > 0);
+                                                                    }}
+                                                                    onFocus={() => setIsPblAskingDropdownOpen(pblAskingPriceOptions.length > 0)}
+                                                                    onBlur={() => {
+                                                                        setTimeout(() => setIsPblAskingDropdownOpen(false), 120);
+                                                                    }}
+                                                                    onKeyDown={onlyDecimalInput}
+                                                                />
+                                                                {isPblAskingDropdownOpen && pblAskingPriceOptions.length > 0 && (
+                                                                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
+                                                                        {pblAskingPriceOptions.map((option) => {
+                                                                            const isSelected = selectedPblAskingOption === option.value;
+                                                                            return (
+                                                                                <button
+                                                                                    key={option.value}
+                                                                                    type="button"
+                                                                                    onMouseDown={(e) => e.preventDefault()}
+                                                                                    className="flex w-full items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 text-left last:border-b-0 hover:bg-gray-50"
+                                                                                    onClick={() => {
+                                                                                        setValue('vp_pbl_asking_price', option.value, { shouldDirty: true, shouldValidate: true });
+                                                                                        setSelectedPblAskingOption(option.value);
+                                                                                        setIsPblAskingDropdownOpen(false);
+                                                                                    }}
+                                                                                >
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                                                                                        <p className="mt-1 text-xs text-gray-700">{option.words}</p>
+                                                                                    </div>
+                                                                                    {/* <span className={`mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${isSelected ? 'border-blue-600' : 'border-gray-400'}`}>
+                                                                                    {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
+                                                                                </span> */}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Price Negotiation
+                                                            </label>
+                                                            <select
+                                                                id="vp_pbl_hs_price_status"
+                                                                name="vp_pbl_hs_price_status"
+                                                                className="outline-none py-2 px-3 rounded border w-full"
+                                                                {...register("vp_pbl_hs_price_status")}
+                                                            >
+                                                                <option value="" className="text-gray-800">Select PBL Price Negotiation</option>
+                                                                <option value="negotiable">Negotiation</option>
+                                                                <option value="fixed">Fixed</option>
+                                                                <option value="variable">Variable</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                PBL Partner Code
+                                                            </label>
+                                                            <Input
+                                                                id="pbl_partner_code"
+                                                                name="pbl_partner_code"
+                                                                placeholder="Enter PBL Partner Code"
+                                                                {...register("pbl_partner_code")}
+                                                                onKeyDown={onlyDecimalInput}
+                                                            />
+                                                        </div>
+
+                                                        <div className="mb-2">
+                                                            <label className="text-base font-medium" htmlFor="v_pbl_partnership_expire_date">
+                                                                Product Expire Date
+                                                            </label>
+                                                            <Input
+                                                                id="v_pbl_partnership_expire_date"
+                                                                type="date"
+                                                                {...register("v_pbl_partnership_expire_date")}
+                                                            />
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                After this date, the vehicle is automatically removed from PBL sale (home &amp; category pages).
+                                                            </p>
+                                                        </div>
+
+                                                        <PblHistoryPanel type="vehicle" id={productId} />
+
+
+
+                                                        {
+
+
+                                                            user && (user.user_mode === 'pbl' || user.user_mode === 'admin' || user.user_mode === 'supreme') && (
+                                                                <>
+                                                                    <div className="mb-2">
+                                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                                            Priority
+                                                                        </label>
+                                                                        <Input
+                                                                            id="v_priority"
+                                                                            name="v_priority"
+                                                                            placeholder="Select Priority"
+                                                                            {...register("v_priority")}
+                                                                            onKeyDown={onlyNumberInput}
+                                                                        />
+                                                                        {errors.v_priority && (
+                                                                            <p className="text-red-500 text-sm">{errors.v_priority.message}</p>
+                                                                        )}
+                                                                    </div>
+
+
+
+
+                                                                </>
+                                                            )
+                                                        }
+
+
+                                                        <div>
+                                                            <label className="text-base font-medium" htmlFor="customer-name">
+                                                                Google link (Pic)
+                                                            </label>
+                                                            <Input
+                                                                id="v_video_gdocpbl"
+                                                                name="v_video_gdocpbl"
+                                                                placeholder="Enter Google Link"
+                                                                {...register("v_video_gdocpbl")}
+                                                            />
+                                                        </div>
+
+
+
+
+
+                                                        <div>
+                                                            <label className="text-base font-medium" htmlFor="v_auction_type">
+                                                                Auction Types
+                                                            </label>
+                                                            <Controller
+                                                                name="v_auction_type"
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Select
+                                                                        {...field}
+                                                                        options={auctionTypeOptions}
+                                                                        onChange={(selectedOption) => {
+                                                                            field.onChange(selectedOption ? selectedOption.value : '');
+                                                                        }}
+                                                                        value={auctionTypeOptions.find(option => option.value === field.value) || null}
+                                                                        placeholder="Select Auction Type"
+                                                                        className="basic-single"
+                                                                        classNamePrefix="select"
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+
+                                                        {/* <div className="">
+                                                        <label className="text-base font-medium" htmlFor="customer-name">
+                                                            Users Mode (Call PBL Hotline to be Partner)
+                                                        </label>
+                                                        <select
+                                                            id="v_user_mode"
+                                                            name="v_user_mode"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_user_mode")}
+                                                        >
+                                                            <option value="">Select User Mode</option>
+                                                            {
+                                                                userModeData.map((userMode) => (
+                                                                    <option key={userMode.value} value={userMode.value}>
+                                                                        {userMode.label}
+                                                                    </option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                    </div> */}
+                                                        {/* <div className="mb-3 mt-4">
+        <span className="text-sm font-semibold text-gray-600 mb-1">{hotlineText}</span>
+        </div> */}
+
+
+                                                    </div>
+
+
+                                                    {/* Description section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-lg font-semibold text-gray-800 mb-1">Description (PB)</h4>
+                                                        <div className="flex w-24 h-1">
+                                                            <div className="w-2/3 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <textarea
+                                                            id="v_description"
+                                                            name="v_description"
+                                                            placeholder="Description (PB)"
+                                                            rows="6"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_description")}
+                                                        ></textarea>
+                                                        {errors.v_description && (
+                                                            <p className="text-red-500 text-sm">{errors.v_description.message}</p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Special Description section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-lg font-bold text-gray-800 mb-1">Special Description (PB)</h4>
+                                                        <div className="flex w-40 h-1">
+                                                            <div className="w-2/3 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <textarea
+                                                            id="vm_description"
+                                                            name="vm_description"
+                                                            placeholder="Special Description"
+                                                            rows="4"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("vm_description")}
+                                                        ></textarea>
+                                                        {errors.vm_description && (
+                                                            <p className="text-red-500 text-sm">{errors.vm_description.message}</p>
+                                                        )}
+                                                    </div>
+
+
+
+                                                    {/* Video Link PBL section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-sm font-semibold text-gray-800 mb-1">Video Link</h4>
+                                                        <div className="flex w-20 h-0.5">
+                                                            <div className="w-1/2 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+
+                                                    <div className="mb-2 w-[50%]">
+                                                        <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="v_video_pbl">
+                                                            Video Link (PBL)
+                                                        </label>
+                                                        <Input
+                                                            id="v_video_pbl"
+                                                            name="v_video_pbl"
+                                                            placeholder="PBL Video Link"
+                                                            {...register("v_video_pbl")}
+                                                        />
+                                                    </div>
+
+                                                    {/* Vendor Agreement section */}
+                                                    <div className="mb-3 mt-4">
+                                                        <h4 className="text-lg font-semibold text-gray-800 mb-1">Vendor Agreement</h4>
+                                                        <div className="flex w-24 h-1">
+                                                            <div className="w-2/3 bg-green-500"></div>
+                                                            <div className="w-1/2 bg-gray-500/20"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <textarea
+                                                            id="v_pbl_text"
+                                                            name="v_pbl_text"
+                                                            placeholder="Vendor Agreement"
+                                                            rows="4"
+                                                            className="outline-none py-2 px-3 rounded border w-full"
+                                                            {...register("v_pbl_text")}
+                                                        ></textarea>
+                                                    </div>
+
+                                                    {canShowSellerMobileToggle() && (
+                                                        <div className="mt-4 flex items-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="v_show_seller_mobile"
+                                                                className="mr-2"
+                                                                {...register("v_show_seller_mobile")}
+                                                            />
+                                                            <label htmlFor="v_show_seller_mobile" className="text-sm font-medium text-gray-700">
+                                                                Show Seller Mobile Number
+                                                            </label>
+                                                        </div>
+                                                    )}
+
+                                                    {canShowSellerMobileToggle() && watch("v_show_seller_mobile") && (
+                                                        <div className="mt-4">
+                                                            <h4 className="text-sm font-semibold text-gray-800 mb-2">Sellers</h4>
+                                                            {sellerInfoRows.map((row, index) => (
+                                                                <div key={index} className="flex items-end gap-2 mb-2">
+                                                                    <div className="flex-1">
+                                                                        <label className="text-sm font-medium text-gray-700">Seller Name</label>
+                                                                        <Input
+                                                                            value={row.name}
+                                                                            placeholder="Seller Name"
+                                                                            onChange={(e) => handleSellerInfoChange(index, "name", e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <label className="text-sm font-medium text-gray-700">Phone</label>
+                                                                        <Input
+                                                                            value={row.phone}
+                                                                            placeholder="Phone"
+                                                                            onChange={(e) => handleSellerInfoChange(index, "phone", e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveSellerInfoRow(index)}
+                                                                        className="px-3 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleAddSellerInfoRow}
+                                                                className="mt-1 px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+                                                            >
+                                                                + Add Seller
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                </div>
+                                            )
+                                        }
+
+
 
                                     </div>
 
