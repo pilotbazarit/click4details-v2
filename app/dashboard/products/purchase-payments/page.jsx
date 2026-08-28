@@ -76,8 +76,9 @@ const PurchasePaymentsContent = () => {
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [isPdfDownloading, setIsPdfDownloading] = useState(false);
 
-  const [costingSectionOpen, setCostingSectionOpen] = useState(true);
-  const [paymentSectionOpen, setPaymentSectionOpen] = useState(true);
+  const [selectEntitySectionOpen, setSelectEntitySectionOpen] = useState(false);
+  const [paymentSectionOpen, setPaymentSectionOpen] = useState(false);
+  const [reportSectionOpen, setReportSectionOpen] = useState(false);
 
   const [showReportFilter, setShowReportFilter] = useState(false);
   const [pendingReportKind, setPendingReportKind] = useState(null); // 'payment' | 'money-receipt'
@@ -88,9 +89,29 @@ const PurchasePaymentsContent = () => {
   const searchParams = useSearchParams();
 
   const isSupreme = user?.user_mode === "supreme";
-  const canCreate = isSupreme || hasPermission(permissionList, 0, "PurchasePayment", "Create");
-  const canUpdate = isSupreme || hasPermission(permissionList, 0, "PurchasePayment", "Update");
-  const canDelete = isSupreme || hasPermission(permissionList, 0, "PurchasePayment", "Delete");
+  const entityShopId = pricing?.shop_id || selectedShop?.id || 0;
+  const isShopOwnerOrPartner =
+    user?.user_mode === "partner" ||
+    (pricing?.shop_id && Number(pricing.shop_id) === Number(selectedShop?.id)) ||
+    (pricing?.user_id && Number(pricing.user_id) === Number(user?.id));
+
+  const canCreate =
+    isSupreme ||
+    isShopOwnerOrPartner ||
+    hasPermission(permissionList, 0, "PurchasePayment", "Create") ||
+    hasPermission(permissionList, entityShopId, "PurchasePayment", "Create");
+
+  const canUpdate =
+    isSupreme ||
+    isShopOwnerOrPartner ||
+    hasPermission(permissionList, 0, "PurchasePayment", "Update") ||
+    hasPermission(permissionList, entityShopId, "PurchasePayment", "Update");
+
+  const canDelete =
+    isSupreme ||
+    isShopOwnerOrPartner ||
+    hasPermission(permissionList, 0, "PurchasePayment", "Delete") ||
+    hasPermission(permissionList, entityShopId, "PurchasePayment", "Delete");
 
   const getPayments = useCallback(
     async (page = currentPage, perPage = itemsPerPage, entityOption = selectedEntityOption) => {
@@ -402,57 +423,21 @@ const PurchasePaymentsContent = () => {
           {/* ================= Section 1: Select Vehicle or Product ================= */}
           <div className="rounded-md border-2 border-teal-300 mb-6 overflow-hidden bg-teal-50 shadow-sm shadow-teal-100">
             <div className="px-4 py-3 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border-b border-teal-200 flex flex-col md:flex-row md:items-center justify-between gap-2">
-              <span className="text-sm font-bold tracking-wide text-teal-700 uppercase">Select Vehicle or Product</span>
+              <button type="button" onClick={() => setSelectEntitySectionOpen(v => !v)} className="text-sm font-bold tracking-wide text-teal-700 uppercase hover:text-teal-900 transition-colors text-left">
+                Select Vehicle or Product
+              </button>
               <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                {selectedEntityOption && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReportFilter("payment")}
-                    disabled={isPdfDownloading}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 bg-white"
-                  >
-                    <FileDown className="w-3.5 h-3.5" />
-                    Payment PDF
-                  </Button>
-                )}
-                {selectedEntityOption && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReportFilter("money-receipt")}
-                    disabled={isPdfDownloading}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-800 text-teal-900 hover:bg-teal-50 bg-white"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    Money Receipt
-                  </Button>
-                )}
-                {selectedEntityOption?.entity_type === "vehicle" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleDownloadCalculationReport}
-                    disabled={isPdfDownloading}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 bg-white"
-                  >
-                    <FileDown className="w-3.5 h-3.5" />
-                    Calculation
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDownloadReasonWiseReport}
-                  disabled={isPdfDownloading}
-                  className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-indigo-600 text-indigo-700 hover:bg-indigo-50 bg-white"
+                <button 
+                  type="button" 
+                  onClick={() => setSelectEntitySectionOpen(v => !v)} 
+                  className="p-1 text-teal-700 hover:bg-teal-200 rounded transition-colors ml-1"
                 >
-                  <FileDown className="w-3.5 h-3.5" />
-                  Reason Wise
-                </Button>
+                  {selectEntitySectionOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </button>
               </div>
             </div>
-            <div className="p-4">
+            {selectEntitySectionOpen && (
+              <div className="p-4">
               <div className="w-full sm:w-96">
                 <AsyncSelect
                   inputId="purchase-payment-entity-select"
@@ -508,29 +493,21 @@ const PurchasePaymentsContent = () => {
                 </div>
               )}
 
-            </div>
+              </div>
+            )}
           </div>
 
           {/* ================= Section 2: Costing Section ================= */}
           {selectedEntityOption?.entity_type === "vehicle" && (
-            <div id="costing-section" className="rounded-md border-2 border-blue-400 mb-4 overflow-hidden bg-blue-50 shadow-sm shadow-blue-200">
-              <SectionHeader
-                title="Costing Section"
-                open={costingSectionOpen}
-                onToggle={() => setCostingSectionOpen((v) => !v)}
+            <div id="costing-section" className="mb-4">
+              <VehiclePurchaseCalculationPanel
+                vehicleId={selectedEntityOption.entity_id}
+                canCreate={canCreate}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
+                onChanged={handleAfterSave}
+                refreshSignal={calcRefreshSignal}
               />
-              {costingSectionOpen && (
-                <div className="p-4">
-                  <VehiclePurchaseCalculationPanel
-                    vehicleId={selectedEntityOption.entity_id}
-                    canCreate={canCreate}
-                    canUpdate={canUpdate}
-                    canDelete={canDelete}
-                    onChanged={handleAfterSave}
-                    refreshSignal={calcRefreshSignal}
-                  />
-                </div>
-              )}
             </div>
           )}
 
@@ -651,6 +628,65 @@ const PurchasePaymentsContent = () => {
               )}
             </div>
           )}
+
+          {/* ================= Section 4: Report Section ================= */}
+          <div id="report-section" className="rounded-md border-2 border-gray-300 mb-4 overflow-hidden bg-gray-50 shadow-sm shadow-gray-200">
+            <SectionHeader
+              title="Report Section"
+              open={reportSectionOpen}
+              onToggle={() => setReportSectionOpen((v) => !v)}
+            />
+            {reportSectionOpen && (
+              <div className="p-4 flex flex-wrap items-center gap-4 bg-white">
+                {selectedEntityOption && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openReportFilter("payment")}
+                    disabled={isPdfDownloading}
+                    className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold border-teal-600 text-teal-700 hover:bg-teal-50 bg-white"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Payment PDF
+                  </Button>
+                )}
+                {selectedEntityOption && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openReportFilter("money-receipt")}
+                    disabled={isPdfDownloading}
+                    className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold border-teal-800 text-teal-900 hover:bg-teal-50 bg-white"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Money Receipt
+                  </Button>
+                )}
+                {selectedEntityOption?.entity_type === "vehicle" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleDownloadCalculationReport}
+                    disabled={isPdfDownloading}
+                    className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold border-emerald-600 text-emerald-700 hover:bg-emerald-50 bg-white"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Calculation
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDownloadReasonWiseReport}
+                  disabled={isPdfDownloading}
+                  className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold border-indigo-600 text-indigo-700 hover:bg-indigo-50 bg-white"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Reason Wise
+                </Button>
+              </div>
+            )}
+          </div>
 
           {!selectedEntityOption && (
             <p className="text-sm text-gray-500 text-center py-6">

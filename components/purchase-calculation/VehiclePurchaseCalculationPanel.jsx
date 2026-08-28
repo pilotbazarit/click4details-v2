@@ -12,6 +12,8 @@ import {
   Trash2,
   X,
   Layers,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
@@ -340,9 +342,17 @@ const CostingSection = ({
     fd.append("section", section);
     if (row.date) fd.append("date", row.date);
     if (row.reason) fd.append("reason", row.reason);
-    if (row.amount !== "") fd.append("amount", row.amount);
-    if (row.conv_rate !== "") fd.append("conversion_rate", row.conv_rate);
-    if (row.toAmount !== "") fd.append("total_amount", row.toAmount);
+
+    const cleanAmount = String(row.amount ?? "").replace(/,/g, "").trim();
+    const cleanRate = String(row.conv_rate ?? "").replace(/,/g, "").trim();
+    const cleanToAmount = String(row.toAmount ?? "").replace(/,/g, "").trim();
+
+    if (cleanAmount !== "") fd.append("amount", cleanAmount);
+    if (cleanRate !== "") {
+      fd.append("conv_rate", cleanRate);
+      fd.append("conversion_rate", cleanRate);
+    }
+    if (cleanToAmount !== "") fd.append("total_amount", cleanToAmount);
     (row.docs || []).forEach((file) => fd.append("docs[]", file));
     return fd;
   };
@@ -930,6 +940,17 @@ const CostingSection = ({
   );
 };
 
+const SectionHeader = ({ title, open, onToggle }) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    className="w-full flex items-center justify-between px-4 py-2 bg-white border-b border-gray-400 text-sm font-bold tracking-wide text-gray-900 hover:bg-gray-50 transition-colors"
+  >
+    <span className="text-left">{title}</span>
+    {open ? <ChevronUp className="w-5 h-5 text-red-600" /> : <ChevronDown className="w-5 h-5 text-red-600" />}
+  </button>
+);
+
 const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canDelete, onChanged, refreshSignal }) => {
   const [calculations, setCalculations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -938,6 +959,10 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
   const [addForm, setAddForm] = useState({ type: "", from_currency: "USD", to_currency: "BDT" });
   const [savingCalc, setSavingCalc] = useState(false);
   const [sizeMode, setSizeMode] = useState("large"); // 'normal' | 'large' | 'xl'
+  const [orgTypeOpen, setOrgTypeOpen] = useState(true);
+  const [fixedGenCostOpen, setFixedGenCostOpen] = useState(true);
+  const [grandTotalOpen, setGrandTotalOpen] = useState(true);
+  const [orgWiseSummaryOpen, setOrgWiseSummaryOpen] = useState(true);
 
   const fetchCalculations = useCallback(async () => {
     if (!vehicleId) return;
@@ -1129,7 +1154,11 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
       )}
 
       {/* Organization Type Navigation Pills & Adjustable font/field size bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-gray-50/90 p-3 rounded-xl border border-gray-200 shadow-xs">
+      <div className="border border-gray-400 mb-4 bg-white">
+        <SectionHeader title="Org Type & Currency" open={orgTypeOpen} onToggle={() => setOrgTypeOpen(v => !v)} />
+        {orgTypeOpen && (
+          <div className="p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-gray-50/90 p-3 rounded-xl border border-gray-200 shadow-xs">
         {calculations.length > 0 && (
           <div className="flex flex-wrap items-center gap-2.5">
             {calculations.map((calc) => {
@@ -1260,9 +1289,8 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
         </div>
       )}
 
-      {/* selected calculation detail */}
       {selectedCalc && (
-        <div>
+        <div className="mt-4 border-t border-gray-200 pt-4">
           {/* Organization Type & Currency - Prominent read-only summary card */}
           <div className="rounded-xl border-2 border-blue-300 bg-blue-50/70 p-4 sm:p-5 mb-4 shadow-sm">
             <div className="text-center mb-3 pb-2 border-b border-blue-200">
@@ -1318,8 +1346,20 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
               </div>
             </div>
           </div>
+        </div>
+      )}
+          </div>
+        )}
+      </div>
 
-          <CostingSection
+      {/* selected calculation detail */}
+      {selectedCalc && (
+        <div>
+          <div className="border border-gray-400 mb-4 bg-white">
+            <SectionHeader title="Fixed & Gen Cost" open={fixedGenCostOpen} onToggle={() => setFixedGenCostOpen(v => !v)} />
+            {fixedGenCostOpen && (
+              <div className="p-4">
+                <CostingSection
             className="mt-4"
             calculation={selectedCalc}
             section="purchase_costing"
@@ -1346,10 +1386,17 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
               sizeMode={sizeMode}
             />
           )}
+              </div>
+            )}
+          </div>
 
           {/* 1. Grand Total Costing for Selected Organization Type */}
           {grandTotal && (
-            <div className="mt-8 rounded-xl border-2 border-indigo-300 overflow-hidden shadow-sm bg-white">
+            <div className="border border-gray-400 mb-4 bg-white">
+              <SectionHeader title={`Grand Total Costing (${selectedCalc.vpc_type.toUpperCase()})`} open={grandTotalOpen} onToggle={() => setGrandTotalOpen(v => !v)} />
+              {grandTotalOpen && (
+                <div className="p-4">
+                  <div className="rounded-xl border-2 border-indigo-300 overflow-hidden shadow-sm bg-white">
               <div className="text-center py-2.5 bg-indigo-600 text-white flex items-center justify-center gap-2">
                 <Layers className="w-5 h-5" />
                 <h4 className="text-base font-extrabold uppercase tracking-wide">
@@ -1417,11 +1464,18 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
                 </tbody>
               </table>
             </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* 2. Organization Type Wise Grand Total Breakdown Table */}
           {calculations.length > 0 && (
-            <div className="mt-8 rounded-xl border-2 border-purple-300 overflow-hidden shadow-sm bg-white">
+            <div className="border border-gray-400 mb-4 bg-white">
+              <SectionHeader title="Org Wise Summary" open={orgWiseSummaryOpen} onToggle={() => setOrgWiseSummaryOpen(v => !v)} />
+              {orgWiseSummaryOpen && (
+                <div className="p-4">
+                  <div className="rounded-xl border-2 border-purple-300 overflow-hidden shadow-sm bg-white">
               <div className="text-center py-2.5 bg-gradient-to-r from-purple-700 to-indigo-800 text-white">
                 <h4 className="text-base font-extrabold uppercase tracking-wider">
                   Organization Type Wise Grand Total Costing Summary
@@ -1532,6 +1586,9 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
                   )}
                 </table>
               </div>
+            </div>
+                </div>
+              )}
             </div>
           )}
         </div>
