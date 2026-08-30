@@ -447,114 +447,107 @@ const PurchasePaymentsContent = () => {
         <div className="p-6">
           {/* ================= Section 1: Select Vehicle or Product ================= */}
           <div className="mb-6 overflow-hidden border-2 border-teal-300 rounded-md shadow-sm bg-teal-50 shadow-teal-100">
-            <div className="flex flex-col justify-between gap-2 px-4 py-3 border-b border-teal-200 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 md:flex-row md:items-center">
-              <button type="button" onClick={() => setSelectEntitySectionOpen(v => !v)} className="text-sm font-bold tracking-wide text-left text-teal-700 uppercase transition-colors hover:text-teal-900">
-                Select Vehicle or Product
-              </button>
-              <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                {selectedEntityOption && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReportFilter("payment")}
-                    disabled={isPdfDownloading}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 bg-white"
-                  >
-                    <FileDown className="w-3.5 h-3.5" />
-                    Costing Payment PDF
-                  </Button>
-                )}
-                {selectedEntityOption && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReportFilter("money-receipt")}
-                    disabled={isPdfDownloading}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-800 text-teal-900 hover:bg-teal-50 bg-white"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    Money Receipt
-                  </Button>
-                )}
-                {selectedEntityOption?.entity_type === "vehicle" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleDownloadCalculationReport}
-                    disabled={isPdfDownloading}
-                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 bg-white"
-                  >
-                    <FileDown className="w-3.5 h-3.5" />
-                    Calculation
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDownloadReasonWiseReport}
-                  disabled={isPdfDownloading}
-                  className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-indigo-600 text-indigo-700 hover:bg-indigo-50 bg-white"
-                >
-                  {selectEntitySectionOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </Button>
-              </div>
-            </div>
+            <SectionHeader
+              title="Select Vehicle or Product"
+              open={selectEntitySectionOpen}
+              onToggle={() => setSelectEntitySectionOpen((v) => !v)}
+            />
             {selectEntitySectionOpen && (
               <div className="p-4">
-              <div className="w-full sm:w-96">
-                <AsyncSelect
-                  inputId="purchase-payment-entity-select"
-                  cacheOptions={false}
-                  defaultOptions={false}
-                  loadOptions={loadEntityOptions}
-                  value={selectedEntityOption}
-                  onChange={handleEntitySelectChange}
-                  placeholder="Search by title or code..."
-                  isClearable
-                  openMenuOnClick={false}
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  noOptionsMessage={({ inputValue }) => {
-                    const q = String(inputValue ?? "").trim();
-                    if (q.length < ENTITY_SEARCH_MIN_LENGTH) return "Type at least 2 characters...";
-                    return "No vehicle/product found";
-                  }}
-                />
-              </div>
-
-              {/* Vehicle info strip */}
-              {selectedEntityOption?.entity_type === "vehicle" && pricing?.vehicle_info && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-4 gap-y-1.5 mt-3 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
-                  {[
-                    ["Brand", pricing.vehicle_info.brand],
-                    ["Model", pricing.vehicle_info.model],
-                    ["Package", pricing.vehicle_info.package],
-                    ["Condition", pricing.vehicle_info.condition],
-                    ["Model Yr", pricing.vehicle_info.model_year],
-                    ["Reg Yr", pricing.vehicle_info.reg_year],
-                    ["Grade", pricing.vehicle_info.grade],
-                    ["Exterior Grd", pricing.vehicle_info.exterior_grade],
-                    ["Interior Grd", pricing.vehicle_info.interior_grade],
-                    ["Mileage", pricing.vehicle_info.mileage],
-                    ["Auction Type", pricing.vehicle_info.auction_type],
-                    ["Color", pricing.vehicle_info.color],
-                    ["Fuel", pricing.vehicle_info.fuel],
-                    ["Option", pricing.vehicle_info.option],
-                    ["CC", pricing.vehicle_info.cc],
-                    ["Body", pricing.vehicle_info.body],
-                    ["Seat", pricing.vehicle_info.seat],
-                    ["Chassis No", pricing.vehicle_info.chassis_no],
-                    ["Engine No", pricing.vehicle_info.engine_no],
-                    ["Tax Token", pricing.vehicle_info.tax_token],
-                    ["Fitness", pricing.vehicle_info.fitness],
-                    ["Arrival Date", pricing.vehicle_info.arrival_date],
-                  ].map(([label, value]) => (
-                    <span key={label}>
-                      <span className="font-semibold text-gray-500">{label}:</span> {value || "-"}
-                    </span>
-                  ))}
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-4">
+                  <div className="w-full sm:w-96">
+                    <AsyncSelect
+                      inputId="purchase-payment-entity-select"
+                      cacheOptions={false}
+                      defaultOptions={false}
+                      loadOptions={loadEntityOptions}
+                      value={selectedEntityOption}
+                      onChange={handleEntitySelectChange}
+                      placeholder="Search by title or code..."
+                      isClearable
+                      openMenuOnClick={false}
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      noOptionsMessage={({ inputValue }) => {
+                        const q = String(inputValue ?? "").trim();
+                        if (q.length < ENTITY_SEARCH_MIN_LENGTH) return "Type at least 2 characters...";
+                        return "No vehicle/product found";
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedEntityOption && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openReportFilter("payment")}
+                        disabled={isPdfDownloading}
+                        className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 bg-white"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                        Costing Payment PDF
+                      </Button>
+                    )}
+                    {selectedEntityOption && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openReportFilter("money-receipt")}
+                        disabled={isPdfDownloading}
+                        className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-800 text-teal-900 hover:bg-teal-50 bg-white"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Money Receipt
+                      </Button>
+                    )}
+                    {selectedEntityOption?.entity_type === "vehicle" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleDownloadCalculationReport}
+                        disabled={isPdfDownloading}
+                        className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 bg-white"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                        Calculation
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {/* Vehicle info strip */}
+                {selectedEntityOption?.entity_type === "vehicle" && pricing?.vehicle_info && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-4 gap-y-1.5 mt-3 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+                    {[
+                      ["Brand", pricing.vehicle_info.brand],
+                      ["Model", pricing.vehicle_info.model],
+                      ["Package", pricing.vehicle_info.package],
+                      ["Condition", pricing.vehicle_info.condition],
+                      ["Model Yr", pricing.vehicle_info.model_year],
+                      ["Reg Yr", pricing.vehicle_info.reg_year],
+                      ["Grade", pricing.vehicle_info.grade],
+                      ["Exterior Grd", pricing.vehicle_info.exterior_grade],
+                      ["Interior Grd", pricing.vehicle_info.interior_grade],
+                      ["Mileage", pricing.vehicle_info.mileage],
+                      ["Auction Type", pricing.vehicle_info.auction_type],
+                      ["Color", pricing.vehicle_info.color],
+                      ["Fuel", pricing.vehicle_info.fuel],
+                      ["Option", pricing.vehicle_info.option],
+                      ["CC", pricing.vehicle_info.cc],
+                      ["Body", pricing.vehicle_info.body],
+                      ["Seat", pricing.vehicle_info.seat],
+                      ["Chassis No", pricing.vehicle_info.chassis_no],
+                      ["Engine No", pricing.vehicle_info.engine_no],
+                      ["Tax Token", pricing.vehicle_info.tax_token],
+                      ["Fitness", pricing.vehicle_info.fitness],
+                      ["Arrival Date", pricing.vehicle_info.arrival_date],
+                    ].map(([label, value]) => (
+                      <span key={label}>
+                        <span className="font-semibold text-gray-500">{label}:</span> {value || "-"}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
               </div>
             )}
@@ -576,7 +569,7 @@ const PurchasePaymentsContent = () => {
 
           {/* ================= Section 3: Payment Section ================= */}
           {selectedEntityOption && (
-            <div id="payment-section" className="mb-4 overflow-hidden border-2 border-orange-400 rounded-md shadow-sm bg-orange-50 shadow-orange-200">
+            <div id="payment-section" className="mb-4 overflow-hidden border-2 border-green-300 rounded-md shadow-sm bg-green-50 shadow-orange-200">
               <SectionHeader
                 title="Payment Section"
                 open={paymentSectionOpen}
@@ -701,7 +694,7 @@ const PurchasePaymentsContent = () => {
           )}
 
           {/* ================= Section 4: Report Section ================= */}
-          <div id="report-section" className="mb-4 overflow-hidden border-2 border-gray-300 rounded-md shadow-sm bg-gray-50 shadow-gray-200">
+          <div id="report-section" className="mb-4 overflow-hidden border-2 border-green-300 rounded-md  bg-green-50 shadow-sm bg-gray-50 shadow-gray-200">
             <SectionHeader
               title="Report Section"
               open={reportSectionOpen}

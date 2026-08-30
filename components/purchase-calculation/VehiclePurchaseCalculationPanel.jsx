@@ -14,6 +14,7 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Building2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
@@ -166,6 +167,7 @@ const CostingSection = ({
   const [amountAnchorRect, setAmountAnchorRect] = useState(null);
   const amountInputRef = useRef(null); // tracks the active amount input for scroll repositioning
   const [isTaxDocDownloading, setIsTaxDocDownloading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const sameCurrency = calculation.vpc_from_currency === calculation.vpc_to_currency;
   // any differing currency pair (BDT/USD/YEN, either direction) gets the
@@ -463,103 +465,148 @@ const CostingSection = ({
     amountDropdownTarget === "new"
       ? newRow.amount
       : amountDropdownTarget
-      ? editRow.amount
-      : "";
+        ? editRow.amount
+        : "";
   const amountOptions = useMemo(() => buildAmountOptions(activeAmountValue), [activeAmountValue]);
   const showAmountDropdown = Boolean(amountDropdownTarget && amountAnchorRect);
 
   return (
-    <div className={className}>
+    <div className={`border border-gray-300 rounded-md bg-white ${className}`}>
       {/* section header + optional Tax Doc action */}
-      <div className="flex items-center justify-between mb-2">
-        <h4 className={`${sz.headerText} font-bold uppercase tracking-wide text-gray-700`}>{title}</h4>
-        {isFixedCost && (
-          <button
-            type="button"
-            onClick={handleDownloadTaxDoc}
-            disabled={isTaxDocDownloading}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border border-blue-400 text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50"
-            title="Download Bangladesh Tax Reference Document"
-          >
-            {isTaxDocDownloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-            <span>BD Tax Doc</span>
-          </button>
-        )}
+      <div
+        className="flex items-center justify-between px-4 py-3 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h4 className="text-sm font-bold tracking-wide text-gray-700 uppercase">{title}</h4>
+        <div className="flex items-center gap-3">
+          {isFixedCost && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownloadTaxDoc();
+              }}
+              disabled={isTaxDocDownloading}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border border-blue-400 text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50"
+              title="Download Bangladesh Tax Reference Document"
+            >
+              {isTaxDocDownloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+              <span>BD Tax Doc</span>
+            </button>
+          )}
+          {isOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-300 bg-white shadow-xs">
-        <table className={`min-w-full ${sz.text}`}>
-          <thead>
-            <tr className="bg-gray-100 border-b border-gray-300 text-gray-700 font-bold">
-              <th className={`${sz.cellPadding} text-left`}>Date</th>
-              <th className={`${sz.cellPadding} text-left`}>Reason</th>
-              {dualCurrency ? (
-                <>
-                  <th className={`${sz.cellPadding} text-right`}>
-                    Amount <span className={sz.unitText}>({calculation.vpc_from_currency})</span>
-                  </th>
-                  <th className={`${sz.cellPadding} text-right`}>
-                    Rate <span className={sz.unitText}>({calculation.vpc_from_currency}→{calculation.vpc_to_currency})</span>
-                  </th>
-                  <th className={`${sz.cellPadding} text-right`}>
-                    Total Amount <span className={sz.unitText}>({calculation.vpc_to_currency})</span>
-                  </th>
-                </>
-              ) : (
-                <th className={`${sz.cellPadding} text-right`}>
-                  Amount <span className={sz.unitText}>({calculation.vpc_to_currency})</span>
-                </th>
-              )}
-              <th className={`${sz.cellPadding} text-left`}>Attachment</th>
-              <th className={`${sz.cellPadding} text-center`}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const isEditing = editingItemId === item.vpci_id;
-              const hasDocs = Array.isArray(item.docs) && item.docs.length > 0;
+      {isOpen && (
+        <div className="p-4 border-t border-gray-200 overflow-x-auto">
 
-              if (isEditing) {
-                return (
-                  <tr key={item.vpci_id} className="bg-yellow-50/70 border-b border-yellow-200">
-                    <td className={sz.cellPadding}>
-                      <input
-                        type="date"
-                        className={sz.inputClass}
-                        value={editRow.date}
-                        onChange={(e) => setEditRow({ ...editRow, date: e.target.value })}
-                      />
-                    </td>
-                    <td className={sz.cellPadding}>
-                      {isFixedCost ? (
-                        <select
-                          className={sz.inputClass}
-                          value={editRow.reason}
-                          onChange={(e) => setEditRow({ ...editRow, reason: e.target.value })}
-                        >
-                          <option value="">Select reason</option>
-                          {availableFixedReasonsForEdit(editRow.reason).map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
-                      ) : (
+          <table className={`min-w-full ${sz.text}`}>
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-300 text-gray-700 font-bold">
+                <th className={`${sz.cellPadding} text-left`}>Date</th>
+                <th className={`${sz.cellPadding} text-left`}>Reason</th>
+                {dualCurrency ? (
+                  <>
+                    <th className={`${sz.cellPadding} text-right`}>
+                      Amount <span className={sz.unitText}>({calculation.vpc_from_currency})</span>
+                    </th>
+                    <th className={`${sz.cellPadding} text-right`}>
+                      Rate <span className={sz.unitText}>({calculation.vpc_from_currency}→{calculation.vpc_to_currency})</span>
+                    </th>
+                    <th className={`${sz.cellPadding} text-right`}>
+                      Total Amount <span className={sz.unitText}>({calculation.vpc_to_currency})</span>
+                    </th>
+                  </>
+                ) : (
+                  <th className={`${sz.cellPadding} text-right`}>
+                    Amount <span className={sz.unitText}>({calculation.vpc_to_currency})</span>
+                  </th>
+                )}
+                <th className={`${sz.cellPadding} text-left`}>Attachment</th>
+                <th className={`${sz.cellPadding} text-center`}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => {
+                const isEditing = editingItemId === item.vpci_id;
+                const hasDocs = Array.isArray(item.docs) && item.docs.length > 0;
+
+                if (isEditing) {
+                  return (
+                    <tr key={item.vpci_id} className="bg-yellow-50/70 border-b border-yellow-200">
+                      <td className={sz.cellPadding}>
                         <input
-                          type="text"
-                          data-suggestion-input="true"
+                          type="date"
                           className={sz.inputClass}
-                          placeholder="Type or select reason..."
-                          value={editRow.reason}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setEditRow({ ...editRow, reason: val });
-                            openSuggestions(e.currentTarget, val, item.vpci_id);
-                          }}
-                          onFocus={(e) => openSuggestions(e.currentTarget, e.target.value, item.vpci_id)}
+                          value={editRow.date}
+                          onChange={(e) => setEditRow({ ...editRow, date: e.target.value })}
                         />
-                      )}
-                    </td>
-                    {dualCurrency ? (
-                      <>
+                      </td>
+                      <td className={sz.cellPadding}>
+                        {isFixedCost ? (
+                          <select
+                            className={sz.inputClass}
+                            value={editRow.reason}
+                            onChange={(e) => setEditRow({ ...editRow, reason: e.target.value })}
+                          >
+                            <option value="">Select reason</option>
+                            {availableFixedReasonsForEdit(editRow.reason).map((r) => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            data-suggestion-input="true"
+                            className={sz.inputClass}
+                            placeholder="Type or select reason..."
+                            value={editRow.reason}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditRow({ ...editRow, reason: val });
+                              openSuggestions(e.currentTarget, val, item.vpci_id);
+                            }}
+                            onFocus={(e) => openSuggestions(e.currentTarget, e.target.value, item.vpci_id)}
+                          />
+                        )}
+                      </td>
+                      {dualCurrency ? (
+                        <>
+                          <td className={sz.cellPadding}>
+                            <input
+                              type="number"
+                              step="any"
+                              data-amount-input="true"
+                              className={sz.inputRightClass}
+                              placeholder="0.00"
+                              value={editRow.amount}
+                              onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
+                              onFocus={(e) => openAmountDropdown(e.currentTarget, item.vpci_id)}
+                            />
+                          </td>
+                          <td className={sz.cellPadding}>
+                            <input
+                              type="number"
+                              step="any"
+                              className={sz.inputRightClass}
+                              placeholder="1.00"
+                              value={editRow.conv_rate}
+                              onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
+                            />
+                          </td>
+                          <td className={sz.cellPadding}>
+                            <input
+                              type="number"
+                              step="any"
+                              className={sz.inputRightClass}
+                              placeholder="0.00"
+                              value={editRow.toAmount}
+                              onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
+                            />
+                          </td>
+                        </>
+                      ) : (
                         <td className={sz.cellPadding}>
                           <input
                             type="number"
@@ -572,28 +619,149 @@ const CostingSection = ({
                             onFocus={(e) => openAmountDropdown(e.currentTarget, item.vpci_id)}
                           />
                         </td>
-                        <td className={sz.cellPadding}>
-                          <input
-                            type="number"
-                            step="any"
-                            className={sz.inputRightClass}
-                            placeholder="1.00"
-                            value={editRow.conv_rate}
-                            onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
-                          />
+                      )}
+                      <td className={sz.cellPadding}>
+                        <input
+                          type="file"
+                          multiple
+                          className={`text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:${sz.text} file:bg-gray-100 file:text-gray-700`}
+                          onChange={(e) => setEditRow({ ...editRow, docs: Array.from(e.target.files || []) })}
+                        />
+                      </td>
+                      <td className={`${sz.cellPadding} text-center`}>
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(item.vpci_id)}
+                            disabled={savingRow}
+                            className="p-1 rounded text-emerald-600 hover:bg-emerald-50"
+                            title="Save"
+                          >
+                            {savingRow ? <Loader2 size={sz.iconSize} className="animate-spin" /> : <Save size={sz.iconSize} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="p-1 rounded text-gray-500 hover:bg-gray-100"
+                            title="Cancel"
+                          >
+                            <X size={sz.iconSize} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={item.vpci_id} className="border-b border-gray-200 hover:bg-gray-50/60">
+                    <td className={sz.cellPadding}>{formatRowDate(item.vpci_date)}</td>
+                    <td className={`${sz.cellPadding} font-medium text-gray-800`}>{item.vpci_reason || "-"}</td>
+                    {dualCurrency ? (
+                      <>
+                        <td className={`${sz.cellPadding} text-right font-medium`}>{formatAmount(item.vpci_amount)}</td>
+                        <td className={`${sz.cellPadding} text-right text-gray-500`}>
+                          {Number(item.vpci_conv_rate) > 0 ? Number(item.vpci_conv_rate).toFixed(4) : "-"}
                         </td>
-                        <td className={sz.cellPadding}>
-                          <input
-                            type="number"
-                            step="any"
-                            className={sz.inputRightClass}
-                            placeholder="0.00"
-                            value={editRow.toAmount}
-                            onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
-                          />
+                        <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
+                          {formatAmount(item.vpci_conv_amount)}
                         </td>
                       </>
                     ) : (
+                      <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
+                        {formatAmount(item.vpci_conv_amount ?? item.vpci_amount)}
+                      </td>
+                    )}
+                    <td className={sz.cellPadding}>
+                      {hasDocs ? (
+                        <div className="flex flex-wrap items-center gap-1">
+                          {item.docs.map((doc, idx) => (
+                            <a
+                              key={doc.id || idx}
+                              href={doc.doc_file?.url || doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"
+                              title={doc.title || doc.name || `Document ${idx + 1}`}
+                            >
+                              <FileText size={11} />
+                              <span>{doc.title || `Doc ${idx + 1}`}</span>
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className={`${sz.cellPadding} text-center`}>
+                      <div className="inline-flex items-center gap-1">
+                        {canUpdate && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item)}
+                            className="p-1 rounded text-blue-600 hover:bg-blue-50"
+                            title="Edit"
+                          >
+                            <Pencil size={sz.iconSize} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRow(item)}
+                            className="p-1 rounded text-red-600 hover:bg-red-50"
+                            title="Delete"
+                          >
+                            <Trash2 size={sz.iconSize} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* inline append row for new items */}
+              {canCreate && (!isFixedCost || availableFixedReasonsForNew.length > 0) && (
+                <tr className="bg-emerald-50/40 border-t-2 border-emerald-300">
+                  <td className={sz.cellPadding}>
+                    <input
+                      type="date"
+                      className={sz.inputClass}
+                      value={newRow.date}
+                      onChange={(e) => setNewRow({ ...newRow, date: e.target.value })}
+                    />
+                  </td>
+                  <td className={sz.cellPadding}>
+                    {isFixedCost ? (
+                      <select
+                        className={sz.inputClass}
+                        value={newRow.reason}
+                        onChange={(e) => setNewRow({ ...newRow, reason: e.target.value })}
+                      >
+                        <option value="">Select reason</option>
+                        {availableFixedReasonsForNew.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        data-suggestion-input="true"
+                        className={sz.inputClass}
+                        placeholder="Type or select reason..."
+                        value={newRow.reason}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewRow({ ...newRow, reason: val });
+                          openSuggestions(e.currentTarget, val, "new");
+                        }}
+                        onFocus={(e) => openSuggestions(e.currentTarget, e.target.value, "new")}
+                      />
+                    )}
+                  </td>
+                  {dualCurrency ? (
+                    <>
                       <td className={sz.cellPadding}>
                         <input
                           type="number"
@@ -601,154 +769,33 @@ const CostingSection = ({
                           data-amount-input="true"
                           className={sz.inputRightClass}
                           placeholder="0.00"
-                          value={editRow.amount}
-                          onChange={(e) => setEditRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
-                          onFocus={(e) => openAmountDropdown(e.currentTarget, item.vpci_id)}
+                          value={newRow.amount}
+                          onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
+                          onFocus={(e) => openAmountDropdown(e.currentTarget, "new")}
                         />
                       </td>
-                    )}
-                    <td className={sz.cellPadding}>
-                      <input
-                        type="file"
-                        multiple
-                        className={`text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:${sz.text} file:bg-gray-100 file:text-gray-700`}
-                        onChange={(e) => setEditRow({ ...editRow, docs: Array.from(e.target.files || []) })}
-                      />
-                    </td>
-                    <td className={`${sz.cellPadding} text-center`}>
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleSaveEdit(item.vpci_id)}
-                          disabled={savingRow}
-                          className="p-1 rounded text-emerald-600 hover:bg-emerald-50"
-                          title="Save"
-                        >
-                          {savingRow ? <Loader2 size={sz.iconSize} className="animate-spin" /> : <Save size={sz.iconSize} />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          className="p-1 rounded text-gray-500 hover:bg-gray-100"
-                          title="Cancel"
-                        >
-                          <X size={sz.iconSize} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }
-
-              return (
-                <tr key={item.vpci_id} className="border-b border-gray-200 hover:bg-gray-50/60">
-                  <td className={sz.cellPadding}>{formatRowDate(item.vpci_date)}</td>
-                  <td className={`${sz.cellPadding} font-medium text-gray-800`}>{item.vpci_reason || "-"}</td>
-                  {dualCurrency ? (
-                    <>
-                      <td className={`${sz.cellPadding} text-right font-medium`}>{formatAmount(item.vpci_amount)}</td>
-                      <td className={`${sz.cellPadding} text-right text-gray-500`}>
-                        {Number(item.vpci_conv_rate) > 0 ? Number(item.vpci_conv_rate).toFixed(4) : "-"}
+                      <td className={sz.cellPadding}>
+                        <input
+                          type="number"
+                          step="any"
+                          className={sz.inputRightClass}
+                          placeholder="1.00"
+                          value={newRow.conv_rate}
+                          onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
+                        />
                       </td>
-                      <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
-                        {formatAmount(item.vpci_conv_amount)}
+                      <td className={sz.cellPadding}>
+                        <input
+                          type="number"
+                          step="any"
+                          className={sz.inputRightClass}
+                          placeholder="0.00"
+                          value={newRow.toAmount}
+                          onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
+                        />
                       </td>
                     </>
                   ) : (
-                    <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
-                      {formatAmount(item.vpci_conv_amount ?? item.vpci_amount)}
-                    </td>
-                  )}
-                  <td className={sz.cellPadding}>
-                    {hasDocs ? (
-                      <div className="flex flex-wrap items-center gap-1">
-                        {item.docs.map((doc, idx) => (
-                          <a
-                            key={doc.id || idx}
-                            href={doc.doc_file?.url || doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200"
-                            title={doc.title || doc.name || `Document ${idx + 1}`}
-                          >
-                            <FileText size={11} />
-                            <span>{doc.title || `Doc ${idx + 1}`}</span>
-                          </a>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className={`${sz.cellPadding} text-center`}>
-                    <div className="inline-flex items-center gap-1">
-                      {canUpdate && (
-                        <button
-                          type="button"
-                          onClick={() => handleStartEdit(item)}
-                          className="p-1 rounded text-blue-600 hover:bg-blue-50"
-                          title="Edit"
-                        >
-                          <Pencil size={sz.iconSize} />
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRow(item)}
-                          className="p-1 rounded text-red-600 hover:bg-red-50"
-                          title="Delete"
-                        >
-                          <Trash2 size={sz.iconSize} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-
-            {/* inline append row for new items */}
-            {canCreate && (!isFixedCost || availableFixedReasonsForNew.length > 0) && (
-              <tr className="bg-emerald-50/40 border-t-2 border-emerald-300">
-                <td className={sz.cellPadding}>
-                  <input
-                    type="date"
-                    className={sz.inputClass}
-                    value={newRow.date}
-                    onChange={(e) => setNewRow({ ...newRow, date: e.target.value })}
-                  />
-                </td>
-                <td className={sz.cellPadding}>
-                  {isFixedCost ? (
-                    <select
-                      className={sz.inputClass}
-                      value={newRow.reason}
-                      onChange={(e) => setNewRow({ ...newRow, reason: e.target.value })}
-                    >
-                      <option value="">Select reason</option>
-                      {availableFixedReasonsForNew.map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      data-suggestion-input="true"
-                      className={sz.inputClass}
-                      placeholder="Type or select reason..."
-                      value={newRow.reason}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewRow({ ...newRow, reason: val });
-                        openSuggestions(e.currentTarget, val, "new");
-                      }}
-                      onFocus={(e) => openSuggestions(e.currentTarget, e.target.value, "new")}
-                    />
-                  )}
-                </td>
-                {dualCurrency ? (
-                  <>
                     <td className={sz.cellPadding}>
                       <input
                         type="number"
@@ -761,136 +808,103 @@ const CostingSection = ({
                         onFocus={(e) => openAmountDropdown(e.currentTarget, "new")}
                       />
                     </td>
-                    <td className={sz.cellPadding}>
-                      <input
-                        type="number"
-                        step="any"
-                        className={sz.inputRightClass}
-                        placeholder="1.00"
-                        value={newRow.conv_rate}
-                        onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "conv_rate", e.target.value))}
-                      />
+                  )}
+                  <td className={sz.cellPadding}>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      multiple
+                      className={`text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:${sz.text} file:bg-gray-100 file:text-gray-700`}
+                      onChange={(e) => setNewRow({ ...newRow, docs: Array.from(e.target.files || []) })}
+                    />
+                  </td>
+                  <td className={`${sz.cellPadding} text-center`}>
+                    <button
+                      type="button"
+                      onClick={handleAddRow}
+                      disabled={savingRow}
+                      className={`inline-flex items-center gap-1 ${sz.btnSize} rounded bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50`}
+                      title="Add row"
+                    >
+                      {savingRow ? <Loader2 size={sz.iconSize} className="animate-spin" /> : <Plus size={sz.iconSize} />}
+                      Add
+                    </button>
+                  </td>
+                </tr>
+              )}
+
+              {items.length === 0 && (!canCreate || (isFixedCost && availableFixedReasonsForNew.length === 0)) && (
+                <tr>
+                  <td colSpan={dualCurrency ? 6 : 4} className="px-3 py-4 text-center text-gray-400">
+                    No {title.toLowerCase()} items added yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* section totals summary */}
+            <tfoot>
+              <tr className="bg-gray-100 border-t border-gray-300 font-semibold text-gray-800">
+                <td colSpan={2} className={`${sz.cellPadding} text-right`}>Total {title}:</td>
+                {dualCurrency ? (
+                  <>
+                    <td className={`${sz.cellPadding} text-right`}>
+                      {formatAmount(totalAmount)} {calculation.vpc_from_currency}
                     </td>
-                    <td className={sz.cellPadding}>
-                      <input
-                        type="number"
-                        step="any"
-                        className={sz.inputRightClass}
-                        placeholder="0.00"
-                        value={newRow.toAmount}
-                        onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "toAmount", e.target.value))}
-                      />
+                    <td className={sz.cellPadding} />
+                    <td className={`${sz.cellPadding} text-right font-bold`}>
+                      {formatAmount(totalConv)} {calculation.vpc_to_currency}
                     </td>
                   </>
                 ) : (
-                  <td className={sz.cellPadding}>
-                    <input
-                      type="number"
-                      step="any"
-                      data-amount-input="true"
-                      className={sz.inputRightClass}
-                      placeholder="0.00"
-                      value={newRow.amount}
-                      onChange={(e) => setNewRow((r) => applyRowFieldChange(r, "amount", e.target.value))}
-                      onFocus={(e) => openAmountDropdown(e.currentTarget, "new")}
-                    />
-                  </td>
-                )}
-                <td className={sz.cellPadding}>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    multiple
-                    className={`text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:${sz.text} file:bg-gray-100 file:text-gray-700`}
-                    onChange={(e) => setNewRow({ ...newRow, docs: Array.from(e.target.files || []) })}
-                  />
-                </td>
-                <td className={`${sz.cellPadding} text-center`}>
-                  <button
-                    type="button"
-                    onClick={handleAddRow}
-                    disabled={savingRow}
-                    className={`inline-flex items-center gap-1 ${sz.btnSize} rounded bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-50`}
-                    title="Add row"
-                  >
-                    {savingRow ? <Loader2 size={sz.iconSize} className="animate-spin" /> : <Plus size={sz.iconSize} />}
-                    Add
-                  </button>
-                </td>
-              </tr>
-            )}
-
-            {items.length === 0 && (!canCreate || (isFixedCost && availableFixedReasonsForNew.length === 0)) && (
-              <tr>
-                <td colSpan={dualCurrency ? 6 : 4} className="px-3 py-4 text-center text-gray-400">
-                  No {title.toLowerCase()} items added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-
-          {/* section totals summary */}
-          <tfoot>
-            <tr className="bg-gray-100 border-t border-gray-300 font-semibold text-gray-800">
-              <td colSpan={2} className={`${sz.cellPadding} text-right`}>Total {title}:</td>
-              {dualCurrency ? (
-                <>
-                  <td className={`${sz.cellPadding} text-right`}>
-                    {formatAmount(totalAmount)} {calculation.vpc_from_currency}
-                  </td>
-                  <td className={sz.cellPadding} />
                   <td className={`${sz.cellPadding} text-right font-bold`}>
                     {formatAmount(totalConv)} {calculation.vpc_to_currency}
                   </td>
-                </>
-              ) : (
-                <td className={`${sz.cellPadding} text-right font-bold`}>
-                  {formatAmount(totalConv)} {calculation.vpc_to_currency}
-                </td>
-              )}
-              <td colSpan={2} className={sz.cellPadding} />
-            </tr>
-            <tr className="bg-emerald-50 border-t border-emerald-200 text-emerald-800 font-semibold">
-              <td colSpan={2} className={`${sz.cellPadding} text-right`}>Paid:</td>
-              {dualCurrency ? (
-                <>
-                  <td className={`${sz.cellPadding} text-right`}>
-                    {formatAmount(paidFrom)} {calculation.vpc_from_currency}
-                  </td>
-                  <td className={sz.cellPadding} />
+                )}
+                <td colSpan={2} className={sz.cellPadding} />
+              </tr>
+              <tr className="bg-emerald-50 border-t border-emerald-200 text-emerald-800 font-semibold">
+                <td colSpan={2} className={`${sz.cellPadding} text-right`}>Paid:</td>
+                {dualCurrency ? (
+                  <>
+                    <td className={`${sz.cellPadding} text-right`}>
+                      {formatAmount(paidFrom)} {calculation.vpc_from_currency}
+                    </td>
+                    <td className={sz.cellPadding} />
+                    <td className={`${sz.cellPadding} text-right font-bold`}>
+                      {formatAmount(paid)} {calculation.vpc_to_currency}
+                    </td>
+                  </>
+                ) : (
                   <td className={`${sz.cellPadding} text-right font-bold`}>
                     {formatAmount(paid)} {calculation.vpc_to_currency}
                   </td>
-                </>
-              ) : (
-                <td className={`${sz.cellPadding} text-right font-bold`}>
-                  {formatAmount(paid)} {calculation.vpc_to_currency}
-                </td>
-              )}
-              <td colSpan={2} className={sz.cellPadding} />
-            </tr>
-            <tr className="bg-rose-50 border-t border-rose-200 text-rose-800 font-semibold">
-              <td colSpan={2} className={`${sz.cellPadding} text-right`}>Due:</td>
-              {dualCurrency ? (
-                <>
-                  <td className={`${sz.cellPadding} text-right`}>
-                    {formatAmount(dueFrom)} {calculation.vpc_from_currency}
-                  </td>
-                  <td className={sz.cellPadding} />
+                )}
+                <td colSpan={2} className={sz.cellPadding} />
+              </tr>
+              <tr className="bg-rose-50 border-t border-rose-200 text-rose-800 font-semibold">
+                <td colSpan={2} className={`${sz.cellPadding} text-right`}>Due:</td>
+                {dualCurrency ? (
+                  <>
+                    <td className={`${sz.cellPadding} text-right`}>
+                      {formatAmount(dueFrom)} {calculation.vpc_from_currency}
+                    </td>
+                    <td className={sz.cellPadding} />
+                    <td className={`${sz.cellPadding} text-right font-bold`}>
+                      {formatAmount(due)} {calculation.vpc_to_currency}
+                    </td>
+                  </>
+                ) : (
                   <td className={`${sz.cellPadding} text-right font-bold`}>
                     {formatAmount(due)} {calculation.vpc_to_currency}
                   </td>
-                </>
-              ) : (
-                <td className={`${sz.cellPadding} text-right font-bold`}>
-                  {formatAmount(due)} {calculation.vpc_to_currency}
-                </td>
-              )}
-              <td colSpan={2} className={sz.cellPadding} />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+                )}
+                <td colSpan={2} className={sz.cellPadding} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
 
       {/* reason autocomplete popover */}
       {showReasonDropdown && (
@@ -976,9 +990,7 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
   const [addForm, setAddForm] = useState({ type: "", from_currency: "USD", to_currency: "BDT" });
   const [savingCalc, setSavingCalc] = useState(false);
   const [sizeMode, setSizeMode] = useState("large"); // 'normal' | 'large' | 'xl'
-  const [orgTypeOpen, setOrgTypeOpen] = useState(true);
-  const [fixedGenCostOpen, setFixedGenCostOpen] = useState(true);
-  const [grandTotalOpen, setGrandTotalOpen] = useState(true);
+  const [costingSectionOpen, setCostingSectionOpen] = useState(true);
   const [orgWiseSummaryOpen, setOrgWiseSummaryOpen] = useState(true);
 
   const fetchCalculations = useCallback(async () => {
@@ -1163,459 +1175,412 @@ const VehiclePurchaseCalculationPanel = ({ vehicleId, canCreate, canUpdate, canD
   if (!vehicleId) return null;
 
   return (
-    <div>
-      {loading && (
-        <div className="flex items-center gap-2 text-emerald-600 mb-3 font-semibold">
-          <Loader2 className="w-5 h-5 animate-spin" /> Loading calculations...
+    <div className="mb-4 overflow-hidden border-2 border-green-200 rounded-md shadow-sm bg-green-50/30">
+      <div className="flex items-center justify-between w-full px-4 py-3 bg-green-50 border-b border-blue-200">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-bold tracking-wide text-[#1E3A8A] uppercase">Costing Section</h3>
+          <a
+            href="https://www.youtube.com/watch?v=6YGR8r2VnOA&t=93s"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-full hover:bg-red-100 transition-colors"
+          >
+            <span className="flex items-center justify-center w-4 h-4 text-white bg-red-500 rounded-full text-[10px]">▶</span>
+            How to use
+          </a>
         </div>
-      )}
-
-      {/* Organization Type Navigation Pills & Adjustable font/field size bar */}
-      <div className="border border-gray-400 mb-4 bg-white">
-        <SectionHeader title="Org Type & Currency" open={orgTypeOpen} onToggle={() => setOrgTypeOpen(v => !v)} />
-        {orgTypeOpen && (
-          <div className="p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-gray-50/90 p-3 rounded-xl border border-gray-200 shadow-xs">
-        {calculations.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2.5">
-            {calculations.map((calc) => {
-              const isSelected = selectedCalcId === calc.vpc_id;
-              return (
-                <button
-                  key={calc.vpc_id}
-                  onClick={() => setSelectedCalcId(calc.vpc_id)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-base font-bold border-2 transition ${
-                    isSelected
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]"
-                      : "bg-white text-gray-800 border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50"
-                  }`}
-                >
-                  <span className="capitalize">{calc.vpc_type}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded font-bold ${isSelected ? "bg-emerald-700 text-white" : "bg-gray-100 text-gray-600"}`}>
-                    {calc.vpc_from_currency}→{calc.vpc_to_currency}
-                  </span>
-                  {calc.vpc_is_active && (
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-400 text-amber-950 px-1.5 py-0.5 rounded shadow-xs">
-                      Active
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-            {canCreate && availableTypes.length > 0 && !showAddForm && (
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm sm:text-base font-bold border-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 bg-white transition"
-              >
-                <Plus size={16} /> Add another
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Font & Field Size Selector */}
-        <div className="flex items-center gap-1.5 ml-auto text-xs font-semibold text-gray-700 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-xs">
-          <span className="text-gray-500 uppercase tracking-wider text-[11px] mr-1">Font &amp; Field Size:</span>
-          {[
-            ["normal", "Normal"],
-            ["large", "Large"],
-            ["xl", "Extra Large"],
-          ].map(([mode, label]) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setSizeMode(mode)}
-              className={`px-2.5 py-1 rounded transition ${
-                sizeMode === mode
-                  ? "bg-teal-600 text-white font-bold"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <button type="button" onClick={() => setCostingSectionOpen(!costingSectionOpen)}>
+          {costingSectionOpen ? <ChevronUp className="w-5 h-5 text-[#1E3A8A]" /> : <ChevronDown className="w-5 h-5 text-[#1E3A8A]" />}
+        </button>
       </div>
 
-      {/* Organization Type & Currency box - Prominent & Bigger */}
-      {(showAddForm || calculations.length === 0) && canCreate && availableTypes.length > 0 && (
-        <div className="rounded-xl border-2 border-blue-300 bg-blue-50/70 p-5 mb-4 shadow-sm">
-          <div className="text-center mb-4 pb-2 border-b border-blue-200">
-            <h4 className="text-base font-extrabold uppercase tracking-wide text-blue-900">
-              Organization Type &amp; Currency
-            </h4>
-          </div>
-          <div className="flex flex-wrap items-end gap-5">
-            <div className="flex-1 min-w-[220px]">
-              <label className="block text-base font-bold text-gray-800 mb-1.5">
-                Select Organization Type <span className="text-red-500 text-lg">*</span>
-              </label>
-              <select
-                className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
-                value={addForm.type}
-                onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}
-              >
-                <option value="">Select Organization Type</option>
-                {availableTypes.map((t) => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                ))}
-              </select>
+      {costingSectionOpen && (
+        <div className="p-4 bg-white">
+          {loading && (
+            <div className="flex items-center gap-2 text-emerald-600 mb-3 font-semibold">
+              <Loader2 className="w-5 h-5 animate-spin" /> Loading calculations...
             </div>
-            <div className="flex-1 min-w-[280px]">
-              <label className="block text-base font-bold text-gray-800 mb-1.5">
-                Select Currency Conversion <span className="text-red-500 text-lg">*</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <select
-                  className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
-                  value={addForm.from_currency}
-                  onChange={(e) => setAddForm({ ...addForm, from_currency: e.target.value })}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <span className="text-gray-600 text-xl font-bold px-1">→</span>
-                <select
-                  className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
-                  value={addForm.to_currency}
-                  onChange={(e) => setAddForm({ ...addForm, to_currency: e.target.value })}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleAddCalculation}
-                disabled={savingCalc}
-                className="bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 text-base font-bold rounded-lg shadow-sm"
-              >
-                {savingCalc ? <Loader2 className="w-5 h-5 animate-spin mr-1" /> : <Plus className="w-5 h-5 mr-1" />}
-                Create
-              </Button>
-              {calculations.length > 0 && (
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  className="text-gray-500 hover:text-gray-800 h-11 px-3 rounded-lg hover:bg-blue-100/50 transition"
-                  aria-label="Cancel"
-                >
-                  <X size={20} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedCalc && (
-        <div className="mt-4 border-t border-gray-200 pt-4">
-          {/* Organization Type & Currency - Prominent read-only summary card */}
-          <div className="rounded-xl border-2 border-blue-300 bg-blue-50/70 p-4 sm:p-5 mb-4 shadow-sm">
-            <div className="text-center mb-3 pb-2 border-b border-blue-200">
-              <h4 className="text-base font-extrabold uppercase tracking-wide text-blue-900">
-                Organization Type &amp; Currency
-              </h4>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-6 sm:gap-8">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm sm:text-base font-semibold text-gray-600">Organization Type:</span>
-                  <span className="text-base sm:text-lg font-extrabold capitalize text-blue-950 bg-white px-3.5 py-1 rounded-lg border-2 border-blue-200 shadow-xs">
-                    {selectedCalc.vpc_type}
-                  </span>
-                  {selectedCalc.vpc_is_active && (
-                    <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider bg-amber-500 text-white px-2.5 py-0.5 rounded-md shadow-xs">
-                      Active
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm sm:text-base font-semibold text-gray-600">Currency Conversion:</span>
-                  <span className="text-base sm:text-lg font-extrabold text-blue-950 bg-white px-3.5 py-1 rounded-lg border-2 border-blue-200 shadow-xs">
-                    {selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency}
-                  </span>
-                </div>
-                {calcHasItems && (
-                  <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-500 bg-gray-200/80 px-2.5 py-1 rounded-md">
-                    <span>Currency locked</span>
-                    <Lock size={14} />
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {canUpdate && !selectedCalc.vpc_is_active && (
-                  <button
-                    onClick={() => handleActivate(selectedCalc)}
-                    className="inline-flex items-center gap-1.5 text-sm font-bold px-3.5 py-1.5 rounded-lg border-2 border-amber-500 text-amber-800 bg-amber-50 hover:bg-amber-100 transition shadow-xs"
-                  >
-                    Set Active
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={() => handleDeleteCalc(selectedCalc)}
-                    className="inline-flex items-center justify-center p-2 rounded-lg border-2 border-red-300 text-red-600 bg-white hover:bg-red-50 hover:border-red-400 transition"
-                    aria-label="Delete calculation"
-                    title="Delete calculation"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-          </div>
-        )}
-      </div>
-
-      {/* selected calculation detail */}
-      {selectedCalc && (
-        <div>
-          <div className="border border-gray-400 mb-4 bg-white">
-            <SectionHeader title="Fixed & Gen Cost" open={fixedGenCostOpen} onToggle={() => setFixedGenCostOpen(v => !v)} />
-            {fixedGenCostOpen && (
-              <div className="p-4">
-                <CostingSection
-            className="mt-4"
-            calculation={selectedCalc}
-            section="purchase_costing"
-            title="Fixed Cost"
-            suggestionTypeId={PURCHASE_EXPENDITURE_SUGGESTION_TYPE_ID}
-            canCreate={canCreate}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            onChanged={handleCalcChanged}
-            sizeMode={sizeMode}
-          />
-
-          {!selectedCalc.general_cost_locked && (
-            <CostingSection
-              className="mt-8"
-              calculation={selectedCalc}
-              section="other_costing"
-              title="General Cost"
-              suggestionTypeId={OTHER_CHARGES_SUGGESTION_TYPE_ID}
-              canCreate={canCreate}
-              canUpdate={canUpdate}
-              canDelete={canDelete}
-              onChanged={handleCalcChanged}
-              sizeMode={sizeMode}
-            />
           )}
+
+          {/* Organization Type Navigation Pills */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            {calculations.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3">
+                {calculations.map((calc) => {
+                  const isSelected = selectedCalcId === calc.vpc_id;
+                  const isActive = calc.vpc_is_active;
+
+                  return (
+                    <button
+                      key={calc.vpc_id}
+                      onClick={() => setSelectedCalcId(calc.vpc_id)}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-all ${isSelected
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : isActive
+                          ? "bg-white text-gray-800 border-gray-300 hover:border-gray-400 shadow-sm"
+                          : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                        }`}
+                    >
+                      {isActive && !isSelected && <span className="text-orange-500">★</span>}
+                      {isActive && isSelected && <span className="text-white">★</span>}
+                      <span className="capitalize">{calc.vpc_type}</span>
+                      <span>{calc.vpc_from_currency}→{calc.vpc_to_currency}</span>
+                      {isActive && (
+                        <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold ${isSelected ? "bg-white/20 text-white" : "bg-orange-100 text-orange-700"
+                          }`}>
+                          Active
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+                {canCreate && availableTypes.length > 0 && !showAddForm && (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold border-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 bg-white transition"
+                  >
+                    <Plus size={16} /> Add another
+                  </button>
+                )}
               </div>
             )}
           </div>
 
-          {/* 1. Grand Total Costing for Selected Organization Type */}
-          {grandTotal && (
-            <div className="border border-gray-400 mb-4 bg-white">
-              <SectionHeader title={`Grand Total Costing (${selectedCalc.vpc_type.toUpperCase()})`} open={grandTotalOpen} onToggle={() => setGrandTotalOpen(v => !v)} />
-              {grandTotalOpen && (
-                <div className="p-4">
-                  <div className="rounded-xl border-2 border-indigo-300 overflow-hidden shadow-sm bg-white">
-              <div className="text-center py-2.5 bg-indigo-600 text-white flex items-center justify-center gap-2">
-                <Layers className="w-5 h-5" />
-                <h4 className="text-base font-extrabold uppercase tracking-wide">
-                  Grand Total Costing — {selectedCalc.vpc_type.toUpperCase()} ({selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency})
+          {/* Organization Type & Currency box */}
+          {(showAddForm || calculations.length === 0) && canCreate && availableTypes.length > 0 && (
+            <div className="rounded-xl border-2 border-blue-300 bg-blue-50/70 p-5 mb-6 shadow-sm">
+              <div className="text-center mb-4 pb-2 border-b border-blue-200">
+                <h4 className="text-base font-extrabold uppercase tracking-wide text-blue-900">
+                  Organization Type &amp; Currency
                 </h4>
               </div>
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="bg-indigo-50/80 border-b border-indigo-200 text-indigo-950 font-bold">
-                    <th className="px-4 py-2.5 text-left">Costing Section</th>
-                    <th className="px-4 py-2.5 text-right">Amount ({selectedCalc.vpc_from_currency})</th>
-                    <th className="px-4 py-2.5 text-right">Conversion Amount ({selectedCalc.vpc_to_currency})</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-indigo-100">
-                  <tr className="bg-white hover:bg-indigo-50/30 transition">
-                    <td className="px-4 py-2.5 font-medium text-gray-800">Total Fixed Cost</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
-                      {formatAmount(grandTotal.fixedAmount)} {selectedCalc.vpc_from_currency}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-bold text-gray-900">
-                      {formatAmount(grandTotal.fixedConv)} {selectedCalc.vpc_to_currency}
-                    </td>
-                  </tr>
-                  {!selectedCalc.general_cost_locked && (
-                    <tr className="bg-white hover:bg-indigo-50/30 transition">
-                      <td className="px-4 py-2.5 font-medium text-gray-800">Total General Cost</td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
-                        {formatAmount(grandTotal.otherAmount)} {selectedCalc.vpc_from_currency}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-bold text-gray-900">
-                        {formatAmount(grandTotal.otherConv)} {selectedCalc.vpc_to_currency}
-                      </td>
-                    </tr>
+              <div className="flex flex-wrap items-end gap-5">
+                <div className="flex-1 min-w-[220px]">
+                  <label className="block text-base font-bold text-gray-800 mb-1.5">
+                    Select Organization Type <span className="text-red-500 text-lg">*</span>
+                  </label>
+                  <select
+                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
+                    value={addForm.type}
+                    onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}
+                  >
+                    <option value="">Select Organization Type</option>
+                    {availableTypes.map((t) => (
+                      <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[280px]">
+                  <label className="block text-base font-bold text-gray-800 mb-1.5">
+                    Select Currency Conversion <span className="text-red-500 text-lg">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
+                      value={addForm.from_currency}
+                      onChange={(e) => setAddForm({ ...addForm, from_currency: e.target.value })}
+                    >
+                      {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <span className="text-gray-600 text-xl font-bold px-1">→</span>
+                    <select
+                      className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-2.5 text-base font-semibold bg-white text-gray-900 shadow-xs focus:border-blue-600 focus:ring-2 focus:ring-blue-400 outline-none"
+                      value={addForm.to_currency}
+                      onChange={(e) => setAddForm({ ...addForm, to_currency: e.target.value })}
+                    >
+                      {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleAddCalculation}
+                    disabled={savingCalc}
+                    className="bg-blue-600 text-white hover:bg-blue-700 h-11 px-6 text-base font-bold rounded-lg shadow-sm"
+                  >
+                    {savingCalc ? <Loader2 className="w-5 h-5 animate-spin mr-1" /> : <Plus className="w-5 h-5 mr-1" />}
+                    Create
+                  </Button>
+                  {calculations.length > 0 && (
+                    <button
+                      onClick={() => setShowAddForm(false)}
+                      className="text-gray-500 hover:text-gray-800 h-11 px-3 rounded-lg hover:bg-blue-100/50 transition"
+                      aria-label="Cancel"
+                    >
+                      <X size={20} />
+                    </button>
                   )}
-                  <tr className="bg-emerald-50/80 text-emerald-900 font-semibold">
-                    <td className="px-4 py-2.5">Total Paid</td>
-                    <td className="px-4 py-2.5 text-right">
-                      {formatAmount(grandTotal.paidAmount)} {selectedCalc.vpc_from_currency}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-bold text-emerald-700">
-                      {formatAmount(grandTotal.paidConv)} {selectedCalc.vpc_to_currency}
-                    </td>
-                  </tr>
-                  <tr className="bg-rose-50/80 text-rose-900 font-semibold">
-                    <td className="px-4 py-2.5">Total Due</td>
-                    <td className="px-4 py-2.5 text-right">
-                      {formatAmount(grandTotal.dueAmount)} {selectedCalc.vpc_from_currency}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-bold text-rose-700">
-                      {formatAmount(grandTotal.dueConv)} {selectedCalc.vpc_to_currency}
-                    </td>
-                  </tr>
-                  <tr className="bg-indigo-900 text-white font-extrabold text-base">
-                    <td className="px-4 py-3">
-                      Total Costing ({selectedCalc.vpc_type.toUpperCase()}){selectedCalc.general_cost_locked ? " (Fixed only)" : ""}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {formatAmount(grandTotal.grandAmount)} {selectedCalc.vpc_from_currency}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {formatAmount(grandTotal.grandConv)} {selectedCalc.vpc_to_currency}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                </div>
+              </div>
             </div>
+          )}
+
+          {selectedCalc && (
+            <>
+              {/* Selected calculation summary box */}
+              <div className="flex items-center justify-between p-4 mb-6 bg-white border border-gray-100 rounded-xl shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md">
+                    <Building2 size={16} />
+                    <span className="capitalize">{selectedCalc.vpc_type}</span>
+                  </div>
+                  <div className="px-3 py-1.5 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-md">
+                    {selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {canUpdate && !selectedCalc.vpc_is_active && (
+                    <button
+                      onClick={() => handleActivate(selectedCalc)}
+                      className="px-4 py-1.5 text-sm font-bold text-orange-600 bg-white border border-orange-500 rounded-full hover:bg-orange-50 transition-colors"
+                    >
+                      Set Active
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => handleDeleteCalc(selectedCalc)}
+                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete calculation"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Fixed & General Cost Sections */}
+              <div className="space-y-4 mb-6">
+                <CostingSection
+                  calculation={selectedCalc}
+                  section="purchase_costing"
+                  title="Fixed Cost"
+                  suggestionTypeId={PURCHASE_EXPENDITURE_SUGGESTION_TYPE_ID}
+                  canCreate={canCreate}
+                  canUpdate={canUpdate}
+                  canDelete={canDelete}
+                  onChanged={handleCalcChanged}
+                  sizeMode={sizeMode}
+                />
+
+                {!selectedCalc.general_cost_locked && (
+                  <CostingSection
+                    calculation={selectedCalc}
+                    section="other_costing"
+                    title="General Cost"
+                    suggestionTypeId={OTHER_CHARGES_SUGGESTION_TYPE_ID}
+                    canCreate={canCreate}
+                    canUpdate={canUpdate}
+                    canDelete={canDelete}
+                    onChanged={handleCalcChanged}
+                    sizeMode={sizeMode}
+                  />
+                )}
+              </div>
+
+              {/* 1. Grand Total Costing for Selected Organization Type */}
+              {grandTotal && (
+                <div className="mb-6">
+                  <div className="rounded-xl border border-indigo-200 overflow-hidden shadow-sm bg-white">
+                    <div className="py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white flex items-center justify-center gap-2">
+                      <Layers className="w-5 h-5 text-indigo-100" />
+                      <h4 className="text-sm font-bold uppercase tracking-wide">
+                        Grand Total Costing — {selectedCalc.vpc_type.toUpperCase()} ({selectedCalc.vpc_from_currency} → {selectedCalc.vpc_to_currency})
+                      </h4>
+                    </div>
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="bg-indigo-50/80 border-b border-indigo-200 text-indigo-950 font-bold">
+                          <th className="px-4 py-2.5 text-left">Costing Section</th>
+                          <th className="px-4 py-2.5 text-right">Amount ({selectedCalc.vpc_from_currency})</th>
+                          <th className="px-4 py-2.5 text-right">Conversion Amount ({selectedCalc.vpc_to_currency})</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-indigo-100">
+                        <tr className="bg-white hover:bg-indigo-50/30 transition">
+                          <td className="px-4 py-2.5 font-medium text-gray-800">Total Fixed Cost</td>
+                          <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
+                            {formatAmount(grandTotal.fixedAmount)} {selectedCalc.vpc_from_currency}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-bold text-gray-900">
+                            {formatAmount(grandTotal.fixedConv)} {selectedCalc.vpc_to_currency}
+                          </td>
+                        </tr>
+                        {!selectedCalc.general_cost_locked && (
+                          <tr className="bg-white hover:bg-indigo-50/30 transition">
+                            <td className="px-4 py-2.5 font-medium text-gray-800">Total General Cost</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-gray-700">
+                              {formatAmount(grandTotal.otherAmount)} {selectedCalc.vpc_from_currency}
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-bold text-gray-900">
+                              {formatAmount(grandTotal.otherConv)} {selectedCalc.vpc_to_currency}
+                            </td>
+                          </tr>
+                        )}
+                        <tr className="bg-emerald-50/80 text-emerald-900 font-semibold">
+                          <td className="px-4 py-2.5">Total Paid</td>
+                          <td className="px-4 py-2.5 text-right">
+                            {formatAmount(grandTotal.paidAmount)} {selectedCalc.vpc_from_currency}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-bold text-emerald-700">
+                            {formatAmount(grandTotal.paidConv)} {selectedCalc.vpc_to_currency}
+                          </td>
+                        </tr>
+                        <tr className="bg-rose-50/80 text-rose-900 font-semibold">
+                          <td className="px-4 py-2.5">Total Due</td>
+                          <td className="px-4 py-2.5 text-right">
+                            {formatAmount(grandTotal.dueAmount)} {selectedCalc.vpc_from_currency}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-bold text-rose-700">
+                            {formatAmount(grandTotal.dueConv)} {selectedCalc.vpc_to_currency}
+                          </td>
+                        </tr>
+                        <tr className="bg-indigo-900 text-white font-extrabold text-base">
+                          <td className="px-4 py-3">
+                            Total Costing ({selectedCalc.vpc_type.toUpperCase()}){selectedCalc.general_cost_locked ? " (Fixed only)" : ""}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {formatAmount(grandTotal.grandAmount)} {selectedCalc.vpc_from_currency}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {formatAmount(grandTotal.grandConv)} {selectedCalc.vpc_to_currency}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* 2. Organization Type Wise Grand Total Breakdown Table */}
           {calculations.length > 0 && (
-            <div className="border border-gray-400 mb-4 bg-white">
-              <SectionHeader title="Org Wise Summary" open={orgWiseSummaryOpen} onToggle={() => setOrgWiseSummaryOpen(v => !v)} />
-              {orgWiseSummaryOpen && (
-                <div className="p-4">
-                  <div className="rounded-xl border-2 border-purple-300 overflow-hidden shadow-sm bg-white">
-              <div className="text-center py-2.5 bg-gradient-to-r from-purple-700 to-indigo-800 text-white">
-                <h4 className="text-base font-extrabold uppercase tracking-wider">
+            <div className="mb-4 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+              {/* <SectionHeader title="Organization Type Wise Grand Total Costing Summary" open={orgWiseSummaryOpen} onToggle={() => setOrgWiseSummaryOpen(v => !v)} /> */}
+              <div className="text-center py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white flex items-center justify-center gap-2">
+                <Layers className="w-5 h-5 text-indigo-100" />
+                <h4 className="text-sm font-bold uppercase tracking-wide">
                   Organization Type Wise Grand Total Costing Summary
                 </h4>
-                <p className="text-xs text-purple-200 mt-0.5">
-                  Detailed costing, paid, and due summary categorized by each Organization Type
-                </p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-purple-100/90 border-b border-purple-200 text-purple-950 font-bold">
-                      <th className="px-4 py-2.5 text-left">Organization Type</th>
-                      <th className="px-4 py-2.5 text-left">Currency</th>
-                      <th className="px-4 py-2.5 text-right">Fixed Cost</th>
-                      <th className="px-4 py-2.5 text-right">General Cost</th>
-                      <th className="px-4 py-2.5 text-right">Total Costing</th>
-                      <th className="px-4 py-2.5 text-right">Total Paid</th>
-                      <th className="px-4 py-2.5 text-right">Total Due</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-purple-100">
-                    {allCalcsSummary.map((item) => {
-                      const isCurrent = selectedCalcId === item.calcId;
-                      return (
-                        <tr
-                          key={item.calcId}
-                          onClick={() => setSelectedCalcId(item.calcId)}
-                          className={`cursor-pointer transition ${
-                            isCurrent
-                              ? "bg-purple-50/90 font-medium"
-                              : "hover:bg-gray-50/80 bg-white"
-                          }`}
-                          title="Click to view this organization type"
-                        >
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold capitalize text-gray-900 text-base">
-                                {item.type}
-                              </span>
-                              {item.isActive && (
-                                <span className="text-[10px] font-bold uppercase tracking-wide bg-amber-400 text-amber-950 px-2 py-0.5 rounded shadow-xs">
-                                  Active
-                                </span>
-                              )}
-                              {isCurrent && (
-                                <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded border border-purple-300">
-                                  Viewing
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-semibold text-xs">
-                            {item.fromCurrency} → {item.toCurrency}
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-800">
-                            <div>{formatAmount(item.fixedConv)} {item.toCurrency}</div>
-                            {item.fromCurrency !== item.toCurrency && (
-                              <div className="text-[11px] text-gray-400">
-                                ({formatAmount(item.fixedAmount)} {item.fromCurrency})
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-800">
-                            {item.locked ? (
-                              <span className="text-gray-400 text-xs italic">Locked</span>
-                            ) : (
-                              <>
-                                <div>{formatAmount(item.otherConv)} {item.toCurrency}</div>
+              {orgWiseSummaryOpen && (
+                <div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="bg-purple-100/90 border-b border-purple-200 text-purple-950 font-bold">
+                          <th className="px-4 py-2.5 text-left">Organization Type</th>
+                          <th className="px-4 py-2.5 text-left">Currency</th>
+                          <th className="px-4 py-2.5 text-right">Fixed Cost</th>
+                          <th className="px-4 py-2.5 text-right">General Cost</th>
+                          <th className="px-4 py-2.5 text-right">Total Costing</th>
+                          <th className="px-4 py-2.5 text-right">Total Paid</th>
+                          <th className="px-4 py-2.5 text-right">Total Due</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-purple-100">
+                        {allCalcsSummary.map((item) => {
+                          const isCurrent = selectedCalcId === item.calcId;
+                          return (
+                            <tr
+                              key={item.calcId}
+                              onClick={() => setSelectedCalcId(item.calcId)}
+                              className={`cursor-pointer transition ${isCurrent
+                                ? "bg-purple-50/90 font-medium"
+                                : "hover:bg-gray-50/80 bg-white"
+                                }`}
+                              title="Click to view this organization type"
+                            >
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-extrabold capitalize text-gray-900 text-base">
+                                    {item.type}
+                                  </span>
+                                  {item.isActive && (
+                                    <span className="text-[10px] font-bold uppercase tracking-wide bg-amber-400 text-amber-950 px-2 py-0.5 rounded shadow-xs">
+                                      Active
+                                    </span>
+                                  )}
+                                  {isCurrent && (
+                                    <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded border border-purple-300">
+                                      Viewing
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-gray-600 font-semibold text-xs">
+                                {item.fromCurrency} → {item.toCurrency}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-800">
+                                <div>{formatAmount(item.fixedConv)} {item.toCurrency}</div>
                                 {item.fromCurrency !== item.toCurrency && (
                                   <div className="text-[11px] text-gray-400">
-                                    ({formatAmount(item.otherAmount)} {item.fromCurrency})
+                                    ({formatAmount(item.fixedAmount)} {item.fromCurrency})
                                   </div>
                                 )}
-                              </>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-indigo-950">
-                            {formatAmount(item.totalConv)} {item.toCurrency}
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-emerald-700">
-                            {formatAmount(item.paidConv)} {item.toCurrency}
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-rose-700">
-                            {formatAmount(item.dueConv)} {item.toCurrency}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  {calculations.length > 1 && (
-                    <tfoot>
-                      <tr className="bg-gradient-to-r from-purple-900 to-indigo-950 text-white font-extrabold text-sm">
-                        <td colSpan={4} className="px-4 py-3 text-right uppercase tracking-wider">
-                          Net Grand Total (All Organization Types):
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {formatAmount(netGrandTotals.totalConv)} BDT
-                        </td>
-                        <td className="px-4 py-3 text-right text-emerald-300">
-                          {formatAmount(netGrandTotals.paidConv)} BDT
-                        </td>
-                        <td className="px-4 py-3 text-right text-rose-300">
-                          {formatAmount(netGrandTotals.dueConv)} BDT
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-            </div>
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-800">
+                                {item.locked ? (
+                                  <span className="text-gray-400 text-xs italic">Locked</span>
+                                ) : (
+                                  <>
+                                    <div>{formatAmount(item.otherConv)} {item.toCurrency}</div>
+                                    {item.fromCurrency !== item.toCurrency && (
+                                      <div className="text-[11px] text-gray-400">
+                                        ({formatAmount(item.otherAmount)} {item.fromCurrency})
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-indigo-950">
+                                {formatAmount(item.totalConv)} {item.toCurrency}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-emerald-700">
+                                {formatAmount(item.paidConv)} {item.toCurrency}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap font-bold text-rose-700">
+                                {formatAmount(item.dueConv)} {item.toCurrency}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      {calculations.length > 1 && (
+                        <tfoot>
+                          <tr className="bg-gradient-to-r from-purple-900 to-indigo-950 text-white font-extrabold text-sm">
+                            <td colSpan={4} className="px-4 py-3 text-right uppercase tracking-wider">
+                              Net Grand Total (All Organization Types):
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {formatAmount(netGrandTotals.totalConv)} BDT
+                            </td>
+                            <td className="px-4 py-3 text-right text-emerald-300">
+                              {formatAmount(netGrandTotals.paidConv)} BDT
+                            </td>
+                            <td className="px-4 py-3 text-right text-rose-300">
+                              {formatAmount(netGrandTotals.dueConv)} BDT
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
           )}
-        </div>
-      )}
 
-      {!loading && calculations.length === 0 && !showAddForm && (
-        <p className="text-sm text-gray-500">No purchase calculations yet for this vehicle.</p>
+          {!loading && calculations.length === 0 && !showAddForm && (
+            <p className="text-sm text-gray-500">No purchase calculations yet for this vehicle.</p>
+          )}
+        </div>
       )}
     </div>
   );
 };
 
 export default VehiclePurchaseCalculationPanel;
+
