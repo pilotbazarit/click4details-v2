@@ -27,8 +27,8 @@ import CategoryService from "@/services/CategoryService";
 import GiftService from "@/services/GiftService";
 import PblHistoryPanel from "@/components/PblHistoryPanel";
 import { parseStoredUser } from "@/lib/parseStoredUser";
-import { hasPermission } from "@/lib/utils";
-import { useAppContext } from "@/context/AppContext";
+// import { hasPermission } from "@/lib/utils";
+// import { useAppContext } from "@/context/AppContext";
 import { Pencil, Check, Eye, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 
 const Select = dynamic(() => import('react-select'), { ssr: false });
