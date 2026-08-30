@@ -11,7 +11,7 @@ const STORAGE_WELCOMED_KEY = "pilot_bazar_chat_welcomed";
 const WELCOME_MESSAGE = {
   id: "welcome",
   role: "bot",
-  text: "আস্সালামু আলাইকুম! আমি Sidratul Muntaha, Pilot Bazar-এর কাস্টমার সার্ভিস থেকে বলছি। 😊\n\nআপনি কি গাড়ি কিনতে আগ্রহী?",
+  text: "আস্সালামু আলাইকুম! আমি Sidratul Muntaha, Click4Details-এর কাস্টমার সার্ভিস থেকে বলছি। 😊\n\nআপনি কি গাড়ি কিনতে আগ্রহী?",
   options: ["হ্যাঁ, কিনতে চাই", "না, শুধু দেখছি"],
   timestamp: new Date().toISOString(),
 };
@@ -204,7 +204,7 @@ export default function ChatbotWidget() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-white text-sm leading-tight">Sidratul Muntaha</p>
-              <p className="text-[11px] text-white/70 mt-0.5">Pilot Bazar · Customer Service</p>
+              <p className="text-[11px] text-white/70 mt-0.5">Click4Details · Customer Service</p>
             </div>
             <button
               onClick={toggleChat}

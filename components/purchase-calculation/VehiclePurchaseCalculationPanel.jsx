@@ -20,7 +20,7 @@ import Swal from "sweetalert2";
 import PurchasePaymentService from "@/services/PurchasePaymentService";
 import PresetSuggestionService from "@/services/PresetSuggestionService";
 import SystemDocumentService from "@/services/SystemDocumentService";
-import { formatPrice } from "@/helpers/functions";
+import { formatDate, formatPrice } from "@/helpers/functions";
 import { buildAmountOptions } from "@/helpers/amountSuggestions";
 
 const CALCULATION_TYPES = ["exporter", "importer", "dealer", "retailer", "seller"];
@@ -36,6 +36,21 @@ const SYSTEM_DOC_TYPE_ID = 475;
 const formatAmount = (value) => {
   if (value === null || value === undefined || value === "") return "0.00";
   return formatPrice(Number(value).toFixed(2));
+};
+
+// vpci_date is cast to `date` on the model, so the API sends a full ISO
+// timestamp ("2026-08-26T00:00:00.000000Z") for what is really a date-only
+// value. Read the calendar date straight off the string instead of letting
+// dayjs re-anchor it in the viewer's timezone - anywhere west of UTC that
+// would render the row a day early. <input type="date"> wants the same
+// bare yyyy-MM-dd, which is all it ever accepts.
+const toDateInputValue = (value) => {
+  const match = String(value ?? "").match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : "";
+};
+const formatRowDate = (value) => {
+  const isoDate = toDateInputValue(value);
+  return isoDate ? formatDate(isoDate, "DD MMM, YYYY") : "-";
 };
 
 const getPresetSuggestionRows = (response) => {
@@ -316,12 +331,12 @@ const CostingSection = ({
   const handleStartEdit = (item) => {
     setEditingItemId(item.vpci_id);
     const amountVal = item.vpci_amount !== null && item.vpci_amount !== undefined ? String(item.vpci_amount) : "";
-    const toAmountVal = item.vpci_total_amount !== null && item.vpci_total_amount !== undefined ? String(item.vpci_total_amount) : "";
+    const toAmountVal = item.vpci_conv_amount !== null && item.vpci_conv_amount !== undefined ? String(item.vpci_conv_amount) : "";
     setEditRow({
-      date: item.vpci_date || "",
+      date: toDateInputValue(item.vpci_date),
       reason: item.vpci_reason || "",
       amount: amountVal,
-      conv_rate: item.vpci_conversion_rate !== null && item.vpci_conversion_rate !== undefined ? String(item.vpci_conversion_rate) : "",
+      conv_rate: item.vpci_conv_rate !== null && item.vpci_conv_rate !== undefined ? String(item.vpci_conv_rate) : "",
       toAmount: toAmountVal,
       lastEditedSide: "from",
       docs: [],
@@ -368,7 +383,7 @@ const CostingSection = ({
     }
     try {
       setSavingRow(true);
-      await PurchasePaymentService.Commands.addItem(calculation.vpc_id, buildFormData(newRow));
+      await PurchasePaymentService.Commands.addCostingItem(calculation.vpc_id, buildFormData(newRow));
       setNewRow(emptyNewRow);
       closeSuggestions();
       closeAmountDropdown();
@@ -394,8 +409,10 @@ const CostingSection = ({
     try {
       setSavingRow(true);
       const fd = buildFormData(editRow);
-      fd.append("_method", "PUT");
-      await PurchasePaymentService.Commands.updateItem(itemId, fd);
+      // no _method spoofing here: the update route is registered as POST
+      // (api routes/api.php), and Laravel's method override would turn a
+      // spoofed PUT into a 405 since no PUT route exists for costing-items.
+      await PurchasePaymentService.Commands.updateCostingItem(itemId, fd);
       setEditingItemId(null);
       setEditRow(emptyNewRow);
       closeSuggestions();
@@ -422,7 +439,7 @@ const CostingSection = ({
     if (!result.isConfirmed) return;
 
     try {
-      await PurchasePaymentService.Commands.deleteItem(item.vpci_id);
+      await PurchasePaymentService.Commands.deleteCostingItem(item.vpci_id);
       toast.success("Costing row deleted.");
       onChanged?.();
     } catch (error) {
@@ -625,21 +642,21 @@ const CostingSection = ({
 
               return (
                 <tr key={item.vpci_id} className="border-b border-gray-200 hover:bg-gray-50/60">
-                  <td className={sz.cellPadding}>{item.vpci_date || "-"}</td>
+                  <td className={sz.cellPadding}>{formatRowDate(item.vpci_date)}</td>
                   <td className={`${sz.cellPadding} font-medium text-gray-800`}>{item.vpci_reason || "-"}</td>
                   {dualCurrency ? (
                     <>
                       <td className={`${sz.cellPadding} text-right font-medium`}>{formatAmount(item.vpci_amount)}</td>
                       <td className={`${sz.cellPadding} text-right text-gray-500`}>
-                        {item.vpci_conversion_rate ? Number(item.vpci_conversion_rate).toFixed(4) : "-"}
+                        {Number(item.vpci_conv_rate) > 0 ? Number(item.vpci_conv_rate).toFixed(4) : "-"}
                       </td>
                       <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
-                        {formatAmount(item.vpci_total_amount)}
+                        {formatAmount(item.vpci_conv_amount)}
                       </td>
                     </>
                   ) : (
                     <td className={`${sz.cellPadding} text-right font-semibold text-gray-900`}>
-                      {formatAmount(item.vpci_total_amount ?? item.vpci_amount)}
+                      {formatAmount(item.vpci_conv_amount ?? item.vpci_amount)}
                     </td>
                   )}
                   <td className={sz.cellPadding}>
@@ -913,10 +930,10 @@ const CostingSection = ({
               key={opt.value}
               type="button"
               onClick={() => selectAmountOption(opt.value)}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 hover:text-blue-700 text-gray-700 border-b border-gray-100 last:border-b-0 flex items-center justify-between"
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 hover:text-blue-700 text-gray-700 border-b border-gray-100 last:border-b-0 flex flex-col items-start gap-0.5"
             >
               <span className="font-semibold text-gray-900">{opt.label}</span>
-              <span className="text-[11px] text-gray-400">{opt.value.toLocaleString()}</span>
+              <span className="text-[11px] text-gray-500">{opt.words}</span>
             </button>
           ))}
         </div>

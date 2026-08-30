@@ -3035,7 +3035,13 @@ const ProductList = () => {
 
                       {isColumnVisible('costing-price') && (
                         <TableCell className="border-r border-gray-200 font-medium py-4">
-                          <span>{item?.vehicle_db_price?.vp_user_costing_price ?? "-"}</span>
+                          <span>
+                            {item?.vehicle_db_price?.vp_user_costing_price != null
+                              ? item.vehicle_db_price.vp_user_costing_price
+                              : (item?.vehicle_price?.v_costing_price != null
+                                  ? item.vehicle_price.v_costing_price
+                                  : "-")}
+                          </span>
                         </TableCell>
                       )}
 
@@ -3412,8 +3418,8 @@ const ProductList = () => {
                                 }
                               }}
                               className="text-orange-600 hover:text-orange-800 disabled:cursor-not-allowed disabled:text-gray-400"
-                              title="Payment PDF"
-                              aria-label={`Download payment PDF for ${item.v_name}`}
+                              title="Costing Payment PDF"
+                              aria-label={`Download costing payment PDF for ${item.v_name}`}
                             >
                               <CloudDownload size={18} />
                             </button>

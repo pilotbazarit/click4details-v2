@@ -251,6 +251,16 @@ const CustomersDataTable = () => {
     [isColumnVisible]
   );
 
+  // One column absorbs extra width when fewer columns are visible so the table stays full width.
+  const flexColumnKey = useMemo(() => {
+    const preference = ["note", "search", "address"];
+    for (const key of preference) {
+      if (isColumnVisible(key)) return key;
+    }
+    const last = [...visibleDataColumns].reverse().find((col) => col.key !== "customer");
+    return last?.key ?? "customer";
+  }, [visibleDataColumns, isColumnVisible]);
+
   const tableMinWidth = useMemo(() => {
     const customerWidth = isMobileViewport ? 168 : null;
     const actionsWidth = isMobileViewport ? 96 : ACTIONS_COLUMN_WIDTH;
@@ -639,15 +649,25 @@ const CustomersDataTable = () => {
           </p>
         ) : null}
         <div className="overflow-x-auto overscroll-x-contain" style={{ WebkitOverflowScrolling: "touch" }}>
-          <table className="table-fixed" style={{ width: tableMinWidth, minWidth: tableMinWidth }}>
+          <table className="w-full table-fixed" style={{ minWidth: tableMinWidth }}>
             <colgroup>
-              {visibleDataColumns.map((column) => (
-                <col
-                  key={column.key}
-                  style={{ width: column.key === "customer" ? customerColumnWidth : column.minWidth }}
-                />
-              ))}
-              <col style={{ width: actionsColumnWidth }} />
+              {visibleDataColumns.map((column) => {
+                const isFlexColumn = column.key === flexColumnKey;
+                return (
+                  <col
+                    key={column.key}
+                    style={
+                      isFlexColumn
+                        ? { minWidth: column.minWidth }
+                        : {
+                            width: column.key === "customer" ? customerColumnWidth : column.minWidth,
+                            minWidth: column.key === "customer" ? customerColumnWidth : column.minWidth,
+                          }
+                    }
+                  />
+                );
+              })}
+              <col style={{ width: actionsColumnWidth, minWidth: actionsColumnWidth }} />
             </colgroup>
             <thead className="bg-slate-800">
               <tr>
@@ -655,13 +675,21 @@ const CustomersDataTable = () => {
                   const isSortable = !!column.sortable;
                   const isActiveSort = sortBy === column.sortable;
                   const isCustomerColumn = column.key === "customer";
+                  const isFlexColumn = column.key === flexColumnKey;
                   return (
                     <th
                       key={column.key}
                       className={`px-3 py-3 text-left text-xs font-semibold text-slate-100 uppercase tracking-wider whitespace-nowrap ${
                         isSortable ? "cursor-pointer hover:bg-slate-700" : ""
                       } ${isCustomerColumn ? stickyCustomerTh : ""}`}
-                      style={{ width: isCustomerColumn ? customerColumnWidth : column.minWidth }}
+                      style={
+                        isFlexColumn
+                          ? { minWidth: column.minWidth }
+                          : {
+                              width: isCustomerColumn ? customerColumnWidth : column.minWidth,
+                              minWidth: isCustomerColumn ? customerColumnWidth : column.minWidth,
+                            }
+                      }
                       onClick={() => {
                         if (isSortable) handleSort(column.sortable);
                       }}

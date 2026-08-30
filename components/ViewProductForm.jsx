@@ -27,6 +27,8 @@ import CategoryService from "@/services/CategoryService";
 import GiftService from "@/services/GiftService";
 import PblHistoryPanel from "@/components/PblHistoryPanel";
 import { parseStoredUser } from "@/lib/parseStoredUser";
+import { hasPermission } from "@/lib/utils";
+import { useAppContext } from "@/context/AppContext";
 import { Pencil, Check, Eye, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 
 const Select = dynamic(() => import('react-select'), { ssr: false });
@@ -285,11 +287,18 @@ const ViewProductForm = ({ productId }) => {
     const [selectedFsId, setSelectedFsId] = useState([]);
     const [priceSelection, setPriceSelection] = useState('fixed');
     const [user, setUser] = useState(null);
+    // const { permissionList } = useAppContext();
     const [countryData, setCountryData] = useState([]);
 
     // Missing state from UpdateProductForm for Category & Gift
     const [giftData, setGiftData] = useState([]);
     const [isGiftLoading, setIsGiftLoading] = useState(false);
+    // seller gift approval - the stock page (/pb-home) only shows a seller's
+    // gift once somebody with the global Vehicle.ApproveUserGiftByPbl grant
+    // has signed off on this particular attachment
+    const [userGiftApproved, setUserGiftApproved] = useState(false);
+    const [approvingUserGift, setApprovingUserGift] = useState(false);
+    const [canApproveUserGift, setCanApproveUserGift] = useState(false);
     const [masterCategoryItems, setMasterCategoryItems] = useState([]);
     const [categoryItems, setCategoryItems] = useState([]);
     const [categoryHistory, setCategoryHistory] = useState([]);
@@ -670,6 +679,30 @@ const ViewProductForm = ({ productId }) => {
             setUser(userInfo);
         }
     }, []);
+
+    // shopId 0 = the platform-wide grant shape, matching the backend's
+    // deliberately non-shop-scoped check for this permission
+    useEffect(() => {
+        setCanApproveUserGift(
+            user?.user_mode === "supreme" ||
+            hasPermission(permissionList, 0, "Vehicle", "ApproveUserGiftByPbl")
+        );
+    }, [user, permissionList]);
+
+    const handleToggleUserGiftApproval = async (nextApproved) => {
+        try {
+            setApprovingUserGift(true);
+            const response = await VehicleService.Commands.approveUserGiftByPbl(productId, nextApproved);
+            if (response?.status === "success") {
+                setUserGiftApproved(Number(response?.data?.v_user_gift_approved) === 1);
+                toast.success(nextApproved ? "Seller gift approved." : "Seller gift approval removed.");
+            }
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to update seller gift approval");
+        } finally {
+            setApprovingUserGift(false);
+        }
+    };
 
 
     const fetchModelData = async (selectedBrandId) => {
@@ -1201,6 +1234,7 @@ const ViewProductForm = ({ productId }) => {
                 setValue('v_product_type_id', data.v_product_type_id ? data.v_product_type_id : "1");
                 setValue('category', data.category ? data.category : "");
                 setValue('v_user_gift', data.v_user_gift);
+                setUserGiftApproved(Number(data.v_user_gift_approved) === 1);
                 setValue('v_condition_id', data?.v_condition_id);
                 setValue('v_mod_year', data?.v_mod_year);
                 setValue('v_registration', data.v_registration);
@@ -1739,6 +1773,39 @@ const ViewProductForm = ({ productId }) => {
                                                         ))
                                                     }
                                                 </select>
+
+                                                {/* the stock page only shows a seller gift once it is approved here */}
+                                                {watch("v_user_gift") ? (
+                                                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                                        <span
+                                                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                                userGiftApproved
+                                                                    ? "bg-emerald-100 text-emerald-700"
+                                                                    : "bg-amber-100 text-amber-700"
+                                                            }`}
+                                                        >
+                                                            {userGiftApproved ? "Approved - visible on stock page" : "Not approved - hidden on stock page"}
+                                                        </span>
+                                                        {canApproveUserGift && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleUserGiftApproval(!userGiftApproved)}
+                                                                disabled={approvingUserGift}
+                                                                className={`px-3 py-1 rounded text-xs font-semibold text-white disabled:opacity-50 ${
+                                                                    userGiftApproved
+                                                                        ? "bg-red-600 hover:bg-red-700"
+                                                                        : "bg-emerald-600 hover:bg-emerald-700"
+                                                                }`}
+                                                            >
+                                                                {approvingUserGift
+                                                                    ? "Saving..."
+                                                                    : userGiftApproved
+                                                                    ? "Remove approval"
+                                                                    : "Approve gift"}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ) : null}
                                             </div>
 
                                             <div>

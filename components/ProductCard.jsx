@@ -186,7 +186,7 @@ const buildInitialChalanForm = (product = {}) => ({
   customerName: "",
   customerPhone: "",
   reference: "",
-  date: "",
+  date: new Date().toISOString().split("T")[0],
   address: "",
   fromAddress: "",
   note: "",
@@ -2220,7 +2220,13 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
                 className="rounded-xl mb-3 w-full h-60 sm:h-72 md:h-72 lg:h-72 xl:h-60 3xl:h-72 object-cover aspect-[3/2] transition-transform duration-500 group-hover/image:scale-105"
               />
             )}
-            <GiftBadge userGift={product?.user_gift} pblGift={product?.pbl_gift} className="top-3 left-3" />
+            {/* a seller's own gift stays hidden until somebody with
+                Vehicle.ApproveUserGiftByPbl approves that attachment; the
+                PilotBazar gift needs no such sign-off */}
+            <GiftBadge
+                userGift={Number(product?.v_user_gift_approved) === 1 ? product?.user_gift : null}
+                pblGift={product?.pbl_gift}
+            />
 
             {/* {(parsedUser?.user_mode === 'pbl' || parsedUser?.user_mode === 'supreme') && ( */}
             {/* <div
@@ -4349,7 +4355,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
       <Dialog open={chatConfirmOpen} onOpenChange={setChatConfirmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — Pilot Bazar এর মাধ্যমে</DialogTitle><hr />
+            <DialogTitle className="text-center mb-2">সরাসরি ইমপোর্টার সাথে চ্যাট করুন ও গাড়ি কিনুন — Click4Details এর মাধ্যমে</DialogTitle><hr />
           </DialogHeader>
           <div className="text-sm text-gray-600 space-y-4 leading-relaxed max-h-[60vh] overflow-y-auto pr-4">
 
@@ -4358,9 +4364,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             </p>
 
             <p>
-              <strong>১।</strong> Wow! Pilot Bazar নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
-              যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
-              ঝামেলা ছাড়া, সময় নষ্ট না করে।
+              <strong>১।</strong> Wow! Click4Details নিয়ে এসেছে একটি স্মার্ট ও ইউনিক সিস্টেম,
+              যেখানে আপনি সরাসরি ইমপোর্টারের কাছ থেকে গাড়ি কেনার সিদ্ধান্ত নিতে পারবেন—
+              ঝামেলা ছাড়া, সময় নষ্ট না করে।
             </p>
 
             <p>
@@ -4387,7 +4393,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>প্রতিদিন প্রতি গাড়িতে হাজারের বেশি অফার আসে</li>
                 <li>সাধারণত ৭২ ঘণ্টার মধ্যে উত্তর পাওয়া যায়</li>
-                <li>অথবা Pilot Bazar এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
+                <li>অথবা Click4Details এর প্রতিনিধি আপনার সাথে যোগাযোগ করবে</li>
               </ul>
             </div>
 
@@ -4535,7 +4541,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <div>
-              <strong>১৪। কেন ইমপোর্টাররা Pilot Bazar পছন্দ করে?</strong>
+              <strong>১৪। কেন ইমপোর্টাররা Click4Details পছন্দ করে?</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>অযথা দরদাম, লম্বা কথা, হোয়াটসঅ্যাপ স্প্যাম বন্ধ</li>
                 <li>টু-দা-পয়েন্ট Fixed Price Deal</li>
@@ -4548,9 +4554,9 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <div>
               <strong>১৫। ট্রান্সপারেন্সি ও কমিটমেন্ট</strong>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Pilot Bazar কোনো পক্ষপাতমূলক দরদাম করে না</li>
+                <li>Click4Details কোনো পক্ষপাতমূলক দরদাম করে না</li>
                 <li>
-                  ডিল সফল হলে Pilot bazar শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
+                  ডিল সফল হলে Click4Details শুধুমাত্র ইমপোর্টার থেকে একটি সার্ভিস চার্জ গ্রহণ করে
                 </li>
                 <li>
                   <strong>I Agree</strong> বাটনে ক্লিক মানে—
@@ -4562,7 +4568,7 @@ const ProductCard = ({ product, parsedUser = null, sourceParam = null }) => {
             <hr />
 
             <p className="font-semibold text-gray-800">
-              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন Pilot Bazar এর মাধ্যমে।”
+              ১৬। “ঝামেলা ছাড়া, কম দামে — সরাসরি ইমপোর্টার থেকে গাড়ি কিনুন Click4Details এর মাধ্যমে।”
             </p>
 
           </div>

@@ -3,53 +3,79 @@
 import React, { useState } from "react";
 import { Gift, X, Sparkles, CalendarClock } from "lucide-react";
 
-// Renders a small animated gift icon (drop into any relative-positioned
-// image container) when a vehicle/product has a user_gift and/or pbl_gift
-// attached. Clicking it opens a popup with the gift's image, description,
-// and expiry - used on both listing cards (ProductCard/GeneralProductCard)
-// and detail pages (ProductDetails/GeneralProductDetails), fed directly by
-// VehicleResource/ProductResource's `user_gift`/`pbl_gift` fields.
-const GiftBadge = ({ userGift = null, pblGift = null, className = "", variant = "overlay" }) => {
-  const [open, setOpen] = useState(false);
+// Renders small animated gift icons (drop into any relative-positioned image
+// container) when a vehicle/product has a user_gift and/or pbl_gift attached.
+// Clicking one opens a popup with that gift's image, description, and expiry -
+// used on both listing cards (ProductCard/GeneralProductCard) and detail pages
+// (ProductDetails/GeneralProductDetails), fed directly by VehicleResource's /
+// ProductResource's `user_gift`/`pbl_gift` fields.
+//
+// In "overlay" mode the two kinds are separate corner badges - the PilotBazar
+// gift pins to the top-right and the seller's own gift to the bottom-right -
+// so a card carrying both makes it obvious at a glance which is which. In
+// "inline" mode they stay a single static badge next to a detail-page title,
+// where there is no guaranteed relative-positioned wrapper to anchor to.
+const PBL_CORNER = "top-2 right-2";
+const USER_CORNER = "bottom-2 right-2";
 
-  const gifts = [
-    userGift ? { ...userGift, _label: "Seller Gift" } : null,
-    pblGift ? { ...pblGift, _label: "click4details Gift" } : null,
-  ].filter(Boolean);
+const GiftBadge = ({
+  userGift = null,
+  pblGift = null,
+  className = "",
+  variant = "overlay",
+  pblClassName = PBL_CORNER,
+  userClassName = USER_CORNER,
+}) => {
+  // holds the gift list the popup is showing; null while closed
+  const [openGifts, setOpenGifts] = useState(null);
 
-  if (gifts.length === 0) return null;
+  const pbl = pblGift ? { ...pblGift, _label: "PilotBazar Gift" } : null;
+  const user = userGift ? { ...userGift, _label: "Seller Gift" } : null;
+  const allGifts = [user, pbl].filter(Boolean);
 
-  // "overlay" = absolute-positioned corner badge for card/gallery images
-  // (caller passes e.g. className="top-3 left-3"); "inline" = static, for
-  // placing next to a title on a detail page where there's no guaranteed
-  // relative-positioned image wrapper to anchor an absolute badge to.
-  const positionClass = variant === "inline" ? "relative" : "absolute z-20";
+  if (allGifts.length === 0) return null;
+
+  const isInline = variant === "inline";
+
+  const badge = (gift, positionClass, key) => (
+    <button
+      key={key}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpenGifts(isInline ? allGifts : [gift]);
+      }}
+      title={isInline ? "This item comes with a free gift!" : `${gift._label} included!`}
+      className={`${isInline ? "relative" : "absolute z-20"} flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold text-white shadow-lg animate-bounce hover:animate-none transition-all ${
+        gift._label === "PilotBazar Gift"
+          ? "bg-gradient-to-r from-emerald-600 to-teal-600"
+          : "bg-gradient-to-r from-fuchsia-600 to-purple-600"
+      } ${positionClass}`}
+    >
+      <Gift className="h-3.5 w-3.5" />
+      <span className={isInline ? "" : "hidden sm:inline"}>
+        {isInline ? "Gift Included" : gift._label === "PilotBazar Gift" ? "PBL" : "Gift"}
+      </span>
+    </button>
+  );
 
   return (
     <>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        title="This item comes with a free gift!"
-        className={`${positionClass} flex items-center gap-1 rounded-full bg-gradient-to-r from-fuchsia-600 to-purple-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg animate-bounce hover:animate-none transition-all ${className}`}
-      >
-        <Gift className="h-3.5 w-3.5" />
-        <span className={variant === "inline" ? "" : "hidden sm:inline"}>
-          {variant === "inline" ? "Gift Included" : "Gift"}
-        </span>
-      </button>
+      {isInline
+        ? badge(allGifts[0], className, "inline")
+        : [
+            pbl ? badge(pbl, `${pblClassName} ${className}`, "pbl") : null,
+            user ? badge(user, `${userClassName} ${className}`, "user") : null,
+          ]}
 
-      {open && (
+      {openGifts && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setOpen(false);
+            setOpenGifts(null);
           }}
         >
           <div
@@ -59,14 +85,14 @@ const GiftBadge = ({ userGift = null, pblGift = null, className = "", variant = 
             <div className="bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <Sparkles className="h-5 w-5" />
-                <h3 className="text-lg font-semibold">Free Gift{gifts.length > 1 ? "s" : ""} Included!</h3>
+                <h3 className="text-lg font-semibold">Free Gift{openGifts.length > 1 ? "s" : ""} Included!</h3>
               </div>
               <button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setOpen(false);
+                  setOpenGifts(null);
                 }}
                 className="text-white/90 hover:text-white"
                 aria-label="Close"
@@ -76,7 +102,7 @@ const GiftBadge = ({ userGift = null, pblGift = null, className = "", variant = 
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto divide-y divide-gray-100">
-              {gifts.map((gift, index) => (
+              {openGifts.map((gift, index) => (
                 <div key={gift.g_id || index} className="p-5 flex gap-4">
                   <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border bg-purple-50 flex items-center justify-center">
                     {gift?.g_image?.secure_url || gift?.g_image?.url ? (

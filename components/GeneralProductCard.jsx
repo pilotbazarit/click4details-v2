@@ -216,7 +216,7 @@ const GeneralProductCard = ({ product }) => {
           </span>
         )}
 
-        <GiftBadge userGift={product?.user_gift} pblGift={product?.pbl_gift} className="top-2 right-2" />
+        <GiftBadge userGift={product?.user_gift} pblGift={product?.pbl_gift} />
 
         {/* Image dots */}
         {allImages.length > 1 && (

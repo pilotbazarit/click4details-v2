@@ -50,6 +50,11 @@ const Commands = {
         }
     }),
 
+    // approves (or retracts) the seller's own gift so it shows on the stock
+    // page; needs the global Vehicle.ApproveUserGiftByPbl grant
+    approveUserGiftByPbl: (id, isApproved) =>
+        commandApi.post(`/api/vehicle/approve-user-gift-by-pbl/${id}`, { _is_approved: isApproved ? 1 : 0 }),
+
     createPayment: (data) => commandApi.post(`/api/payment`, data, {
         headers: {
             "Content-Type": "multipart/form-data",

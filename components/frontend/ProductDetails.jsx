@@ -293,17 +293,39 @@ const PdfDocumentPreview = ({ url, title, previewUrls = [] }) => {
     }
 
     if (status === "failed") {
+        const openPdfInNewTab = () => {
+            window.open(url, "_blank", "noopener,noreferrer");
+        };
+
         return (
             <div className="flex h-full min-h-[320px] w-full items-center justify-center p-6 text-center">
                 <div className="max-w-md">
                     <FileText className="mx-auto mb-3 h-10 w-10 text-amber-600" />
                     <p className="text-sm font-bold text-slate-900">PDF preview is blocked</p>
                     <p className="mt-2 text-xs font-medium text-slate-500">
-                        {errorMessage || "This PDF cannot be loaded from the current document URL."}
+                        {errorMessage || "This PDF cannot be loaded directly in the browser from the current URL."}
                     </p>
                     <p className="mt-2 text-xs font-medium text-slate-500">
-                        Cloudinary raw PDF delivery needs to be public, signed, or proxied by the backend.
+                        The file may be private, signed, or stored behind a restricted S3 policy. Use the options below to open or download it.
                     </p>
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                        <button
+                            type="button"
+                            onClick={openPdfInNewTab}
+                        className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                        >
+                            Open PDF
+                        </button>
+                        <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            download={title}
+                            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
+                        >
+                            Download
+                        </a>
+                    </div>
                 </div>
             </div>
         );
@@ -534,10 +556,10 @@ const ProductDetails = ({ productDetails }) => {
 
 
     const additionalSecretDocuments = useMemo(() => {
-        const docs = Array.isArray(productDetails?.data?.v_secret_docs)
-            ? productDetails.data.v_secret_docs
-            : Array.isArray(productDetails?.v_secret_docs)
-                ? productDetails.v_secret_docs
+        const docs = Array.isArray(productDetails?.data?.v_docs)
+            ? productDetails.data.v_docs
+            : Array.isArray(productDetails?.v_docs)
+                ? productDetails.v_docs
                 : [];
 
         return normalizeSecretDocuments(docs);
@@ -569,17 +591,17 @@ const ProductDetails = ({ productDetails }) => {
         );
 
 
-    // console.log("isMyShop", isMyShop); myshop false hote hobe 
-    // console.log("isCompanyShop", isCompanyShop); isCompanyShop false hote hobe
-    // console.log("userMode", userMode); userMode supreme 
-    // console.log("additionalSecretDocuments", additionalSecretDocuments); additionalSecretDocuments length 0 er basi hote hobe
+    console.log("isMyShop", isMyShop); //myshop false hote hobe 
+    console.log("isCompanyShop", isCompanyShop); // isCompanyShop false hote hobe
+    console.log("userMode", userMode); //userMode supreme 
+    console.log("additionalSecretDocuments", additionalSecretDocuments); // additionalSecretDocuments length 0 er basi hote hobe
 
 
     const canShowAdditionalSecretDocument =
         additionalSecretDocuments.length > 0 &&
-        !isMyShop &&
-        !isCompanyShop &&
         (
+            isMyShop ||
+            isCompanyShop ||
             userMode === "supreme" ||
             (
                 (userMode === "pbl" || userMode === "admin") &&
@@ -1316,7 +1338,11 @@ const ProductDetails = ({ productDetails }) => {
                         </p>
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
                         <div className="mt-2">
-                            <GiftBadge userGift={productDetails?.user_gift} pblGift={productDetails?.pbl_gift} variant="inline" />
+                            <GiftBadge
+                                userGift={Number(productDetails?.v_user_gift_approved) === 1 ? productDetails?.user_gift : null}
+                                pblGift={productDetails?.pbl_gift}
+                                variant="inline"
+                            />
                         </div>
                     </div>
 
@@ -1570,21 +1596,12 @@ const ProductDetails = ({ productDetails }) => {
                                     {
                                         canShowAdditionalSecretDocument && (
                                             <>
-                                                {/* <div className="">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleOpenAdditionalSecretDocumentSlider}
-                                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-l hover:bg-blue-700 flex items-center gap-2"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-                                                </div> */}
                                                 <div className="">
                                                     <button
                                                         type="button"
                                                         onClick={handleOpenAdditionalSecretDocumentModal}
                                                         className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-700 rounded-l hover:bg-indigo-700 flex items-center gap-2"
-                                                        title="View secret documents"
+                                                        title="Auction Sheet/Brochure/Additional Documents"
                                                         aria-label="View secret documents"
                                                     >
                                                         <FileText className="h-4 w-4" />

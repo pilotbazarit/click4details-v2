@@ -947,6 +947,25 @@ const PurchasePaymentModal = ({ open, setOpen, onSaved, initialData, prefillEnti
                                 )}
                                 {errors.amount && <p className="text-red-600 text-sm">{errors.amount.message}</p>}
                             </div>
+                            <div>
+                                {dualCurrency ? (
+                                    <RequiredLabel htmlFor="conv_rate">{`Conv. Rate (to ${selectedCalculation.vpc_to_currency})`}</RequiredLabel>
+                                ) : (
+                                    <Label htmlFor="conv_rate">
+                                        {isCalcLinked ? `Conv. Rate (to ${selectedCalculation.vpc_to_currency})` : 'Conv. Rate (BDT/USD)'}
+                                    </Label>
+                                )}
+                                <Input
+                                    className="border-gray-400"
+                                    type="number"
+                                    step="0.000001"
+                                    {...register('conv_rate', { onChange: dualCurrency ? handleDualFieldChange('conv_rate') : undefined })}
+                                    id="conv_rate"
+                                    placeholder="e.g. 110"
+                                    disabled={isSubmitting || sameCurrency}
+                                    required={dualCurrency}
+                                />
+                            </div>
                             <div className="relative">
                                 {isCalcLinked ? (
                                     dualCurrency ? (
@@ -989,25 +1008,6 @@ const PurchasePaymentModal = ({ open, setOpen, onSaved, initialData, prefillEnti
                                         </select>
                                     </>
                                 )}
-                            </div>
-                            <div>
-                                {dualCurrency ? (
-                                    <RequiredLabel htmlFor="conv_rate">{`Conv. Rate (to ${selectedCalculation.vpc_to_currency})`}</RequiredLabel>
-                                ) : (
-                                    <Label htmlFor="conv_rate">
-                                        {isCalcLinked ? `Conv. Rate (to ${selectedCalculation.vpc_to_currency})` : 'Conv. Rate (BDT/USD)'}
-                                    </Label>
-                                )}
-                                <Input
-                                    className="border-gray-400"
-                                    type="number"
-                                    step="0.000001"
-                                    {...register('conv_rate', { onChange: dualCurrency ? handleDualFieldChange('conv_rate') : undefined })}
-                                    id="conv_rate"
-                                    placeholder="e.g. 110"
-                                    disabled={isSubmitting || sameCurrency}
-                                    required={dualCurrency}
-                                />
                             </div>
                         </div>
 

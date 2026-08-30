@@ -55,7 +55,7 @@ const SectionHeader = ({ title, open, onToggle }) => (
   <button
     type="button"
     onClick={onToggle}
-    className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 border border-gray-300 rounded-t-md text-sm font-bold tracking-wide text-gray-700 uppercase"
+    className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold tracking-wide text-gray-700 uppercase bg-gray-100 border border-gray-300 rounded-t-md"
   >
     {title}
     {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -293,6 +293,31 @@ const PurchasePaymentsContent = () => {
     }
   };
 
+  // These endpoints are requested with responseType "blob", so a failure comes
+  // back as a Blob rather than parsed JSON and error.response.data.message is
+  // always undefined - every server error used to surface as the generic
+  // "Failed to download PDF". Read the blob back as text so the real message
+  // (validation, permission, or a 500) reaches the toast.
+  const readPdfErrorMessage = async (error) => {
+    const fallback = "Failed to download PDF";
+    const data = error?.response?.data;
+
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text();
+        try {
+          return JSON.parse(text)?.message || fallback;
+        } catch {
+          return text?.trim()?.slice(0, 300) || fallback;
+        }
+      } catch {
+        return fallback;
+      }
+    }
+
+    return data?.message || error?.message || fallback;
+  };
+
   const downloadBlobPdf = async (fetcher, params, filename) => {
     try {
       setIsPdfDownloading(true);
@@ -307,7 +332,7 @@ const PurchasePaymentsContent = () => {
       link.remove();
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
-      toast.error(error?.response?.data?.message || error.message || "Failed to download PDF");
+      toast.error(await readPdfErrorMessage(error));
     } finally {
       setIsPdfDownloading(false);
     }
@@ -337,8 +362,8 @@ const PurchasePaymentsContent = () => {
 
     if (pendingReportKind === "payment") {
       const fileName = chassis
-        ? `${chassis}-purchase-payment.pdf`
-        : `purchase-payment-${selectedEntityOption.entity_type}-${selectedEntityOption.entity_id}.pdf`;
+        ? `${chassis}-costing-payment.pdf`
+        : `costing-payment-${selectedEntityOption.entity_type}-${selectedEntityOption.entity_id}.pdf`;
       await downloadBlobPdf(
         PurchasePaymentService.Queries.downloadPurchasePaymentPdf,
         baseParams,
@@ -394,16 +419,16 @@ const PurchasePaymentsContent = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
 
   return (
-    <div className="flex flex-col w-full justify-between bg-gray-50 px-6">
-      <main className="mx-auto bg-white rounded-lg shadow-lg border border-gray-200 my-6 w-full overflow-hidden">
+    <div className="flex flex-col justify-between w-full px-6 bg-gray-50">
+      <main className="w-full mx-auto my-6 overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg">
         {/* Header */}
-        <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex flex-col items-center justify-between gap-4 px-6 py-6 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 md:flex-row">
           <div className="flex items-center gap-3 text-white">
             <div className="bg-white/15 rounded-full p-2.5">
               <Receipt className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold uppercase tracking-wide">Costing and Payment</h2>
+              <h2 className="text-xl font-semibold tracking-wide uppercase">Costing and Payment</h2>
               <p className="text-sm text-teal-100">Vehicle purchase calculation & payment tracking</p>
             </div>
           </div>
@@ -421,19 +446,57 @@ const PurchasePaymentsContent = () => {
 
         <div className="p-6">
           {/* ================= Section 1: Select Vehicle or Product ================= */}
-          <div className="rounded-md border-2 border-teal-300 mb-6 overflow-hidden bg-teal-50 shadow-sm shadow-teal-100">
-            <div className="px-4 py-3 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border-b border-teal-200 flex flex-col md:flex-row md:items-center justify-between gap-2">
-              <button type="button" onClick={() => setSelectEntitySectionOpen(v => !v)} className="text-sm font-bold tracking-wide text-teal-700 uppercase hover:text-teal-900 transition-colors text-left">
+          <div className="mb-6 overflow-hidden border-2 border-teal-300 rounded-md shadow-sm bg-teal-50 shadow-teal-100">
+            <div className="flex flex-col justify-between gap-2 px-4 py-3 border-b border-teal-200 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 md:flex-row md:items-center">
+              <button type="button" onClick={() => setSelectEntitySectionOpen(v => !v)} className="text-sm font-bold tracking-wide text-left text-teal-700 uppercase transition-colors hover:text-teal-900">
                 Select Vehicle or Product
               </button>
               <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                <button 
-                  type="button" 
-                  onClick={() => setSelectEntitySectionOpen(v => !v)} 
-                  className="p-1 text-teal-700 hover:bg-teal-200 rounded transition-colors ml-1"
+                {selectedEntityOption && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openReportFilter("payment")}
+                    disabled={isPdfDownloading}
+                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-600 text-teal-700 hover:bg-teal-50 bg-white"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    Costing Payment PDF
+                  </Button>
+                )}
+                {selectedEntityOption && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openReportFilter("money-receipt")}
+                    disabled={isPdfDownloading}
+                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-teal-800 text-teal-900 hover:bg-teal-50 bg-white"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Money Receipt
+                  </Button>
+                )}
+                {selectedEntityOption?.entity_type === "vehicle" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleDownloadCalculationReport}
+                    disabled={isPdfDownloading}
+                    className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-emerald-600 text-emerald-700 hover:bg-emerald-50 bg-white"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    Calculation
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDownloadReasonWiseReport}
+                  disabled={isPdfDownloading}
+                  className="flex items-center gap-1.5 h-8 px-2.5 text-xs border-indigo-600 text-indigo-700 hover:bg-indigo-50 bg-white"
                 >
                   {selectEntitySectionOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </button>
+                </Button>
               </div>
             </div>
             {selectEntitySectionOpen && (
@@ -513,7 +576,7 @@ const PurchasePaymentsContent = () => {
 
           {/* ================= Section 3: Payment Section ================= */}
           {selectedEntityOption && (
-            <div id="payment-section" className="rounded-md border-2 border-orange-400 mb-4 overflow-hidden bg-orange-50 shadow-sm shadow-orange-200">
+            <div id="payment-section" className="mb-4 overflow-hidden border-2 border-orange-400 rounded-md shadow-sm bg-orange-50 shadow-orange-200">
               <SectionHeader
                 title="Payment Section"
                 open={paymentSectionOpen}
@@ -522,14 +585,14 @@ const PurchasePaymentsContent = () => {
               {paymentSectionOpen && (
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wide">Purchase Payment</h4>
+                    <h4 className="text-sm font-bold tracking-wide text-teal-700 uppercase">Purchase Payment</h4>
                     {canCreate && (
                       <Button
                         onClick={() => {
                           setOpen(true);
                           setSelectedPayment(null);
                         }}
-                        className="flex items-center gap-2 bg-teal-600 text-white hover:bg-teal-700"
+                        className="flex items-center gap-2 text-white bg-teal-600 hover:bg-teal-700"
                       >
                         <Receipt className="w-4 h-4" />
                         Make Payment
@@ -537,15 +600,17 @@ const PurchasePaymentsContent = () => {
                     )}
                   </div>
 
-                  <div className="overflow-x-auto rounded-md border border-gray-300">
+                  <div className="overflow-x-auto border border-gray-300 rounded-md">
                     <Table className="min-w-full">
                       <TableHeader>
                         <TableRow className="border-b border-gray-300">
                           <TableHead className="w-[60px] border-r border-gray-300 text-center">SL</TableHead>
                           <TableHead className="border-r border-gray-300">Date</TableHead>
                           <TableHead className="border-r border-gray-300">Bucket</TableHead>
+                          <TableHead className="border-r border-gray-300">Reason</TableHead>
+                          <TableHead className="border-r border-gray-300">Supplier</TableHead>
                           <TableHead className="border-r border-gray-300">Description</TableHead>
-                          <TableHead className="border-r border-gray-300 text-right">Amount</TableHead>
+                          <TableHead className="text-right border-r border-gray-300">Amount</TableHead>
                           <TableHead className="border-r border-gray-300">Status</TableHead>
                           <TableHead className="text-right w-[10]">Actions</TableHead>
                         </TableRow>
@@ -555,7 +620,7 @@ const PurchasePaymentsContent = () => {
                         {payments?.length > 0 ? (
                           payments.map((item, index) => (
                             <TableRow key={item.pp_id || index} className="border-b border-gray-200">
-                              <TableCell className="border-r border-gray-200 text-center">{startIndex + index + 1}</TableCell>
+                              <TableCell className="text-center border-r border-gray-200">{startIndex + index + 1}</TableCell>
                               <TableCell className="border-r border-gray-200">
                                 {item.pp_paid_at ? String(item.pp_paid_at).slice(0, 16).replace("T", " ") : "-"}
                               </TableCell>
@@ -567,10 +632,16 @@ const PurchasePaymentsContent = () => {
                                   {BUCKET_LABELS[item.pp_payment_against]?.label || item.pp_payment_against}
                                 </span>
                               </TableCell>
-                              <TableCell className="border-r border-gray-200 text-gray-700">
+                              <TableCell className="text-gray-700 border-r border-gray-200">
+                                {item.pp_reason || "-"}
+                              </TableCell>
+                              <TableCell className="text-gray-700 border-r border-gray-200">
+                                {item.supplier?.s_name || "-"}
+                              </TableCell>
+                              <TableCell className="text-gray-700 border-r border-gray-200">
                                 {item.pp_remark || (item.pp_method ? item.pp_method.replace(/_/g, " ") : "-")}
                               </TableCell>
-                              <TableCell className="border-r border-gray-200 text-right font-medium">
+                              <TableCell className="font-medium text-right border-r border-gray-200">
                                 {formatAmount(item.pp_amount)} {item.pp_currency}
                               </TableCell>
                               <TableCell className="border-r border-gray-200">
@@ -602,10 +673,10 @@ const PurchasePaymentsContent = () => {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-4 text-gray-500">
+                            <TableCell colSpan={9} className="py-4 text-center text-gray-500">
                               {loading ? (
                                 <div className="flex items-center justify-center space-x-2">
-                                  <Loader2 className="animate-spin w-5 h-5 text-teal-500" />
+                                  <Loader2 className="w-5 h-5 text-teal-500 animate-spin" />
                                   <span>Loading...</span>
                                 </div>
                               ) : (
@@ -630,14 +701,14 @@ const PurchasePaymentsContent = () => {
           )}
 
           {/* ================= Section 4: Report Section ================= */}
-          <div id="report-section" className="rounded-md border-2 border-gray-300 mb-4 overflow-hidden bg-gray-50 shadow-sm shadow-gray-200">
+          <div id="report-section" className="mb-4 overflow-hidden border-2 border-gray-300 rounded-md shadow-sm bg-gray-50 shadow-gray-200">
             <SectionHeader
               title="Report Section"
               open={reportSectionOpen}
               onToggle={() => setReportSectionOpen((v) => !v)}
             />
             {reportSectionOpen && (
-              <div className="p-4 flex flex-wrap items-center gap-4 bg-white">
+              <div className="flex flex-wrap items-center gap-4 p-4 bg-white">
                 {selectedEntityOption && (
                   <Button
                     size="sm"
@@ -689,7 +760,7 @@ const PurchasePaymentsContent = () => {
           </div>
 
           {!selectedEntityOption && (
-            <p className="text-sm text-gray-500 text-center py-6">
+            <p className="py-6 text-sm text-center text-gray-500">
               Select a vehicle or product above to view its costing and payment details.
             </p>
           )}
@@ -712,7 +783,7 @@ const PurchasePaymentsContent = () => {
           if (!isOpen) setPendingReportKind(null);
         }}
         entityOption={selectedEntityOption}
-        title={pendingReportKind === "money-receipt" ? "Money Receipt Filters" : "Payment Report Filters"}
+        title={pendingReportKind === "money-receipt" ? "Money Receipt Filters" : "Costing Payment PDF Filters"}
         onConfirm={handleReportFilterConfirm}
         isGenerating={isPdfDownloading}
       />
@@ -721,8 +792,8 @@ const PurchasePaymentsContent = () => {
 };
 
 const PurchasePaymentsFallback = () => (
-  <div className="flex flex-col min-h-screen w-full justify-center items-center bg-gray-50 px-6">
-    <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+  <div className="flex flex-col items-center justify-center w-full min-h-screen px-6 bg-gray-50">
+    <Loader2 className="w-6 h-6 text-teal-600 animate-spin" />
   </div>
 );
 

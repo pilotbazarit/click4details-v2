@@ -16,7 +16,7 @@ import RangeSlider from "@/components/RangeSlider";
 import PageHeaderSection from "@/components/advance-filter/PageHeaderSection";
 import CardViewFilteredProducts from "@/components/advance-filter/CardViewFilteredProducts";
 import { AdvanceFilterProductContextProvider } from "@/context/AdvanceFilterProductContextProvider";
-import { ArrowLeft, BarChart3, CreditCard, ExternalLink, Eye, EyeOff, FileText, FolderOpen, Headset, Mail, MapPin, Phone, Plus, Share2, Upload, UserRound, Youtube, Minus, Package, History, Download, RefreshCw, Clock, Globe, ArrowRight, Layers, X, Calendar, Search } from "lucide-react";
+import { ArrowLeft, BarChart3, CreditCard, ExternalLink, Eye, EyeOff, FileText, FolderOpen, Headset, Lock, Mail, MapPin, Phone, Plus, Share2, Upload, UserRound, Youtube, Minus, Package, History, Download, RefreshCw, Clock, Globe, ArrowRight, Layers, X, Calendar, Search } from "lucide-react";
 import user_icon from "@/assets/user_icon.svg";
 import Image from "next/image";
 import PhoneInput from "react-phone-input-2";
@@ -68,6 +68,7 @@ const resolveProfileImageUrl = (profile, fallbackUser) => {
 
 const profileMenuItems = [
     { id: "profile-info", label: "Profile Info", description: "Basic profile details", icon: UserRound },
+    { id: "filter-product-password", label: "Filter Product Password", description: "Secure filter products access", icon: Lock, privilegedOnly: true },
     { id: "business-locations", label: "Business Locations", description: "Office, shop, outlet", icon: MapPin },
     { id: "additional-email", label: "Email", description: "Extra business emails", icon: Mail },
     { id: "additional-phone", label: "Phone", description: "Extra phone numbers", icon: Phone },
@@ -114,6 +115,11 @@ const Profile = () => {
     const [showFilterPassword, setShowFilterPassword] = useState(false);
     const canViewFilterProductPassword = ["supreme", "admin", "pbl"].includes(user?.userMode || user?.user_mode);
 
+    const visibleProfileMenuItems = useMemo(
+        () => profileMenuItems.filter((item) => !item.privilegedOnly || canViewFilterProductPassword),
+        [canViewFilterProductPassword]
+    );
+
 
 
     // console.log("upDocs 74", upDocs);
@@ -132,7 +138,7 @@ const Profile = () => {
             if (!hash) return;
 
             const sectionId = legacyProfileHashMap[hash] || hash;
-            const isKnownSection = profileMenuItems.some((item) => item.id === sectionId);
+            const isKnownSection = visibleProfileMenuItems.some((item) => item.id === sectionId);
 
             if (isKnownSection) {
                 setActiveProfileSection(sectionId);
@@ -143,7 +149,7 @@ const Profile = () => {
         window.addEventListener("hashchange", syncActiveSectionFromHash);
 
         return () => window.removeEventListener("hashchange", syncActiveSectionFromHash);
-    }, []);
+    }, [visibleProfileMenuItems]);
 
     useEffect(() => {
         return () => {
@@ -316,7 +322,8 @@ const Profile = () => {
                 linkedin: profile?.up_linkedin ?? "",
                 youtube: profile?.up_youtube ?? "",
                 website: profile?.up_website ?? "",
-                filter_product_password: profile?.up_filter_product_password ?? "",
+                filter_product_password: "",
+                has_filter_product_password: !!profile?.has_filter_product_password,
             });
 
             // Array গুলো null-safe করে সেট করা
@@ -424,9 +431,13 @@ const Profile = () => {
                 up_linkedin: user?.linkedin,
                 up_youtube: user?.youtube,
                 up_website: user?.website,
-                up_filter_product_password: user?.filter_product_password,
                 _method: 'PUT',
             };
+
+            const trimmedFilterPassword = (user?.filter_product_password || "").trim();
+            if (trimmedFilterPassword) {
+                data.up_filter_product_password = trimmedFilterPassword;
+            }
 
             if (profileImageFile) {
                 data.up_image = profileImageFile;
@@ -715,7 +726,7 @@ const Profile = () => {
         }
     };
 
-    const activeMenuItem = profileMenuItems.find((item) => item.id === activeProfileSection) || profileMenuItems[0];
+    const activeMenuItem = visibleProfileMenuItems.find((item) => item.id === activeProfileSection) || visibleProfileMenuItems[0];
 
     const handleProfileMenuClick = (sectionId) => {
         setActiveProfileSection(sectionId);
@@ -823,7 +834,7 @@ const Profile = () => {
                                 </button>
 
                                 <h2 className="text-[22px] font-extrabold leading-tight text-gray-900">
-                                    Become a Click4Details Partner
+                                    Become a PilotBazar Partner
                                 </h2>
 
                                 <p className="mt-6 text-base leading-relaxed text-gray-500">
@@ -907,7 +918,7 @@ const Profile = () => {
                                     Profile Menu
                                 </p>
                                 <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
-                                    {profileMenuItems.map((item) => {
+                                    {visibleProfileMenuItems.map((item) => {
                                         const Icon = item.icon;
                                         const isActive = activeProfileSection === item.id;
 
@@ -1117,31 +1128,74 @@ const Profile = () => {
                                                 />
                                             </div>
 
-                                            {canViewFilterProductPassword && (
-                                                <div className="flex flex-col gap-1">
-                                                    <label className="text-base font-medium" htmlFor="filter-product-password">
-                                                        Filter Product Password
-                                                    </label>
-                                                    <div className="relative">
-                                                        <input
-                                                            id="filter-product-password"
-                                                            type={showFilterPassword ? "text" : "password"}
-                                                            placeholder="Enter Filter Product Password"
-                                                            className="outline-none py-2 px-3 pr-10 rounded border border-gray-500/40 w-full"
-                                                            value={user.filter_product_password || ""}
-                                                            onChange={(e) => setUser({ ...user, filter_product_password: e.target.value })}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                                            onClick={() => setShowFilterPassword(!showFilterPassword)}
-                                                        >
-                                                            {showFilterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                        </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {activeProfileSection === "filter-product-password" && canViewFilterProductPassword && (
+                                    <>
+                                        <div className="rounded-2xl border-2 border-[#116fa5]/20 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-5 sm:p-6 shadow-sm">
+                                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#116fa5]/10 text-[#116fa5]">
+                                                        <Lock className="h-5 w-5" />
+                                                    </span>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">Filter Product Password</h3>
+                                                        <p className="mt-1 max-w-2xl text-sm text-gray-600">
+                                                            This password protects sensitive customer details on the Filter Products page.
+                                                            Team members must enter it before viewing additional information.
+                                                        </p>
                                                     </div>
                                                 </div>
-                                            )}
+                                                <span
+                                                    className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                                        user.has_filter_product_password
+                                                            ? "bg-emerald-100 text-emerald-700"
+                                                            : "bg-slate-100 text-slate-600"
+                                                    }`}
+                                                >
+                                                    {user.has_filter_product_password ? "Password is set" : "Not configured yet"}
+                                                </span>
+                                            </div>
 
+                                            <div className="mt-6 max-w-xl rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
+                                                <label className="text-sm font-semibold text-gray-800" htmlFor="filter-product-password">
+                                                    {user.has_filter_product_password ? "Set a new password" : "Create password"}
+                                                </label>
+                                                {user.has_filter_product_password ? (
+                                                    <p className="mt-1 text-xs text-slate-500">
+                                                        Leave blank to keep your current password unchanged.
+                                                    </p>
+                                                ) : (
+                                                    <p className="mt-1 text-xs text-slate-500">
+                                                        Choose a password your team will use to unlock filter product details.
+                                                    </p>
+                                                )}
+                                                <div className="relative mt-3">
+                                                    <input
+                                                        id="filter-product-password"
+                                                        type={showFilterPassword ? "text" : "password"}
+                                                        placeholder={
+                                                            user.has_filter_product_password
+                                                                ? "Enter new password to change"
+                                                                : "Enter Filter Product Password"
+                                                        }
+                                                        autoComplete="new-password"
+                                                        className="w-full rounded-lg border border-blue-200 bg-white py-2.5 pl-3 pr-10 text-sm outline-none transition focus:border-[#116fa5] focus:ring-4 focus:ring-blue-100"
+                                                        value={user.filter_product_password || ""}
+                                                        onChange={(e) => setUser({ ...user, filter_product_password: e.target.value })}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                        onClick={() => setShowFilterPassword(!showFilterPassword)}
+                                                        aria-label={showFilterPassword ? "Hide password" : "Show password"}
+                                                    >
+                                                        {showFilterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </>
                                 )}

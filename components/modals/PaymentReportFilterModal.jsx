@@ -15,6 +15,10 @@ const PaymentReportFilterModal = ({ open, setOpen, entityOption, title, onConfir
     const [types, setTypes] = useState([]);
     const [reasons, setReasons] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
+    // { fixed: { reasons, suppliers }, general: { ... } } - lets the Type select
+    // narrow the other two lists instead of offering reasons/suppliers that only
+    // exist on the other bucket, which silently generated an empty report.
+    const [optionsByType, setOptionsByType] = useState({});
     const [type, setType] = useState('');
     const [reason, setReason] = useState('');
     const [supplierId, setSupplierId] = useState('');
@@ -26,6 +30,7 @@ const PaymentReportFilterModal = ({ open, setOpen, entityOption, title, onConfir
         setType('');
         setReason('');
         setSupplierId('');
+        setOptionsByType({});
         setLoadingOptions(true);
 
         PurchasePaymentService.Queries.getFilterOptions({
@@ -37,19 +42,36 @@ const PaymentReportFilterModal = ({ open, setOpen, entityOption, title, onConfir
                     setTypes(response.data?.types || []);
                     setReasons(response.data?.reasons || []);
                     setSuppliers(response.data?.suppliers || []);
+                    setOptionsByType(response.data?.by_type || {});
                 } else {
                     setTypes([]);
                     setReasons([]);
                     setSuppliers([]);
+                    setOptionsByType({});
                 }
             })
             .catch(() => {
                 setTypes([]);
                 setReasons([]);
                 setSuppliers([]);
+                setOptionsByType({});
             })
             .finally(() => setLoadingOptions(false));
     }, [open, entityOption]);
+
+    // "All" keeps the full lists; picking a type narrows to that bucket. Falling
+    // back to the full list when a type has no entry keeps older API responses
+    // (no by_type key) behaving exactly as before.
+    const visibleReasons = type ? (optionsByType[type]?.reasons ?? []) : reasons;
+    const visibleSuppliers = type ? (optionsByType[type]?.suppliers ?? []) : suppliers;
+
+    const handleTypeChange = (nextType) => {
+        setType(nextType);
+        const nextReasons = nextType ? (optionsByType[nextType]?.reasons ?? []) : reasons;
+        const nextSuppliers = nextType ? (optionsByType[nextType]?.suppliers ?? []) : suppliers;
+        if (reason && !nextReasons.includes(reason)) setReason('');
+        if (supplierId && !nextSuppliers.some((s) => String(s.id) === String(supplierId))) setSupplierId('');
+    };
 
     const handleGenerate = () => {
         onConfirm({
@@ -83,7 +105,7 @@ const PaymentReportFilterModal = ({ open, setOpen, entityOption, title, onConfir
                         <select
                             className="w-full border border-gray-400 rounded h-10 px-3 outline-none"
                             value={type}
-                            onChange={(e) => setType(e.target.value)}
+                            onChange={(e) => handleTypeChange(e.target.value)}
                             disabled={isGenerating}
                         >
                             <option value="">All</option>
@@ -98,10 +120,10 @@ const PaymentReportFilterModal = ({ open, setOpen, entityOption, title, onConfir
                             className="w-full border border-gray-400 rounded h-10 px-3 outline-none"
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            disabled={isGenerating || reasons.length === 0}
+                            disabled={isGenerating || visibleReasons.length === 0}
                         >
                             <option value="">All</option>
-                            {reasons.map((r) => (
+                            {visibleReasons.map((r) => (
                                 <option key={r} value={r}>{r}</option>
                             ))}
                         </select>
@@ -112,10 +134,10 @@ const PaymentReportFilterModal = ({ open, setOpen, entityOption, title, onConfir
                             className="w-full border border-gray-400 rounded h-10 px-3 outline-none"
                             value={supplierId}
                             onChange={(e) => setSupplierId(e.target.value)}
-                            disabled={isGenerating || suppliers.length === 0}
+                            disabled={isGenerating || visibleSuppliers.length === 0}
                         >
                             <option value="">All</option>
-                            {suppliers.map((s) => (
+                            {visibleSuppliers.map((s) => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
