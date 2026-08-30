@@ -390,6 +390,20 @@ const ProductShareModal = ({ open, setOpen, product }) => {
         return currency ? `${currency}. ${formattedPrice}` : String(formattedPrice);
     };
 
+    const getProductShareLocationText = () => {
+        const locationName = cleanShareValue(
+            product?.v_location?.location_name ||
+            product?.v_location?.location?.l_name ||
+            product?.v_location?.country_name ||
+            product?.v_location?.uo_name
+        );
+        const outletId = cleanShareValue(product?.v_location?.uo_id || product?.v_availability_id);
+
+        if (!locationName && !outletId) return "";
+        if (locationName && outletId) return `${locationName} (${outletId})`;
+        return locationName || `Outlet ${outletId}`;
+    };
+
     const domain = 'https://click4details.app';
     // const domain = process.env.NEXT_PUBLIC_SITE_URL || 'https://click4details.app';
 
@@ -475,6 +489,13 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
     const buildFeatureAndSpecificationMessage = () => {
         let featureMessage = `*${product?.v_title || product?.v_title}*\n\n`;
+        if (product?.v_category?.c_name) {
+            featureMessage += `Category: ${product.v_category.c_name}\n`;
+        }
+        const productLocationText = getProductShareLocationText();
+        if (productLocationText) {
+            featureMessage += `Location: ${productLocationText}\n`;
+        }
         featureMessage += `Features & Specifications:\n`;
 
         if (product?.feature_specification?.length > 0) {
@@ -524,6 +545,13 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
         let priceLinkDetailsMessage = `*${productName}*\n\n`;
 
+        if (product?.v_category?.c_name) {
+            priceLinkDetailsMessage += `Category: ${product.v_category.c_name}\n`;
+        }
+        const productLocationText = getProductShareLocationText();
+        if (productLocationText) {
+            priceLinkDetailsMessage += `Location: ${productLocationText}\n`;
+        }
         if (product?.v_brand_name) {
             priceLinkDetailsMessage += `Brand: ${product.v_brand_name}\n`;
         }
@@ -626,6 +654,13 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
         let detailsMessage = `*${productName}*\n\n`;
 
+        if (product?.v_category?.c_name) {
+            detailsMessage += `Category: ${product.v_category.c_name}\n`;
+        }
+        const productLocationText = getProductShareLocationText();
+        if (productLocationText) {
+            detailsMessage += `Location: ${productLocationText}\n`;
+        }
         if (product?.v_brand_name) {
             detailsMessage += `Brand: ${product.v_brand_name}\n`;
         }
@@ -923,7 +958,13 @@ const ProductShareModal = ({ open, setOpen, product }) => {
 
         let message = `*${productName}*\n\n`;
 
+        // console.log("product--", product);
+
         // Add vehicle details
+        if (product?.v_category?.c_name) {
+            message += `Category: ${product.v_category.c_name}\n`;
+        }
+
         if (product?.v_brand_name) {
             message += `Brand: ${product.v_brand_name}\n`;
         }
@@ -1203,6 +1244,13 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 // Build detailed message
                 let oneImageDetailsMessage = `*${productName}*\n\n`;
 
+                if (product?.v_category?.c_name) {
+                    oneImageDetailsMessage += `Category: ${product.v_category.c_name}\n`;
+                }
+                const productLocationText = getProductShareLocationText();
+                if (productLocationText) {
+                    oneImageDetailsMessage += `Location: ${productLocationText}\n`;
+                }
                 // Brand
                 if (product?.v_brand_name) {
                     oneImageDetailsMessage += `Brand: ${product.v_brand_name}\n`;
@@ -1296,6 +1344,13 @@ const ProductShareModal = ({ open, setOpen, product }) => {
                 let priceLinkDetailsImageMessage = `*${productName}*\n\n`;
                 const priceLinkShareImageUrl = getProductShareImageUrls()[0];
 
+                if (product?.v_category?.c_name) {
+                    priceLinkDetailsImageMessage += `Category: ${product.v_category.c_name}\n`;
+                }
+                // const productLocationText = getProductShareLocationText();
+                if (productLocationText) {
+                    priceLinkDetailsImageMessage += `Location: ${productLocationText}\n`;
+                }
                 // Brand
                 if (product?.v_brand_name) {
                     priceLinkDetailsImageMessage += `Brand: ${product.v_brand_name}\n`;

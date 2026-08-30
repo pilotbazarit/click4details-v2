@@ -1337,6 +1337,7 @@ const ProductDetails = ({ productDetails }) => {
                             <TypewriterPrice text={productDetails?.v_title} />
                         </p>
                         <span className="text-gray-500">{dayjs(productDetails?.v_created_at).fromNow()}</span>
+                        <span className="text-red-500 ml-2">{productDetails?.v_category?.c_name}</span>
                         <div className="mt-2">
                             <GiftBadge
                                 userGift={Number(productDetails?.v_user_gift_approved) === 1 ? productDetails?.user_gift : null}
