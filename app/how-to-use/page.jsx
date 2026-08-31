@@ -138,7 +138,7 @@ const HowToUse = () => {
 
                     {/* Video Tutorials Section */}
                     <section>
-                        <div className="text-center mb-10">
+                        {/* <div className="text-center mb-10">
                             <div className="inline-flex items-center justify-center gap-3 rounded-full bg-blue-100 px-4 py-2 text-blue-700 font-semibold mb-4">
                                 <Youtube className="w-5 h-5" />
                                 Video Tutorials
@@ -149,7 +149,7 @@ const HowToUse = () => {
                             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                                 প্রয়োজনের অনুযায়ী দ্রুত ভিডিও দেখে শিখুন—শোরুম, স্টক, Quotation, Account, Shop Management এবং Account Setup সবকিছু এক জায়গায়।
                             </p>
-                        </div>
+                        </div> */}
 
                         <div className="space-y-8">
                             {tutorialSections.map((section) => (
