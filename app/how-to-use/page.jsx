@@ -1,203 +1,74 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Play, CheckCircle, Car, Search, ShoppingCart, Youtube } from 'lucide-react';
+import { Play, Youtube } from 'lucide-react';
 
 const HowToUse = () => {
-    const videoTutorials = [
-         {
-            id: 21,
-            title: "১ ক্লিকের ম্যাজিক! | শোরুম ম্যানেজমেন্ট ১ ক্লিকে | Click4Details",
-            description: "Click4Details-এ এক ক্লিকে শোরুম ম্যানেজমেন্টের সুবিধাগুলো জানুন। প্রোডাক্ট, শপ, টিম এবং দৈনন্দিন কাজ দ্রুত ও সহজভাবে পরিচালনা করুন।",
-            videoId: "0MEBcdKJ8-E",
-            src: "https://www.youtube.com/embed/0MEBcdKJ8-E"
-        },
-        {
-            id: 22,
-            title: "Click4Details অ্যাপ কী এবং কেন ব্যবহার করবেন?",
-            description: "Click4Details অ্যাপের মূল সুবিধা, ব্যবহারযোগ্যতা এবং ব্যবসা পরিচালনায় এর প্রয়োজনীয়তা সম্পর্কে জানুন। গাড়ি ও শোরুম ম্যানেজমেন্ট সহজ করতে কেন এটি ব্যবহার করবেন তা দেখুন।",
-            videoId: "7K9Fyhg6_io",
-            src: "https://www.youtube.com/embed/7K9Fyhg6_io"
-        },
-        {
-            id: 23,
-            title: "কিভাবে কোন ইনভেস্টমেন্ট ছাড়া ব্যবসা করব",
-            description: "Click4Details-এ কোন ইনভেস্টমেন্ট ছাড়া ব্যবসা করার সহজ পদ্ধতি জানুন। আপনার গাড়ি বা শোরুমের তথ্য দিয়ে দ্রুত শুরু করুন এবং ব্যবসা পরিচালনা করুন।",
-            videoId: "9n8sXo2l7jA",
-            src: "https://www.youtube.com/embed/UofsXIjvjkc"
-        },
-        {
-            id: 1,
-            title: "লগইন, রেজিস্ট্রেশন ও পাসওয়ার্ড পরিবর্তনের করুন | Click4Details",
-            description: "Click4Details-এ লগইন, রেজিস্ট্রেশন এবং পাসওয়ার্ড পরিবর্তনের সম্পূর্ণ গাইড। আপনার অ্যাকাউন্ট নিরাপদ রাখুন এবং সহজেই পরিচালনা করুন।",
-            videoId: "NF1I0p3WV_4",
-            src: "https://www.youtube.com/embed/NF1I0p3WV_4"
-        },
-        {
-            id: 2,
-            title: "দ্রুত বিক্রি করতে চান? ফিক্সড এবং সঠিক প্রাইসিং কেন গুরুত্বপূর্ণ তা জানুন | Click4Details",
-            description: "Click4Details-এ দ্রুত বিক্রি করতে ফিক্সড এবং সঠিক প্রাইসিং কেন গুরুত্বপূর্ণ তা জানুন। আপনার গাড়ির সঠিক মূল্য নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন এবং দ্রুত বিক",
-            videoId: "-ixjjdM7_Js",
-            src: "https://www.youtube.com/embed/-ixjjdM7_Js"
-        },
-        {
-            id: 3,
-            title: "পার্টনার হলে কি কি সুবিধা পাবেন | Click4Details ",
-            description: "Click4Details-এ পার্টনার হলে কি কি সুবিধা পাবেন তা জানুন। আপনার ব্যবসা বৃদ্ধির জন্য সহজ এবং কার্যকর সমাধানগুলি পেতে পারেন।",
-            videoId: "cKZ0ggw1V-A",
-            src: "https://www.youtube.com/embed/cKZ0ggw1V-A"
-        },
-        {
-            id: 4,
-            title: "প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম | Click4Details",
-            description: "Click4Details-এ প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম জানুন। আপনার পণ্যের মূল্য সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
-            videoId: "XIT-qGd_AiA",
-            src: "https://www.youtube.com/embed/XIT-qGd_AiA"
-        },
-        {
-            id: 5,
-            title: "প্রোডাক্টের তথ্য এডিট করার  নিয়ম | Click4Details",
-            description: "Click4Details-এ প্রোডাক্টের তথ্য এডিট করার নিয়ম জানুন। আপনার পণ্যের তথ্য সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
-            videoId: "-jPRlWFbll0",
-            src: "https://www.youtube.com/embed/-jPRlWFbll0"
-        },
-        {
-            id: 6,
-            title: "দ্রুত এবং সহজে প্রোডাক্ট কিভাবে শেয়ার করবেন | Click4Details",
-            description: "Click4Details-এ দ্রুত এবং সহজে প্রোডাক্ট শেয়ার করার নিয়ম জানুন।",
-            videoId: "3K88q9Mqfls",
-            src: "https://www.youtube.com/embed/3K88q9Mqfls"
-        },
-         {
-            id: 7,
-            title: "Sold, Booked, Available আপডেট করব কিভাবে | Click4Details",
-            description: "Sold, Booked, Available আপডেট করার নিয়ম জানুন। আপনার প্রোডাক্টের স্ট্যাটাস সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
-            videoId: "vhme9eAsuWw",
-            src: "https://www.youtube.com/embed/vhme9eAsuWw"
-        },
-        {
-            id: 8,
-            title: "প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম  | Click4Details",
-            description: "Click4Details-এ প্রোডাক্টের দাম বা প্রাইস আপডেট করার নিয়ম জানুন।",
-            videoId: "0ndMhvB12X4",
-            src: "https://www.youtube.com/embed/0ndMhvB12X4"
-        },
-        {
-            id: 9,
-            title: "প্রোডাক্টের আউটলেট পরিবর্তন করার নিয়ম | Click4Details",
-            description: "Click4Details-এ প্রোডাক্টের আউটলেট পরিবর্তন করার নিয়ম জানুন।",
-            videoId: "_COOEFpEfL8",
-            src: "https://www.youtube.com/embed/_COOEFpEfL8"
-        },
-        {
-            id: 10,
-            title: "প্রোডাক্ট ডিলিট করার নিয়ম | Click4Details ",
-            description: "Click4Details-এ প্রোডাক্ট ডিলিট করার নিয়ম জানুন। আপনার পণ্যের তথ্য সঠিকভাবে নির্ধারণ করে বিক্রয় প্রক্রিয়া সহজ করুন।",
-            videoId: "fzhKg6Zt23U",
-            src: "https://www.youtube.com/embed/fzhKg6Zt23U"
-        },
-        {
-            id: 11,
-            title: "প্রোডাক্ট এডিট করার নিয়ম | Click4Details",
-            description: "Click4Details-এ প্রোডাক্ট এডিট করার নিয়ম জানুন।",
-            videoId: "-jPRlWFbll0",
-            src: "https://www.youtube.com/embed/-jPRlWFbll0"
-        },
+    const getYouTubeVideoId = (url) => {
+        if (!url) return '';
+        const match = url.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{11})/);
+        return match ? match[1] : '';
+    };
 
-        {
-            id: 12,
-            title: "গাড়ির প্রফেশনাল Quotation তৈরি করার নিয়ম | Click4Details",
-            description: "Click4Details-এ গাড়ির জন্য প্রফেশনাল Quotation তৈরি করার সহজ নিয়ম জানুন। গ্রাহকের কাছে দাম, তথ্য এবং প্রয়োজনীয় বিস্তারিত সুন্দরভাবে উপস্থাপন করুন।",
-            videoId: "nXc50JJn6A4",
-            src: "https://www.youtube.com/embed/nXc50JJn6A4"
-        },
-        {
-            id: 13,
-            title: "গাড়ির ডেলিভারি Challan তৈরি করার নিয়ম | Click4Details",
-            description: "Click4Details-এ গাড়ির ডেলিভারি Challan তৈরি করার নিয়ম জানুন। ডেলিভারির সময় প্রয়োজনীয় তথ্য যোগ করে পেশাদারভাবে রেকর্ড সংরক্ষণ করুন।",
-            videoId: "5nq4Y_p1B4Q",
-            src: "https://www.youtube.com/embed/5nq4Y_p1B4Q"
-        },
-        {
-            id: 14,
-            title: "একাধিক শপ কিভাবে তৈরী করব | Click4Details",
-            description: "Click4Details-এ একাধিক শপ তৈরি করার ধাপগুলো জানুন। আপনার ব্যবসার বিভিন্ন শাখা বা আউটলেট সহজে আলাদা করে পরিচালনা করুন।",
-            videoId: "DB-o7WcPVw8",
-            src: "https://www.youtube.com/embed/DB-o7WcPVw8"
-        },
-        {
-            id: 15,
-            title: "সেলসমেন ও ম্যানেজার কোম্পানি শপে অ্যাড করব কিভাবে | Click4Details",
-            description: "Click4Details-এ কোম্পানি শপে সেলসমেন ও ম্যানেজার অ্যাড করার নিয়ম জানুন। টিম মেম্বারদের দায়িত্ব ভাগ করে শপ পরিচালনা সহজ করুন।",
-            videoId: "w1-SRuPwERo",
-            src: "https://www.youtube.com/embed/w1-SRuPwERo"
-        },
-        {
-            id: 16,
-            title: "কিভাবে দ্রুত এবং সহজে প্রোডাক্ট শেয়ার করবেন | Click4Details",
-            description: "Click4Details-এ দ্রুত এবং সহজে প্রোডাক্ট শেয়ার করার নিয়ম জানুন। গ্রাহক বা সোশ্যাল প্ল্যাটফর্মে পণ্যের তথ্য সহজে পৌঁছে দিন।",
-            videoId: "3K88q9Mqfls",
-            src: "https://www.youtube.com/embed/3K88q9Mqfls"
-        },
-        {
-            id: 17,
-            title: "পাসওয়ার্ড ভূলে গেলে বা কিভাবে পরিবর্তন করব | Click4Details",
-            description: "Click4Details-এ পাসওয়ার্ড ভুলে গেলে কীভাবে পুনরুদ্ধার করবেন এবং প্রয়োজন হলে নতুন পাসওয়ার্ড সেট করবেন তা জানুন।",
-            videoId: "Yj1pIin4G0Q",
-            src: "https://www.youtube.com/embed/Yj1pIin4G0Q"
-        },
-        {
-            id: 18,
-            title: "নতুন অ্যাকাউন্ট কিভাবে খুলব | Click4Details",
-            description: "Click4Details-এ নতুন অ্যাকাউন্ট খোলার সহজ ধাপগুলো জানুন। প্রয়োজনীয় তথ্য দিয়ে দ্রুত রেজিস্ট্রেশন সম্পন্ন করুন।",
-            videoId: "IwDJoGGFAqs",
-            src: "https://www.youtube.com/embed/IwDJoGGFAqs"
-        },
-        {
-            id: 19,
-            title: "লগইন করার সহজ নিয়ম | Click4Details",
-            description: "Click4Details-এ লগইন করার সহজ নিয়ম জানুন। আপনার অ্যাকাউন্টে নিরাপদে প্রবেশ করে প্রয়োজনীয় ফিচার ব্যবহার করুন।",
-            videoId: "lS8Z7OhqAYI",
-            src: "https://www.youtube.com/embed/lS8Z7OhqAYI"
-        },
-        {
-            id: 20,
-            title: "গাড়ির আমদানী খরচ ও দাম হিসাব করার নিয়ম | Click4Details",
-            description: "Click4Details-এ গাড়ির আমদানী খরচ ও বিক্রয় মূল্য হিসাব করার নিয়ম জানুন। খরচ, চার্জ এবং প্রাইসিং পরিষ্কারভাবে নির্ধারণ করে ব্যবসার সিদ্ধান্ত সহজ করুন।",
-            videoId: "0U_dOU235IU",
-            src: "https://www.youtube.com/embed/0U_dOU235IU"
-        },
-        {
-            id: 24,
-            title: "কিভাবে Purchase Calculation & Payment করবেন? | Click4Details",
-            description: "Click4Details-এ Purchase Calculation & Payment করার সহজ ধাপগুলো জানুন। আপনার গাড়ি বা প্রোডাক্টের জন্য সঠিক হিসাব এবং নিরাপদ পেমেন্ট নিশ্চিত করুন।",
-            videoId: "0U_dOU235IU",
-            src: "https://www.youtube.com/embed/6YGR8r2VnOA?si=WzOcj8sNNf6wVzs9"
-        }
-    ];
+    const [selectedVideo, setSelectedVideo] = useState(null);
 
-    const steps = [
+    const tutorialSections = [
         {
-            icon: <Search className="w-10 h-10 text-blue-600" />,
-            title: "Search for Your Car",
-            description: "Browse through thousands of verified car listings with detailed specifications"
+            title: 'Hot Topic',
+            items: [
+                { title: 'এক ক্লিকের ম্যাজিক', href: 'https://youtu.be/N80vNsXT5R4' },
+                { title: '১ ক্লিকের ম্যাজিক! | শোরুম ম্যানেজমেন্ট ১ ক্লিকে', href: 'https://youtu.be/0MEBcdKJ8-E' },
+                { title: 'ইনভেস্টমেন্ট ছাড়া ব্যবসা ! দারুন ব্যাপার', href: 'https://www.youtube.com/shorts/UofsXIjvjkc' },
+                { title: 'সরাসরি Importer থেকে গাড়ি কিনুন', href: 'https://youtu.be/KZmZ6vyn5ww' },
+                { title: 'দ্রুত বিক্রি করতে চান? ফিক্সড এবং সঠিক প্রাইসিং কেন গুরুত্বপূর্ণ তা জানুন', href: 'https://www.youtube.com/shorts/-ixjjdM7_Js' },
+                { title: 'দ্রুত এবং সহজে প্রোডাক্ট কিভাবে Share করবেন', href: 'https://www.youtube.com/shorts/3K88q9Mqfls' },
+                { title: 'পার্টনার হলে কি কি সুবিধা পাবেন', href: 'https://www.youtube.com/shorts/cKZ0ggw1V-A' },
+                { title: 'কিভাবে প্রোডাক্ট স্টক পেজ থেকে My Shop এ কপি করে বিক্রি বৃদ্ধি করব ?', href: 'https://youtube.com/shorts/2EfnkonVi9Q' },
+            ],
         },
         {
-            icon: <Car className="w-10 h-10 text-blue-600" />,
-            title: "View Details",
-            description: "Check high-quality images, specifications, and pricing information"
+            title: 'Manager ও Accounts',
+            items: [
+                { title: 'গাড়ী Purchase এর হিসাব রাখার নিয়ম', href: 'https://youtu.be/6YGR8r2VnOA' },
+                { title: 'সেল / মানি রিসিট তৈরি করার নিয়ম', href: 'https://youtube.com/shorts/OWCQWDbV-pg' },
+                { title: 'গাড়ির প্রফেশনাল Quotation তৈরি করার নিয়ম', href: 'https://youtube.com/shorts/nXc50JJn6A4' },
+                { title: 'গাড়ির ডেলিভারি Challan তৈরি করার নিয়ম', href: 'https://youtube.com/shorts/5nq4Y_p1B4Q' },
+                { title: 'প্রফেশনাল Bank Docs তৈরি করার নিয়ম', href: 'https://youtube.com/shorts/tGRXaXnAG_Q' },
+                { title: 'মুহুর্তেই Quotation, Delivery Challan এবং Money Receipt তৈরি করুন', href: 'https://youtu.be/gj1hbbyl7k8' },
+                { title: 'গাড়ির Stock List তৈরি ও শেয়ার করার নিয়ম', href: 'https://youtu.be/eX20X3EaDZo' },
+                { title: 'প্রোডাক্ট বা গাড়ীর Details এডিট করার নিয়ম', href: 'https://youtube.com/shorts/KBoGkZiZqTM' },
+            ],
         },
         {
-            icon: <CheckCircle className="w-10 h-10 text-blue-600" />,
-            title: "Contact Seller",
-            description: "Connect directly with verified sellers and schedule inspections"
+            title: 'Shop Management',
+            items: [
+                { title: 'কিভাবে একাধিক Shop কিভাবে তৈরী করব', href: 'https://www.youtube.com/shorts/DB-o7WcPVw8' },
+                { title: 'Click4Details অ্যাপে টিম মেম্বারদের রোল ও পারমিশন সেট করার সহজ নিয়ম', href: 'https://www.youtube.com/shorts/w1-SRuPwERo' },
+            ],
         },
         {
-            icon: <ShoppingCart className="w-10 h-10 text-blue-600" />,
-            title: "Complete Purchase",
-            description: "Finalize your purchase with secure payment options and documentation"
-        }
+            title: 'Edit and Update',
+            items: [
+                { title: 'প্রোডাক্ট Edit করার নিয়ম | Click4Details', href: 'https://www.youtube.com/shorts/-jPRlWFbll0' },
+                { title: 'প্রোডাক্টের দাম বা Price আপডেট করার নিয়ম', href: 'https://www.youtube.com/shorts/0ndMhvB12X4' },
+                { title: 'Sold, Booked, Available আপডেট করব কিভাবে', href: 'https://www.youtube.com/shorts/vhme9eAsuWw' },
+                { title: 'প্রোডাক্টের Outlet পরিবর্তন করার নিয়ম', href: 'https://www.youtube.com/shorts/_COOEFpEfL8' },
+                { title: 'প্রোডাক্ট Delete করার নিয়ম', href: 'https://www.youtube.com/shorts/fzhKg6Zt23U' },
+                { title: 'প্রোডাক্টের Location আপডেট করার নিয়ম', href: 'https://youtube.com/shorts/PC-uGwNNG2c' },
+                { title: 'Product Image ও তথ্য ডাউনলোড করার নিয়ম', href: 'https://youtube.com/shorts/UTiahfY9qf4' },
+                { title: 'Company Shop এ Share Option ব্যবহার করার নিয়ম', href: 'https://youtube.com/shorts/ne5ptPMjs6Q' },
+            ],
+        },
+        {
+            title: 'App Account',
+            items: [
+                { title: 'Password ভূলে গেলে বা কিভাবে পরিবর্তন করব', href: 'https://www.youtube.com/shorts/Yj1pIin4G0Q' },
+                { title: 'নতুন অ্যাকাউন্ট কিভাবে খুলব', href: 'https://www.youtube.com/shorts/IwDJoGGFAqs' },
+                { title: 'Login করার সহজ নিয়ম | Click4Details', href: 'https://www.youtube.com/shorts/lS8Z7OhqAYI' },
+                { title: 'Login, Registration ও Password পরিবর্তনের করুন', href: 'https://www.youtube.com/shorts/NF1I0p3WV_4' },
+            ],
+        },
     ];
 
     return (
@@ -207,7 +78,7 @@ const HowToUse = () => {
             {/* Hero Section */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <div className="mb-6 flex justify-center">
+                    {/* <div className="mb-6 flex justify-center">
                         <a
                             href="https://www.youtube.com/watch?v=6YGR8r2VnOA"
                             target="_blank"
@@ -218,7 +89,7 @@ const HowToUse = () => {
                             <Youtube className="h-7 w-7" />
                             <span className="text-base font-semibold tracking-wide">How to Use</span>
                         </a>
-                    </div>
+                    </div> */}
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">
                         Click4Details ব্যবহার করার পদ্ধতি
                     </h1>
@@ -267,48 +138,84 @@ const HowToUse = () => {
 
                     {/* Video Tutorials Section */}
                     <section>
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center justify-center gap-3 rounded-full bg-blue-100 px-4 py-2 text-blue-700 font-semibold mb-4">
+                                <Youtube className="w-5 h-5" />
                                 Video Tutorials
+                            </div>
+                            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                                Click4Details Learning Hub
                             </h2>
-                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Watch our comprehensive video guides to master the platform
+                            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                                প্রয়োজনের অনুযায়ী দ্রুত ভিডিও দেখে শিখুন—শোরুম, স্টক, Quotation, Account, Shop Management এবং Account Setup সবকিছু এক জায়গায়।
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {videoTutorials.map((video) => (
-                                <div key={video.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300">
-                                    <div className="relative aspect-video bg-gray-900">
-                                        <iframe
-                                            className="w-full h-full border-0"
-                                            src={`${video.src}?rel=0&modestbranding=1`}
-                                            title={video.title}
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                            allowFullScreen
-                                            loading="lazy"
-                                            referrerPolicy="strict-origin-when-cross-origin"
-                                        ></iframe>
-                                    </div>
-                                    <div className="px-4 py-3">
-                                        <div className="flex items-start gap-2">
-                                            <Play className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
-                                            <h3 className="text-sm sm:text-base font-semibold text-gray-800 leading-snug">
-                                                {video.title}
-                                            </h3>
+                        <div className="space-y-8">
+                            {tutorialSections.map((section) => (
+                                <div key={section.title} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                                    <div className="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white px-5 py-4">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
+                                            <Youtube className="w-5 h-5" />
                                         </div>
+                                        <h3 className="text-xl font-bold text-gray-800">{section.title}</h3>
                                     </div>
-                                    {/* <div className="p-6">
-                                        <div className="flex items-start space-x-3 mb-3">
-                                            <Play className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
-                                            <h3 className="text-xl font-bold text-gray-800">
-                                                {video.title}
-                                            </h3>
-                                        </div>
-                                        <p className="text-gray-600">
-                                            {video.description}
-                                        </p>
-                                    </div> */}
+
+                                    <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+                                        {section.items.map((item) => {
+                                            const videoId = getYouTubeVideoId(item.href);
+                                            const thumbnailUrl = videoId
+                                                ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+                                                : 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80';
+
+                                            return (
+                                                <div
+                                                    key={`${section.title}-${item.title}`}
+                                                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-300 hover:shadow-lg"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedVideo({ title: item.title, videoId })}
+                                                        className="block w-full text-left"
+                                                    >
+                                                        <div className="relative overflow-hidden">
+                                                            <img
+                                                                src={thumbnailUrl}
+                                                                alt={item.title}
+                                                                className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
+                                                                loading="lazy"
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                                                            <div className="absolute left-4 top-4 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                                                                Video
+                                                            </div>
+                                                            <div className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-lg">
+                                                                <Play className="ml-1 h-6 w-6 fill-current text-red-600" />
+                                                            </div>
+                                                        </div>
+                                                    </button>
+
+                                                    <div className="flex flex-1 flex-col p-4">
+                                                        <p className="text-base font-semibold leading-relaxed text-gray-800 group-hover:text-blue-700">
+                                                            {item.title}
+                                                        </p>
+
+                                                        <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 text-sm font-semibold text-blue-700">
+                                                            <a
+                                                                href={item.href}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-2 hover:text-blue-900"
+                                                            >
+                                                                <span>Watch on YouTube</span>
+                                                                <span aria-hidden="true">→</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -374,6 +281,37 @@ const HowToUse = () => {
 
                 </div>
             </div>
+
+            {selectedVideo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                    <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
+                            <h3 className="truncate text-base font-bold text-gray-800 sm:text-lg">
+                                {selectedVideo.title}
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedVideo(null)}
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-xl font-semibold text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                                aria-label="Close video"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="bg-black">
+                            <iframe
+                                className="aspect-video w-full"
+                                src={`https://www.youtube.com/embed/${selectedVideo.videoId}?autoplay=1&rel=0&modestbranding=1`}
+                                title={selectedVideo.title}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                                referrerPolicy="strict-origin-when-cross-origin"
+                            ></iframe>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </>
