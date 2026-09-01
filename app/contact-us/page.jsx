@@ -16,6 +16,7 @@ const ContactUs = () => {
 
     const onSubmit = data => {
         // send to API or reset form here
+        console.log("Data----",data);
     };
 
     return (

@@ -64,7 +64,7 @@ const AboutUs = () => {
                 <div className="max-w-7xl mx-auto space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
 
                     {/* Modern Hero Section */}
-                    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0B5D8A] via-[#116FA5] to-[#0D3B5B] px-6 py-14 text-center text-white shadow-xl sm:px-10 lg:py-20">
+                    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0B5D8A] via-[#116FA5] to-[#0D3B5B] px-6 py-7 text-center text-white shadow-xl sm:px-6 lg:py-10">
                         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-orange-400/20 blur-3xl" />
                         <div className="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-cyan-300/10 blur-3xl" />
                         <div className="relative mx-auto max-w-4xl">
@@ -77,14 +77,14 @@ const AboutUs = () => {
                             <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-blue-50 sm:text-xl">
                                 স্টক, কাস্টমার, মার্কেটিং এবং বিক্রির পুরো প্রক্রিয়াকে একটি ডিজিটাল সিস্টেমে পরিচালনা করুন।
                             </p>
-                            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                            {/* <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                                 <a href="#solutions" className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white shadow-lg transition hover:bg-orange-600">
                                     Solutions দেখুন
                                 </a>
                                 <a href="#video" className="rounded-xl border border-white/30 bg-white/10 px-6 py-3 font-bold text-white transition hover:bg-white/20">
                                     ভিডিও দেখুন
                                 </a>
-                            </div>
+                            </div> */}
                         </div>
                     </section>
 
@@ -107,7 +107,7 @@ const AboutUs = () => {
                             {/* Video Section */}
                             <section id="video" className="w-full scroll-mt-28 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
                                 <div className="mb-5">
-                                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Watch &amp; Learn</p>
+                                    {/* <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Watch &amp; Learn</p> */}
                                     <h2 className="mt-2 text-2xl font-extrabold text-slate-900 sm:text-3xl">
                                         Click For Details কীভাবে কাজ করে
                                     </h2>
@@ -201,7 +201,8 @@ const AboutUs = () => {
                             </div>
 
                             {/* ─── Solution One ─── */}
-                            <SectionHeader id="solutions">Solution One</SectionHeader>
+                            <SectionHeader id="solutions">First Challenge</SectionHeader>
+                            {/* <SectionHeader id="solutions">Solution One</SectionHeader> */}
 
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
                                 <h3
@@ -239,16 +240,43 @@ const AboutUs = () => {
                                 </div>
                             </div>
 
-                            {/* ─── Solution Two ─── */}
-                            <SectionHeader>Solution Two</SectionHeader>
+                            <SectionHeader id="solutions">Solution One</SectionHeader>
 
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
                                 <h3
                                     className="text-2xl sm:text-3xl font-bold underline underline-offset-4 text-center"
                                     style={{ color: '#116fa5' }}
                                 >
-                                    Software &amp; Marketing Growth Support (Partnership)
+                                    আপনার সমস্যার সহজ সমাধান — Click4Details!
                                 </h3>
+
+                                <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
+                                    <p>আপনার প্রয়োজনীয় সমাধান পেতে আজই ব্যবহার করুন আমাদের Click4Details সফটওয়্যার ও অ্যাপ।</p>
+
+                                    <ul className="mt-6 list-disc space-y-5 pl-8 sm:pl-14">
+                                        <li>
+                                            Click4Details অ্যাপ ও সফটওয়্যার ব্যবহার করুন
+                                        </li>
+                                        <li>
+                                            যেকোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন
+                                        </li>
+
+                                        <li>
+                                            আপনার সমস্যার সমাধানে আমরা আপনাকে সহযোগিতা করব
+                                        </li>
+                                        <li>
+                                            সবচেয়ে গুরুত্বপূর্ণ বিষয়—Click4Details সফটওয়্যার ও অ্যাপ সম্পূর্ণ বিনামূল্যে!
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            {/* ─── Second Challenge ─── */}
+                            <SectionHeader>Second Challenge</SectionHeader>
+
+
+                            <div className="w-full mt-4 text-gray-600 text-xl text-start">
+
 
                                 <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
                                     <p>এই ২০২৬ সালে আপনি কি চান না আপনার</p>
@@ -265,7 +293,7 @@ const AboutUs = () => {
                             </div>
 
                             {/* ─── Our Challenges ─── */}
-                            <SectionHeader id="challenges">Our Challenges</SectionHeader>
+                            {/* <SectionHeader id="challenges">Our Challenges</SectionHeader> */}
 
                             <div className='w-full mt-6 text-gray-600 text-xl text-start'>
                                 <p>
@@ -290,11 +318,20 @@ const AboutUs = () => {
                                 </p>
                             </div>
 
-                            {/* ─── Our Solution ─── */}
-                            <SectionHeader>Our Solution</SectionHeader>
+                            {/* ─── Solution Two ─── */}
+                            <SectionHeader>Solution Two</SectionHeader>
+
 
                             <div className='w-full mt-4 text-gray-600 text-xl text-start'>
-                                <p>
+
+                                <h3
+                                    className="text-2xl sm:text-3xl font-bold underline underline-offset-4 text-center"
+                                    style={{ color: '#116fa5' }}
+                                >
+                                    Software &amp; Marketing Growth Support (Partnership)
+                                </h3>
+
+                                <p className='mt-4'>
                                     আপনার স্টক দেখতে পারবে <br />
                                     ✅ শত শত ডিলার ও রিটেইলার <br />
                                     ✅ সরাসরি দেশের সকল কাস্টমার <br />
@@ -323,7 +360,39 @@ const AboutUs = () => {
                                 </p>
                             </div>
 
-                            {/* ─── Solution Three ─── */}
+                            {/* ─── Third Solution ─── */}
+                            <SectionHeader>Third Challenge</SectionHeader>
+
+
+                            <div className="w-full mt-4 text-gray-600 text-xl text-start">
+
+
+                                <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
+                                    <ul className="mt-6 list-disc space-y-5 pl-8 sm:pl-14">
+                                        <li>
+                                            গাড়ি বিক্রি হচ্ছে না?
+                                        </li>
+                                        <li>
+                                            কাস্টমার গাড়ি দেখছে, কথা বলছে—কিন্তু শেষ পর্যন্ত অন্যের গাড়ি কিনছে?
+                                        </li>
+
+                                        <li>
+                                            চিন্তা নেই! আপনার গাড়িটি অনলাইনে আরও বেশি কাস্টমারের কাছে পৌঁছে দিন এবং সবার আগে বিক্রির সুযোগ তৈরি করুন।
+                                        </li>
+                                        <li>
+                                            আপনার গাড়ি অনলাইনে প্রচার করুন, সঠিক কাস্টমারের কাছে পৌঁছান এবং দ্রুত বিক্রির সম্ভাবনা বাড়ান।
+                                        </li>
+                                    </ul>
+                                    {/* <p className="mt-4 text-center">আর অপেক্ষা নয়! আজই Click4Details ব্যবহার করুন।</p> */}
+                                    <div className="mt-6 text-gray-600 text-xl sm:text-2xl leading-relaxed">
+                                        <span className='text-gray-800 text-2xl'>আর অপেক্ষা নয়! এখনই আমাদের সাথে যোগাযোগ করুন :</span><br />
+                                        ✅ আপনার গাড়ি অনলাইনে প্রচার করুন<br />
+                                        ✅ আরও কাস্টমারের কাছে পৌঁছান<br />
+                                        ✅ বিক্রির সম্ভাবনা বাড়ান<br />
+                                    </div>
+                                </div>
+                            </div>
+
                             <SectionHeader>Solution Three</SectionHeader>
 
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
@@ -337,10 +406,10 @@ const AboutUs = () => {
                                 <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
                                     <p>বিশেষ দুটি শর্ত সাপেক্ষে বিক্রি বৃদ্ধির জন্য আমাদের টিম কাজ করবে</p>
 
-                                    <ul className="mt-6 list-disc space-y-5 pl-8 sm:pl-14">
-                                        <li>
-                                            বিশেষ শর্ত একঃ সঠিক বিটুবি প্রাইসঃ
-                                        </li>
+                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500'>বিশেষ শর্ত একঃ সঠিক বিটুবি প্রাইসঃ</p>
+
+                                    <ul className="mt-4 list-disc space-y-2 pl-8 sm:pl-14">
+
                                         <li>
                                             আমাদের কাজ আপনার গাড়ীর মার্কেটিং করা।
                                         </li>
@@ -349,9 +418,10 @@ const AboutUs = () => {
                                         </li>
                                     </ul>
 
-                                    <p>বিশেষ শর্ত দুইঃ এভেইলেবিলিটি আপডেট রাখাঃ </p>
+                                    {/* <p>বিশেষ শর্ত দুইঃ এভেইলেবিলিটি আপডেট রাখাঃ </p> */}
+                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500 mt-2'>বিশেষ শর্ত দুইঃ এভেইলেবিলিটি আপডেট রাখাঃ</p>
 
-                                    <ul className="mt-6 list-disc space-y-5 pl-8 sm:pl-14">
+                                    <ul className="mt-4 list-disc space-y-2 pl-8 sm:pl-14">
                                         <li>
                                             রিটেলে একটি গাড়ী বিক্রি করতে অনেক সময় ও  Effort লাগে। কোন কোন ক্ষেত্রে ১ থেকে ১৫ দিন সময় লাগে। পাঁচ বারের বেশি কাস্টমারে সাথে কথা বলা ও ২ বার থেকে ৩ বার বেশি বসা লাগে।
                                         </li>
@@ -373,6 +443,61 @@ const AboutUs = () => {
                                         ❌ রেটিং খারাপ হয়।  <br />
 
                                     </ul>
+                                </div>
+                            </div>
+
+
+                            <div className="w-full mt-4 text-gray-600 text-xl text-start mt-2 mb-2">
+                                <div className="text-xl sm:text-2xl leading-relaxed">
+                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500 mb-2'>এই ফল পেতে হলে ধৈর্য ধরতে হবে</p>
+                                    <p>এই সিস্টেম একদিনে ডেভেলপ করেনা।</p>
+                                    <p className="font-bold">৩ মাস থেকে ১ বছর লাগবে</p>
+                                    <p>তাই এই এক বছর ফল না পেলেও দাম এবং এভেলেবিলিটি আপডেট রাখতে হবে</p>
+
+                                    <div className="mt-8">
+                                        <p className="font-bold underline underline-offset-4">আমি এই ধৈর্য ধরতে পারবোনা</p>
+                                        <p className="font-bold text-gray-600 underline underline-offset-4">
+                                            কাল থেকে আমার গাড়ী বিক্রি চাই
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <p className="font-bold text-red-500 underline underline-offset-4">আমার আলোঃ ১</p>
+                                        <p>আপনি যদি গাড়ীর হোল সেল প্রাইস দেন বা বাজারদর থেকে কম দেন</p>
+                                        <p>আপনার গাড়ী যদি কাস্টমার চায়</p>
+                                        <p>তাহলে কালকে থেকেই আপনার গাড়ী বিক্রি হবে</p>
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <p className="font-bold text-red-500 underline underline-offset-4">আমার আলোঃ ২</p>
+                                        <p>আমাদের দ্বারা গাড়ী বিক্রি করতে আপনাকে কোন কাজ করতে হচ্ছেনা</p>
+                                        <p>
+                                            <span className="font-bold underline underline-offset-4">সফটওয়্যার ব্যবহারঃ</span>{" "}
+                                            আপনি আপনার কোম্পানির কাছেই সফটওয়্যার ব্যবহার করবেন।
+                                        </p>
+                                        <p>
+                                            <span className="font-bold underline underline-offset-4">বিটুবি প্রাইস সঠিক ভাবে দিনঃ</span>{" "}
+                                            শুধু বিটুবি প্রাইস কম করে লিখবেন।
+                                        </p>
+                                        <p>
+                                            <span className="font-bold underline underline-offset-4">এভেলেবিলিটি দিনঃ</span>{" "}
+                                            এভেলেবিলিটি ঠিক রাখবেন।
+                                        </p>
+                                        <p className="font-bold text-gray-600">
+                                            সব কিছু অটোমেটিক হবে। এখানে কোন এফোর্ট দিতে হবেনা ।
+                                        </p>
+                                        <p className="font-bold text-gray-600">
+                                            আপনার মত স্টক আছে তাদের মধ্যে একজন কি এই কাজ করতে পারবে না?
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <p className="font-bold text-red-500 underline underline-offset-4">মনে রাখবেনঃ</p>
+                                        <p>আমাদের কাজ আপনার গাড়ীর মার্কেটিং করা</p>
+                                        <p className="font-bold text-gray-600">
+                                            কিন্তু বিক্রি নির্ভর করবে আপনার দামের উপর
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -408,61 +533,73 @@ const AboutUs = () => {
                                 </div>
                             </div>
 
+
+
+                            {/* ─── Forth Challenge ─── */}
+                            <SectionHeader>Forth Challenge</SectionHeader>
+
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
-                                <div className="text-xl sm:text-2xl leading-relaxed">
-                                    <p className="font-bold underline underline-offset-4">এই ফল পেতে হলে ধৈর্য ধরতে হবে</p>
-                                    <p>এই সিস্টেম একদিনে ডেভেলপ করেনা।</p>
-                                    <p className="font-bold">৩ মাস থেকে ১ বছর লাগবে</p>
-                                    <p>তাই এই এক বছর ফল না পেলেও দাম এবং এভেলেবিলিটি আপডেট রাখতে হবে</p>
+                                <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
 
-                                    <div className="mt-8">
-                                        <p className="font-bold underline underline-offset-4">আমি এই ধৈর্য ধরতে পারবোনা</p>
-                                        <p className="font-bold text-gray-600 underline underline-offset-4">
-                                            কাল থেকে আমার গাড়ী বিক্রি চাই
+                                    <ul className="mt-6 list-disc space-y-5 pl-8 sm:pl-14">
+                                        <li>
+                                            <strong className="text-gray-800">
+                                                পুঁজি নেই, কিন্তু গাড়ির ব্যবসা করতে চান?
+                                            </strong>
+                                        </li>
+
+                                        <li>
+                                            শোরুমে গাড়ি কম, কিন্তু কাস্টমার আছে অনেক?
+                                            কাস্টমারের চাহিদা অনুযায়ী গাড়ি না থাকায় কাঙ্ক্ষিত গাড়ি বিক্রি করতে পারছেন না?
+                                        </li>
+
+                                        <li>
+                                            <strong className="text-gray-800">
+                                                চিন্তা নেই!
+                                            </strong>{" "}
+                                            শোরুমে বেশি গাড়ি মজুত না রেখেও আপনার গাড়ির ব্যবসা বাড়ানোর সুযোগ তৈরি করুন।
+                                        </li>
+
+                                        <li>
+                                            কাস্টমারের চাহিদা অনুযায়ী গাড়ি খুঁজে বের করুন এবং
+                                            গাড়ির মালিক বা বিক্রেতার গাড়ির সাথে কাস্টমারকে ম্যাচ করে
+                                            বিক্রির সুযোগ তৈরি করুন।
+                                        </li>
+
+                                        <li>
+                                            নিজের শোরুমে গাড়ি না থাকলেও কাস্টমার হারাবেন না।
+                                            কম পুঁজিতে আরও বেশি গাড়ি বিক্রির সুযোগ তৈরি করুন।
+                                        </li>
+                                    </ul>
+
+                                    {/* Call To Action */}
+                                    <div className="mt-8 rounded-xl bg-gray-50 p-5 sm:p-6">
+                                        <p className="text-gray-800 text-2xl sm:text-3xl font-semibold mb-4">
+                                            আজই শুরু করুন!
+                                        </p>
+
+                                        <p className="text-gray-700 text-xl sm:text-2xl mb-4">
+                                            Click4Details-এর মাধ্যমে আপনার কাস্টমারের চাহিদার সাথে
+                                            সঠিক গাড়ি ম্যাচ করুন এবং আপনার ব্যবসার পরিধি বাড়ান।
+                                        </p>
+
+                                        <div className="space-y-2 text-xl sm:text-2xl">
+                                            <p>✅ কাস্টমারের চাহিদা অনুযায়ী গাড়ি খুঁজুন</p>
+                                            <p>✅ গাড়ির মালিক ও বিক্রেতার গাড়ি খুঁজে নিন</p>
+                                            <p>✅ কাস্টমার ও গাড়ির মধ্যে ম্যাচ তৈরি করুন</p>
+                                            <p>✅ নিজের গাড়ি কম থাকলেও বিক্রির সুযোগ তৈরি করুন</p>
+                                            <p>✅ কম পুঁজিতে ব্যবসা বাড়ানোর সুযোগ নিন</p>
+                                        </div>
+
+                                        <p className="mt-6 text-gray-800 text-xl sm:text-2xl font-semibold">
+                                            📞 এখনই আমাদের সাথে যোগাযোগ করুন +8809638660077 এবং Click4Details ব্যবহার শুরু করুন।
                                         </p>
                                     </div>
 
-                                    <div className="mt-8">
-                                        <p className="font-bold underline underline-offset-4">আমার আলোঃ ১</p>
-                                        <p>আপনি যদি গাড়ীর হোল সেল প্রাইস দেন বা বাজারদর থেকে কম দেন</p>
-                                        <p>আপনার গাড়ী যদি কাস্টমার চায়</p>
-                                        <p>তাহলে কালকে থেকেই আপনার গাড়ী বিক্রি হবে</p>
-                                    </div>
-
-                                    <div className="mt-8">
-                                        <p className="font-bold underline underline-offset-4">আমার আলোঃ ২</p>
-                                        <p>আমাদের দ্বারা গাড়ী বিক্রি করতে আপনাকে কোন কাজ করতে হচ্ছেনা</p>
-                                        <p>
-                                            <span className="font-bold underline underline-offset-4">সফটওয়্যার ব্যবহারঃ</span>{" "}
-                                            আপনি আপনার কোম্পানির কাছেই সফটওয়্যার ব্যবহার করবেন।
-                                        </p>
-                                        <p>
-                                            <span className="font-bold underline underline-offset-4">বিটুবি প্রাইস সঠিক ভাবে দিনঃ</span>{" "}
-                                            শুধু বিটুবি প্রাইস কম করে লিখবেন।
-                                        </p>
-                                        <p>
-                                            <span className="font-bold underline underline-offset-4">এভেলেবিলিটি দিনঃ</span>{" "}
-                                            এভেলেবিলিটি ঠিক রাখবেন।
-                                        </p>
-                                        <p className="font-bold text-gray-600">
-                                            সব কিছু অটোমেটিক হবে। এখানে কোন এফোর্ট দিতে হবেনা ।
-                                        </p>
-                                        <p className="font-bold text-gray-600">
-                                            আপনার মত স্টক আছে তাদের মধ্যে একজন কি এই কাজ করতে পারবে না?
-                                        </p>
-                                    </div>
-
-                                    <div className="mt-8">
-                                        <p className="font-bold underline underline-offset-4">মনে রাখবেনঃ</p>
-                                        <p>আমাদের কাজ আপনার গাড়ীর মার্কেটিং করা</p>
-                                        <p className="font-bold text-gray-600">
-                                            কিন্তু বিক্রি নির্ভর করবে আপনার দামের উপর
-                                        </p>
-                                    </div>
                                 </div>
                             </div>
 
-                            {/* ─── Solution Four ─── */}
+
                             <SectionHeader>Solution Four</SectionHeader>
 
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
@@ -575,7 +712,7 @@ const AboutUs = () => {
                             </div>
 
                             {/* ─── Final Slide ─── */}
-                            <SectionHeader>Final Slide</SectionHeader>
+                            <SectionHeader>তারপরও যদি আপনার গাড়ির বিক্রি না বাড়ে, তাহলে কী করবেন?</SectionHeader>
 
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
                                 <div className="space-y-5 text-xl font-medium leading-relaxed">
@@ -591,7 +728,7 @@ const AboutUs = () => {
                                     <p>ক্লিক ফর ডিটেইলস আমার খুব দরকার</p>
                                     <p>আমার কোম্পানির সবাইকে অবশ্যই ব্যবহার করতে বলব</p>
 
-                                    <p className="font-bold text-gray-600 underline underline-offset-4">বিশেষ সতর্কতা</p>
+                                    <p className="font-bold text-red-600 underline underline-offset-4">Click4Details ব্যবহার করার সময় কিছু সতর্কতা :</p>
 
                                     <div className="mt-7 text-left text-[17px] sm:text-[19px] md:text-[21px] font-medium leading-relaxed">
                                         <div>
@@ -613,7 +750,7 @@ const AboutUs = () => {
 
                                         <div className="mt-5">
                                             <h3 className="font-bold text-gray-600 underline underline-offset-4">
-                                                শোরুমে আসারপর খুব সতর্কতা অবলম্বন করতে হবে:
+                                                গাড়ি  শোরুমে আসার পর খুব সতর্কতা অবলম্বন করতে হবে:
                                             </h3>
                                             <ul className="mt-2 list-disc space-y-2 pl-7">
                                                 <li>
@@ -686,7 +823,7 @@ const AboutUs = () => {
                             </div>
 
                             {/* Final Call To Action */}
-                            <section className="mt-16 overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B5D8A] to-[#116FA5] px-6 py-12 text-center text-white shadow-xl sm:px-10">
+                            <section className="mx-auto w-full max-w-5xl mt-16 overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B5D8A] to-[#116FA5] px-6 py-12 text-center text-white shadow-xl sm:px-10">
                                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-300">Ready to Grow?</p>
                                 <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">আপনার গাড়ির ব্যবসাকে আজই ডিজিটাল করুন</h2>
                                 <p className="mx-auto mt-4 max-w-2xl leading-8 text-blue-50">
