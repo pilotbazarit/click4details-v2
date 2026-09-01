@@ -132,12 +132,17 @@ const AboutUs = () => {
 
                             <div className='w-full mt-4 text-gray-600 text-xl text-start'>
                                 <p>
-                                    আপনার গাড়ির ব্যবসা কে আপনি যদি এনালগ সিস্টেম থেকে ডিজিটাল সিস্টেমে <br />
-                                    আনতে পারেন তাহলে আপনি আপনার গাড়ির ব্যবসাকে করতে পারবেন <br />
-                                    আরও সহজ স্মার্ট ও দ্রুত <br />
-                                    পারসোনাল টাইম ও রিলাক্স টাইম বৃদ্ধি <br />
-                                    আর সে সাথে যদি সহজে ব্যবসা বৃদ্ধি হয় তাহলে তো কথাই নেই । <br />
-                                    পাইলট বাজার লিমিটেডের Click For Details এপ নিয়ে আসল সেই সমাধান। এটি <br />
+                                    আপনার গাড়ির ব্যবসা কে আপনি যদি এনালগ সিস্টেম থেকে ডিজিটাল সিস্টেমে
+                                    আনতে পারেন তাহলে আপনি আপনার গাড়ির ব্যবসাকে করতে পারবেন :<br />
+
+                                    <ul className='list-disc pl-6 mt-2'>
+                                        <li>আরও সহজ স্মার্ট ও দ্রুত</li>
+                                        <li>পারসোনাল টাইম ও রিলাক্স টাইম বৃদ্ধি</li>
+                                        <li>আর সে সাথে যদি সহজে ব্যবসা বৃদ্ধি হয় তাহলে তো কথাই নেই ।</li>
+                                    </ul>
+
+                                    <br />
+                                    পাইলট বাজার লিমিটেডের Click For Details এপ নিয়ে আসল সেই সমাধান। এটি
                                     বাংলাদেশের গাড়ি ব্যবসায়ীদের জন্য একটি সম্পূর্ণ ডিজিটাল বিজনেস সিস্টেম।
                                 </p>
                             </div>
@@ -297,25 +302,51 @@ const AboutUs = () => {
 
                             <div className='w-full mt-6 text-gray-600 text-xl text-start'>
                                 <p>
-                                    <span className="font-bold pb-2">Only Exporter, Only Importer, B2B / Whole Seller, Factory Owners Challengesঃ</span> <br />
-                                    ✅ ডিলার আছে, কিন্তু সীমিত <br />
-                                    ✅ শুধু মাত্র কিছু ডিলারের উপড় নির্ভরশীল থাকতে হচ্ছে।  কিন্তু তারা শুধু আমার গাড়ী বিক্রি করছেনা । তারা কাস্টমারকে অন্য ডিলারের গাড়ীও সাজেস্ট করছে। <br />
-                                    ✅ডিলাররা বেশি লাভের আশায় আমার গাড়ী বিক্রি করছেনা <br />
-                                    ✅ আমি বি টু সি/ Retail সেল চাই কিন্তু বি টু সির ঝামেলা বা খরচ চাইনা। বিটুসি বিটুবির মত করে করতে চাই । <br />
+                                    <span className="font-bold pb-2 underline underline-offset-4" style={{ color: '#116fa5' }}>Only Exporter, Only Importer, B2B / Whole Seller, Factory Owners Challengesঃ</span> <br />
+                                    <ul className="mt-6 list-disc space-y-2 pl-8 sm:pl-14">
+                                        <li>
+                                            ডিলার আছে, কিন্তু সীমিত
+                                        </li>
+                                        <li>
+                                            শুধু মাত্র কিছু ডিলারের উপড় নির্ভরশীল থাকতে হচ্ছে।  কিন্তু তারা শুধু আমার গাড়ী বিক্রি করছেনা । তারা কাস্টমারকে অন্য ডিলারের গাড়ীও সাজেস্ট করছে।
+                                        </li>
+                                        <li>
+                                            ডিলাররা বেশি লাভের আশায় আমার গাড়ী বিক্রি করছেনা
+                                        </li>
+                                        <li>
+                                            আমি বি টু সি/ Retail সেল চাই কিন্তু বি টু সির ঝামেলা বা খরচ চাইনা। বিটুসি বিটুবির মত করে করতে চাই ।
+                                        </li>
+                                    </ul>
                                 </p>
 
-                                <p>
-                                    <span className="font-bold pb-2">Importer with Showroom Challengesঃ</span> <br />
-                                    ✅ আমার গাড়ি আছে, কিন্তু স্পেসিফিক সেই গাড়ীর কাস্টমার আমি পাচ্ছিনা <br />
-                                    ✅ আমার কাস্টমার আছে, কিন্তু আমার এই গাড়ীটা চাচ্ছেনা <br />
-                                    ✅ আমি রিটেলের পাশাপাশি বিটুবি করে আমার সেল আরো বাড়াতে চাই <br />
+                                <p className="mt-6">
+                                    <span className="font-bold pb-2 underline underline-offset-4" style={{ color: '#116fa5' }}>Importer with Showroom Challengesঃ</span> <br />
+                                    <ul className="mt-6 list-disc space-y-2 pl-8 sm:pl-14">
+                                        <li>
+                                            আমার গাড়ি আছে, কিন্তু স্পেসিফিক সেই গাড়ীর কাস্টমার আমি পাচ্ছিনা
+                                        </li>
+                                        <li>
+                                            আমার কাস্টমার আছে, কিন্তু আমার এই গাড়ীটা চাচ্ছেনা
+                                        </li>
+                                        <li>
+                                            আমি রিটেলের পাশাপাশি বিটুবি করে আমার সেল আরো বাড়াতে চাই
+                                        </li>
+                                    </ul>
                                 </p>
 
-                                <p>
-                                    <span className="font-bold pb-2">Common Challenges:</span> <br />
-                                    ✅মার্কেটিং খরচ বাড়ছে, বিক্রি বাড়ছে না, বিক্রিত মাধ্যম বাড়াতে পারছিনা <br />
-                                    ✅অনলাইনে সাধারন ধারনা থাকার কারনে অনলাইনে সবাই বিক্রি করছে আমার বিক্রি বাড়ছেনা <br />
+
+                                <p className="mt-6">
+                                    <span className="font-bold pb-2 underline underline-offset-4" style={{ color: '#116fa5' }}>Common Challenges:</span> <br />
+                                    <ul className="mt-6 list-disc space-y-2 pl-8 sm:pl-14">
+                                        <li>
+                                            মার্কেটিং খরচ বাড়ছে, বিক্রি বাড়ছে না, বিক্রিত মাধ্যম বাড়াতে পারছিনা
+                                        </li>
+                                        <li>
+                                            অনলাইনে সাধারন ধারনা থাকার কারনে অনলাইনে সবাই বিক্রি করছে আমার বিক্রি বাড়ছেনা
+                                        </li>
+                                    </ul>
                                 </p>
+
                             </div>
 
                             {/* ─── Solution Two ─── */}
@@ -370,26 +401,26 @@ const AboutUs = () => {
                                 <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
                                     <ul className="mt-6 list-disc space-y-5 pl-8 sm:pl-14">
                                         <li>
-                                            গাড়ি বিক্রি হচ্ছে না?
+                                            তারপরেও গাড়ি বিক্রি হচ্ছে না?
                                         </li>
                                         <li>
                                             কাস্টমার গাড়ি দেখছে, কথা বলছে—কিন্তু শেষ পর্যন্ত অন্যের গাড়ি কিনছে?
                                         </li>
 
-                                        <li>
+                                        {/* <li>
                                             চিন্তা নেই! আপনার গাড়িটি অনলাইনে আরও বেশি কাস্টমারের কাছে পৌঁছে দিন এবং সবার আগে বিক্রির সুযোগ তৈরি করুন।
                                         </li>
                                         <li>
                                             আপনার গাড়ি অনলাইনে প্রচার করুন, সঠিক কাস্টমারের কাছে পৌঁছান এবং দ্রুত বিক্রির সম্ভাবনা বাড়ান।
-                                        </li>
+                                        </li> */}
                                     </ul>
                                     {/* <p className="mt-4 text-center">আর অপেক্ষা নয়! আজই Click4Details ব্যবহার করুন।</p> */}
-                                    <div className="mt-6 text-gray-600 text-xl sm:text-2xl leading-relaxed">
+                                    {/* <div className="mt-6 text-gray-600 text-xl sm:text-2xl leading-relaxed">
                                         <span className='text-gray-800 text-2xl'>আর অপেক্ষা নয়! এখনই আমাদের সাথে যোগাযোগ করুন :</span><br />
                                         ✅ আপনার গাড়ি অনলাইনে প্রচার করুন<br />
                                         ✅ আরও কাস্টমারের কাছে পৌঁছান<br />
                                         ✅ বিক্রির সম্ভাবনা বাড়ান<br />
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
 
@@ -404,9 +435,11 @@ const AboutUs = () => {
                                 </h3>
 
                                 <div className="mt-8 text-gray-600 text-xl sm:text-2xl leading-relaxed">
+                                    {/* <p>আমাদের সাথে Special Partnership গড়ে তুলুন।</p> */}
+                                    <p className='text-4xl text-center mb-8 font-bold underline underline-offset-4 mt-2 text-red-500 mb-2'>আমাদের সাথে Special Partnership গড়ে তুলুন।</p>
                                     <p>বিশেষ দুটি শর্ত সাপেক্ষে বিক্রি বৃদ্ধির জন্য আমাদের টিম কাজ করবে</p>
 
-                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500'>বিশেষ শর্ত একঃ সঠিক বিটুবি প্রাইসঃ</p>
+                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500'>বিশেষ শর্ত একঃ সবসময় বিটুবি প্রাইস আপডেট রাখুন ঃ কেন আপডেট রাখতে হবে জানুন ঃ </p>
 
                                     <ul className="mt-4 list-disc space-y-2 pl-8 sm:pl-14">
 
@@ -416,10 +449,13 @@ const AboutUs = () => {
                                         <li>
                                             কিন্তু বিক্রি নির্ভর করবে আপানার সঠিক হোলসেল দাম নির্বাচনের উপর।
                                         </li>
+                                        <li>
+                                            সব সময় বিটুইবি প্রাইস আপডেট রাখুন আপডেট না রাখলে স্পেশাল পার্টনারশিপে বিক্রি হবে না।
+                                        </li>
                                     </ul>
 
                                     {/* <p>বিশেষ শর্ত দুইঃ এভেইলেবিলিটি আপডেট রাখাঃ </p> */}
-                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500 mt-2'>বিশেষ শর্ত দুইঃ এভেইলেবিলিটি আপডেট রাখাঃ</p>
+                                    <p className='font-bold underline underline-offset-4 mt-2 text-red-500 mt-2'>বিশেষ শর্ত দুইঃ সবসময় এভেইলেবিলিটি আপডেট রাখুন ঃ কেন আপডেট রাখতে হবে জানুন ঃ</p>
 
                                     <ul className="mt-4 list-disc space-y-2 pl-8 sm:pl-14">
                                         <li>
@@ -441,6 +477,7 @@ const AboutUs = () => {
                                         ❌ সিস্টেমের প্রতি ফিল্ড এজেন্ট আস্থা হারায়। <br />
                                         ❌ আপনার গাড়ী পরবর্তিতে আমরা বিক্রি করতে নিরুৎসাই হই।  <br />
                                         ❌ রেটিং খারাপ হয়।  <br />
+                                        ❌ সব সময় এভেইলেবিলিটি আপডেট রাখুন আপডেট না রাখলে গাড়ী বিক্রি হবে না।  <br />
 
                                     </ul>
                                 </div>
@@ -491,10 +528,10 @@ const AboutUs = () => {
                                         </p>
                                     </div>
 
-                                    <div className="mt-8">
-                                        <p className="font-bold text-red-500 underline underline-offset-4">মনে রাখবেনঃ</p>
+                                    <div className="mt-8 text-center">
+                                        <p className="font-bold text-red-500 mb-2 underline underline-offset-4">মনে রাখবেনঃ</p>
                                         <p>আমাদের কাজ আপনার গাড়ীর মার্কেটিং করা</p>
-                                        <p className="font-bold text-gray-600">
+                                        <p className="font-bold text-red-600">
                                             কিন্তু বিক্রি নির্ভর করবে আপনার দামের উপর
                                         </p>
                                     </div>
@@ -572,35 +609,38 @@ const AboutUs = () => {
                                         </li>
                                     </ul>
 
-                                    {/* Call To Action */}
-                                    <div className="mt-8 rounded-xl bg-gray-50 p-5 sm:p-6">
-                                        <p className="text-gray-800 text-2xl sm:text-3xl font-semibold mb-4">
-                                            আজই শুরু করুন!
-                                        </p>
-
-                                        <p className="text-gray-700 text-xl sm:text-2xl mb-4">
-                                            Click4Details-এর মাধ্যমে আপনার কাস্টমারের চাহিদার সাথে
-                                            সঠিক গাড়ি ম্যাচ করুন এবং আপনার ব্যবসার পরিধি বাড়ান।
-                                        </p>
-
-                                        <div className="space-y-2 text-xl sm:text-2xl">
-                                            <p>✅ কাস্টমারের চাহিদা অনুযায়ী গাড়ি খুঁজুন</p>
-                                            <p>✅ গাড়ির মালিক ও বিক্রেতার গাড়ি খুঁজে নিন</p>
-                                            <p>✅ কাস্টমার ও গাড়ির মধ্যে ম্যাচ তৈরি করুন</p>
-                                            <p>✅ নিজের গাড়ি কম থাকলেও বিক্রির সুযোগ তৈরি করুন</p>
-                                            <p>✅ কম পুঁজিতে ব্যবসা বাড়ানোর সুযোগ নিন</p>
-                                        </div>
-
-                                        <p className="mt-6 text-gray-800 text-xl sm:text-2xl font-semibold">
-                                            📞 এখনই আমাদের সাথে যোগাযোগ করুন +8809638660077 এবং Click4Details ব্যবহার শুরু করুন।
-                                        </p>
-                                    </div>
 
                                 </div>
                             </div>
 
 
                             <SectionHeader>Solution Four</SectionHeader>
+
+
+
+                            {/* Call To Action */}
+                            <div className="mt-8 rounded-xl mb-2">
+                                <p className="text-gray-800 text-2xl sm:text-3xl font-semibold mb-4">
+                                    পুঁজি ছাড়া ব্যবসা আমাদের সাথে আজই শুরু করুন
+                                </p>
+
+                                <p className="text-gray-700 text-xl sm:text-2xl mb-4">
+                                    Click4Details-এর মাধ্যমে আপনার কাস্টমারের চাহিদার সাথে
+                                    সঠিক গাড়ি ম্যাচ করুন এবং আপনার ব্যবসার পরিধি বাড়ান।
+                                </p>
+
+                                <div className="space-y-2 text-xl sm:text-2xl">
+                                    <p>✅ কাস্টমারের চাহিদা অনুযায়ী গাড়ি খুঁজুন</p>
+                                    <p>✅ গাড়ির মালিক ও বিক্রেতার গাড়ি খুঁজে নিন</p>
+                                    <p>✅ কাস্টমার ও গাড়ির মধ্যে ম্যাচ তৈরি করুন</p>
+                                    <p>✅ নিজের গাড়ি কম থাকলেও বিক্রির সুযোগ তৈরি করুন</p>
+                                    <p>✅ কম পুঁজিতে ব্যবসা বাড়ানোর সুযোগ নিন</p>
+                                </div>
+
+                                <p className="mt-6 text-gray-800 text-xl sm:text-2xl font-semibold">
+                                    📞 এখনই আমাদের সাথে যোগাযোগ করুন +8809638660077 এবং Click4Details ব্যবহার শুরু করুন।
+                                </p>
+                            </div>
 
                             <div className="w-full mt-4 text-gray-600 text-xl text-start">
                                 <h3
@@ -728,7 +768,7 @@ const AboutUs = () => {
                                     <p>ক্লিক ফর ডিটেইলস আমার খুব দরকার</p>
                                     <p>আমার কোম্পানির সবাইকে অবশ্যই ব্যবহার করতে বলব</p>
 
-                                    <p className="font-bold text-red-600 underline underline-offset-4">Click4Details ব্যবহার করার সময় কিছু সতর্কতা :</p>
+                                    <p className="font-bold text-center text-2xl text-red-600 underline underline-offset-4 mt-2">Click4Details ব্যবহার করার সময় কিছু সতর্কতা :</p>
 
                                     <div className="mt-7 text-left text-[17px] sm:text-[19px] md:text-[21px] font-medium leading-relaxed">
                                         <div>
