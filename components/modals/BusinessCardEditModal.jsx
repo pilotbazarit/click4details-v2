@@ -472,11 +472,10 @@ const BusinessCardEditModal = ({ open, setOpen, selectedCompanyShop }) => {
                         type="button"
                         onClick={onAdd}
                         disabled={values.length >= 4}
-                        className={`px-4 py-2 rounded transition w-fit self-end ${
-                            values.length >= 4
-                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}
+                        className={`px-4 py-2 rounded transition w-fit self-end ${values.length >= 4
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
                     >
                         <Plus className="w-6 h-6" /> {values.length >= 4 && `(Max 4 ${maxLabel})`}
                     </button>
@@ -682,11 +681,10 @@ const BusinessCardEditModal = ({ open, setOpen, selectedCompanyShop }) => {
                                 <button
                                     type="submit"
                                     disabled={submitLoading}
-                                    className={`rounded px-5 py-2 text-white transition ${
-                                        submitLoading
-                                            ? 'bg-blue-400 cursor-not-allowed'
-                                            : 'bg-blue-600 hover:bg-blue-700'
-                                    }`}
+                                    className={`rounded px-5 py-2 text-white transition ${submitLoading
+                                        ? 'bg-blue-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                        }`}
                                 >
                                     {submitLoading ? 'Updating...' : 'Update'}
                                 </button>

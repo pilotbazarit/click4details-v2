@@ -210,11 +210,11 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
     }
 
 
-    const getUserPermissionName = async (roleIdParam) => {
+    const getUserPermissionName = async (roleIdParam, userIdParam) => {
         try {
             setLoading(true);
             const response = await UserService.Queries.getUserPermissionName({
-                _use_id: selectedUserId,
+                _use_id: userIdParam || selectedUserId,
                 _role_id: roleIdParam,
                 _type: 'general',
                 _page: 1,
@@ -601,7 +601,13 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
             setValue("role_id", resolvedRoleId);
             setSelectUser(resolvedUser);
             setUsers([]);
-            setPermissionNames(Array.isArray(permissionData?.urp_permissions) ? permissionData.urp_permissions : []);
+
+            if (resolvedRoleId && resolvedUserId) {
+                getUserPermissionName(resolvedRoleId, resolvedUserId);
+            } else {
+                setPermissionNames(Array.isArray(permissionData?.urp_permissions) ? permissionData.urp_permissions : []);
+            }
+
             setEmails(
                 getListFromSources(
                     ['urp_com_email', 'urp_com_emails', 'com_email', 'emails'],
@@ -663,30 +669,30 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
 
     const getDesignation = async () => {
         try {
-          const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.DESIGNATION_CODE);
-    
-          const designationMasterData = response.data?.master_data;
-          const designationData = [
-            {
-              value: "",
-              label: "-Select Designation-",
-            },
-            // First placeholder option
-            ...designationMasterData.map((designation) => ({
-              value: designation.md_id,
-              label: designation.md_title,
-            })),
-          ];
-    
-          setDesignations(designationData);
+            const response = await MasterDataService.Queries.getMasterDataByTypeCode(constData.DESIGNATION_CODE);
+
+            const designationMasterData = response.data?.master_data;
+            const designationData = [
+                {
+                    value: "",
+                    label: "-Select Designation-",
+                },
+                // First placeholder option
+                ...designationMasterData.map((designation) => ({
+                    value: designation.md_id,
+                    label: designation.md_title,
+                })),
+            ];
+
+            setDesignations(designationData);
         } catch (error) {
-          if (error.errors) {
-            Object.values(error.errors).forEach((e) => toast.error(e[0]));
-          } else {
-            toast.error(error.message || "Something went wrong");
-          }
+            if (error.errors) {
+                Object.values(error.errors).forEach((e) => toast.error(e[0]));
+            } else {
+                toast.error(error.message || "Something went wrong");
+            }
         }
-      };
+    };
 
 
     useEffect(() => {
@@ -875,8 +881,8 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                     </div>
 
 
-                    <h2 className='font-bold text-md mb-1'>Business Card Information</h2>
-                    <hr/>
+                    <h2 className='font-bold text-md mb-1'>Business Card Information </h2>
+                    <hr />
 
 
                     {/* User Name - read only field */}
@@ -995,11 +1001,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                                     type="button"
                                     onClick={handleAddEmail}
                                     disabled={emails.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit self-end ${
-                                        emails.length >= 4
-                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${emails.length >= 4
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <Plus className="w-6 h-6" /> {emails.length >= 4 && '(Max 4)'}
                                 </button>
@@ -1038,11 +1043,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                                     type="button"
                                     onClick={handleAddPhone}
                                     disabled={phones.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit self-end ${
-                                        phones.length >= 4
-                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${phones.length >= 4
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <Plus className="w-6 h-6" /> {phones.length >= 4 && '(Max 4)'}
                                 </button>
@@ -1079,11 +1083,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                                     type="button"
                                     onClick={handleAddFacebook}
                                     disabled={facebooks.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit self-end ${
-                                        facebooks.length >= 4
-                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${facebooks.length >= 4
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <Plus className="w-6 h-6" /> {facebooks.length >= 4 && '(Max 4)'}
                                 </button>
@@ -1120,11 +1123,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                                     type="button"
                                     onClick={handleAddYoutube}
                                     disabled={youtubes.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit self-end ${
-                                        youtubes.length >= 4
-                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${youtubes.length >= 4
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <Plus className="w-6 h-6" /> {youtubes.length >= 4 && '(Max 4)'}
                                 </button>
@@ -1161,11 +1163,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                                     type="button"
                                     onClick={handleAddWebsite}
                                     disabled={websites.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit self-end ${
-                                        websites.length >= 4
-                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${websites.length >= 4
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <Plus className="w-6 h-6" /> {websites.length >= 4 && '(Max 4)'}
                                 </button>
@@ -1202,11 +1203,10 @@ const AddMemberModal = ({ open, setOpen, selectedUser, setSelectedUser, getShopE
                                     type="button"
                                     onClick={handleAddGoogleMap}
                                     disabled={googleMaps.length >= 4}
-                                    className={`px-4 py-2 rounded transition w-fit self-end ${
-                                        googleMaps.length >= 4
-                                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded transition w-fit self-end ${googleMaps.length >= 4
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <Plus className="w-6 h-6" /> {googleMaps.length >= 4 && '(Max 4)'}
                                 </button>
