@@ -571,7 +571,6 @@ const buildPaymentHistoryQueryParams = ({
 
 const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }) => {
   const [clientPaymentHistoryItems, setClientPaymentHistoryItems] = useState([]);
-  const [availablePaymentCustomerIds, setAvailablePaymentCustomerIds] = useState([]);
   const [isClientPaymentHistoryLoading, setIsClientPaymentHistoryLoading] = useState(false);
   const [clientPaymentHistoryError, setClientPaymentHistoryError] = useState("");
 
@@ -598,7 +597,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   // currency, so once they've paid once the picker is pinned to that currency.
   const [isCreatePaymentCurrencyLocked, setIsCreatePaymentCurrencyLocked] = useState(false);
   const [selectedPaymentCustomerId, setSelectedPaymentCustomerId] = useState("");
-  const initialCustomerSelectedRef = React.useRef(false);
   const [createPaymentForm, setCreatePaymentForm] = useState(() =>
     buildInitialCreatePaymentForm("", "")
   );
@@ -657,10 +655,40 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     [createPaymentCustomers]
   );
   const historyCustomerOptions = useMemo(() => {
-    return createPaymentCustomerOptions.filter((option) =>
-      availablePaymentCustomerIds.includes(String(option.value))
-    );
-  }, [createPaymentCustomerOptions, availablePaymentCustomerIds]);
+    const customersById = new Map();
+
+    clientPaymentHistoryItems.forEach((entry) => {
+      const id = getPaymentHistoryFilterValue([
+        entry?.p_cci_id,
+        entry?.cci_id,
+        entry?.contact_info_id,
+        entry?.customer_contact_info_id,
+        entry?.customer_contact_info?.cci_id,
+        entry?.customer_contact_info?.id,
+        entry?.customer_contact?.cci_id,
+      ]);
+      const name = getPaymentHistoryFilterValue([
+        entry?.customer_contact_info?.cci_name,
+        entry?.customer_name,
+        entry?.customer?.name,
+        entry?.cus_name,
+      ]);
+      const phone = getPaymentHistoryFilterValue([
+        entry?.customer_contact_info?.cci_phone,
+        entry?.customer_phone,
+        entry?.customer?.phone,
+        entry?.customer?.mobile,
+        entry?.cus_phone,
+      ]);
+
+      if (!id || (!name && !phone)) return;
+
+      const label = [name, phone].filter(Boolean).join(" - ");
+      customersById.set(String(id), { value: String(id), label });
+    });
+
+    return Array.from(customersById.values());
+  }, [clientPaymentHistoryItems]);
   const selectedCreatePaymentCustomerOption = useMemo(
     () =>
       createPaymentCustomerOptions.find(
@@ -670,13 +698,13 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
   );
   const selectedPaymentCustomerOption = useMemo(
     () =>
-      createPaymentCustomerOptions.find(
+      historyCustomerOptions.find(
         (option) => option.value === String(selectedPaymentCustomerId || "")
       ) || null,
-    [createPaymentCustomerOptions, selectedPaymentCustomerId]
+    [historyCustomerOptions, selectedPaymentCustomerId]
   );
 
-  const fetchClientPaymentHistory = useCallback(async () => {
+  const fetchClientPaymentHistory = useCallback(async (customerId = selectedPaymentCustomerId) => {
     if (!productId) {
       setClientPaymentHistoryItems([]);
       setClientPaymentHistoryError("Product id not found.");
@@ -689,32 +717,12 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
     try {
       const params = buildPaymentHistoryQueryParams({
         productId,
-        customerId: selectedPaymentCustomerId,
+        customerId,
         perPage: 100,
       });
       const response = await VehicleService.Queries.getPaymentHistory(params);
       const responseList = getPaymentHistoryListFromResponse(response);
       setClientPaymentHistoryItems(responseList);
-
-      if (!selectedPaymentCustomerId) {
-        const ids = new Set();
-        responseList.forEach((entry) => {
-          const cid =
-            entry?.p_cci_id ||
-            entry?.cci_id ||
-            entry?.contact_info_id ||
-            entry?.customer_contact_info_id ||
-            entry?.customer_contact?.cci_id;
-          if (cid) ids.add(String(cid));
-        });
-        const idArray = Array.from(ids);
-        setAvailablePaymentCustomerIds(idArray);
-
-        if (!initialCustomerSelectedRef.current && idArray.length > 0) {
-          initialCustomerSelectedRef.current = true;
-          setSelectedPaymentCustomerId(idArray[0]);
-        }
-      }
     } catch (error) {
       setClientPaymentHistoryItems([]);
       setClientPaymentHistoryError(
@@ -812,7 +820,6 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
 
   useEffect(() => {
     if (!open) {
-      initialCustomerSelectedRef.current = false;
       setSelectedPaymentCustomerId("");
       return;
     }
@@ -895,6 +902,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
             entry?.cci_id ||
             entry?.contact_info_id ||
             entry?.customer_contact_info_id ||
+            entry?.customer_contact_info?.cci_id ||
             entry?.customer_contact?.cci_id ||
             null,
           customerName:
@@ -1419,7 +1427,7 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
       document.body.appendChild(downloadLink);
       downloadLink.click();
       downloadLink.remove();
-      window.URL.revokeObjectURL(objectUrl);
+      window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
 
       toast.success("Payment history downloaded.");
       return true;
@@ -1567,8 +1575,12 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
             ? "Payment updated successfully."
             : "Payment created successfully.")
         );
+        const isAllCustomersSelected = !selectedPaymentCustomerId;
+        setSelectedPaymentCustomerId("");
         handleCreatePaymentModalChange(false);
-        await fetchClientPaymentHistory();
+        if (isAllCustomersSelected) {
+          await fetchClientPaymentHistory("");
+        }
         return;
       }
 
@@ -1614,8 +1626,8 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                       options={historyCustomerOptions}
                       isClearable
                       isSearchable
-                      isDisabled={isCreatePaymentCustomersLoading}
-                      isLoading={isCreatePaymentCustomersLoading}
+                      isDisabled={isClientPaymentHistoryLoading}
+                      isLoading={isClientPaymentHistoryLoading}
                       placeholder={
                         isCreatePaymentCustomersLoading
                           ? "Loading customers..."
@@ -1952,16 +1964,16 @@ const ClientPaymentHistoryModal = ({ open, setOpen, product, parsedUser = null }
                           event.target.value
                         )
                       }
-                      disabled={isPaymentHistoryDownloading || isCreatePaymentCustomersLoading}
+                      disabled={isPaymentHistoryDownloading || isClientPaymentHistoryLoading}
                       className={formInputClass}
                     >
                       <option value="">
-                        {isCreatePaymentCustomersLoading
+                        {isClientPaymentHistoryLoading
                           ? "Loading customers..."
                           : "All Customer"}
                       </option>
-                      {createPaymentCustomers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
+                      {historyCustomerOptions.map((customer) => (
+                        <option key={customer.value} value={customer.value}>
                           {customer.label}
                         </option>
                       ))}

@@ -154,15 +154,15 @@ const ContactCustomersPage = () => {
 
 
   const canShowAddContactCustomerButton =
-    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    (user?.user_mode == "pbl" || user?.user_mode == "admin") &&
     hasPermission(permissionList, 0, "ContactCustomer", "ShowContactCustomerAddButton")
 
   const canShowEditContactCustomerButton =
-    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    (user?.user_mode == "pbl" || user?.user_mode == "admin") &&
     hasPermission(permissionList, 0, "ContactCustomer", "ShowContactCustomerEditButton")
 
   const canShowDeleteContactCustomerButton =
-    (user?.user_mode !== "pbl" && user?.user_mode !== "admin") ||
+    (user?.user_mode == "pbl" || user?.user_mode == "admin") &&
     hasPermission(permissionList, 0, "ContactCustomer", "ShowContactCustomerDeleteButton")
 
 
@@ -470,8 +470,8 @@ const ContactCustomersPage = () => {
                     <TableCell className="border-r border-gray-200">
                       <div className="flex items-center gap-3">
 
-                        {
-                          canShowEditContactCustomerButton && (
+                        {/* {
+                          canShowEditContactCustomerButton && ( */}
                             <button
                               onClick={() => handleEdit(item)}
                               className="text-blue-600 hover:text-blue-800"
@@ -480,8 +480,8 @@ const ContactCustomersPage = () => {
                             >
                               <Pencil size={18} />
                             </button>
-                          )
-                        }
+                        {/* //   )
+                        // } */}
                         {
                           canShowDeleteContactCustomerButton && (
                             <button
